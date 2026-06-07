@@ -153,66 +153,64 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
     const startDate = new Date(session.start_time);
     const endDate = new Date(session.end_time);
 
-   return (
-  <div
-    key={session.id}
-    className="session-card"
-    onClick={() => handleJoin(session)}
-  >
-   <div
-  className="session-card-banner"
-  style={{
-    backgroundImage: `url(${sessionBanner})`,
-  }}
->
-  <div
-  className={`session-badge ${
-    session.computed_status === "LIVE"
-      ? "live"
-      : session.computed_status === "COMPLETED"
-      ? "completed"
-      : session.computed_status === "CANCELLED"
-      ? "cancelled"
-      : "upcoming"
-  }`}
->
-  {session.computed_status === "LIVE"
-    ? "LIVE"
-    : session.computed_status === "COMPLETED"
-    ? "COMPLETED"
-    : session.computed_status === "CANCELLED"
-    ? "CANCELLED"
-    : "UPCOMING"}
-</div>
+    return (
+      <div
+        key={session.id}
+        className="session-card"
+        onClick={() => handleJoin(session)}
+      >
+        <div
+          className="session-card-banner"
+          style={{
+            backgroundImage: `url(${sessionBanner})`,
+          }}
+        >
+          <div
+            className={`session-badge ${
+              session.computed_status === "LIVE"
+                ? "live"
+                : session.computed_status === "COMPLETED"
+                ? "completed"
+                : session.computed_status === "CANCELLED"
+                ? "cancelled"
+                : "upcoming"
+            }`}
+          >
+            {session.computed_status === "LIVE"
+              ? "LIVE"
+              : session.computed_status === "COMPLETED"
+              ? "COMPLETED"
+              : session.computed_status === "CANCELLED"
+              ? "CANCELLED"
+              : "UPCOMING"}
+          </div>
+        </div>
 
-    <div className="session-card-content">
+        <div className="session-card-content">
+          <h4 className="session-card-subject">
+            {session.subject_name}
+          </h4>
 
-      <h4 className="session-card-subject">
-        {session.subject_name}
-      </h4>
+          <p className="session-card-course">
+            {session.course_name}
+          </p>
 
-      <p className="session-card-course">
-        {session.course_name}
-      </p>
-
-      <div className="session-card-time">
-        {startDate.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        })}
-        {" - "}
-        {endDate.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        })}
+          <div className="session-card-time">
+            {startDate.toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })}
+            {" - "}
+            {endDate.toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })}
+          </div>
+        </div>
       </div>
-
-
-    </div>
-  </div>
-);
+    );
   };
 
   const renderEmpty = (message) => (
