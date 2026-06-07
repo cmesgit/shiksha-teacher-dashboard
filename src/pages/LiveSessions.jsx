@@ -160,17 +160,21 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
   >
     <div className="session-card-banner">
 
-      <div
-        className={`session-badge ${
-          session.computed_status === "LIVE"
-            ? "live"
-            : session.computed_status === "COMPLETED"
-            ? "completed"
-            : "upcoming"
-        }`}
-      >
-        {session.computed_status}
-      </div>
+   <div
+  className={`session-badge ${
+    session.computed_status === "LIVE"
+      ? "live"
+      : session.computed_status === "COMPLETED"
+      ? "completed"
+      : "upcoming"
+  }`}
+>
+  {session.computed_status === "LIVE"
+    ? "LIVE"
+    : session.computed_status === "COMPLETED"
+    ? "COMPLETED"
+    : "UPCOMING"}
+</div>
 
     </div>
 
@@ -198,41 +202,6 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
         })}
       </div>
 
-      {(session.computed_status === "SCHEDULED" ||
-        session.computed_status === "LIVE") && (
-        <div className="session-countdown">
-          {getCountdown(session.start_time)}
-        </div>
-      )}
-
-      {new Date(session.start_time) > new Date() &&
-        session.computed_status !== "COMPLETED" &&
-        session.computed_status !== "CANCELLED" && (
-          <button
-            className="session-cancel-btn"
-            onClick={(e) => handleCancel(e, session.id)}
-          >
-            <MdCancel />
-            Cancel
-          </button>
-        )}
-
-      {new Date(session.start_time) <= new Date() &&
-        (
-          session.computed_status === "WAITING_FOR_TEACHER" ||
-          session.computed_status === "LIVE" ||
-          session.computed_status === "PAUSED" ||
-          session.computed_status === "RECONNECTING"
-        ) && (
-          <button
-            className="session-cancel-btn"
-            style={{ background: "#b91c1c" }}
-            onClick={(e) => handleEnd(e, session.id)}
-          >
-            <MdCancel />
-            End
-          </button>
-        )}
 
     </div>
   </div>
