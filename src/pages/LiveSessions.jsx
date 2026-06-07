@@ -166,20 +166,23 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
   }}
 >
   <div
-    className={`session-badge ${
-      session.computed_status === "LIVE"
-        ? "live"
-        : session.computed_status === "COMPLETED"
-        ? "completed"
-        : "upcoming"
-    }`}
-  >
-    {session.computed_status === "LIVE"
-      ? "LIVE"
+  className={`session-badge ${
+    session.computed_status === "LIVE"
+      ? "live"
       : session.computed_status === "COMPLETED"
-      ? "COMPLETED"
-      : "UPCOMING"}
-  </div>
+      ? "completed"
+      : session.computed_status === "CANCELLED"
+      ? "cancelled"
+      : "upcoming"
+  }`}
+>
+  {session.computed_status === "LIVE"
+    ? "LIVE"
+    : session.computed_status === "COMPLETED"
+    ? "COMPLETED"
+    : session.computed_status === "CANCELLED"
+    ? "CANCELLED"
+    : "UPCOMING"}
 </div>
 
     <div className="session-card-content">

@@ -239,3 +239,7 @@
     padding: 16px;
   }
 }
+
+.session-badge.cancelled {
+  background: #ef4444;
+}
