@@ -4,6 +4,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { MdCancel } from "react-icons/md";
 import api from "../api/apiClient";
 import "../styles/live-sessions.css";
+import sessionBanner from "../assets/live-session-banner.png";
 
 /* =====================================
    🔥 COUNTDOWN FUNCTION
@@ -158,25 +159,28 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
     className="session-card"
     onClick={() => handleJoin(session)}
   >
-    <div className="session-card-banner">
-
    <div
-  className={`session-badge ${
-    session.computed_status === "LIVE"
-      ? "live"
-      : session.computed_status === "COMPLETED"
-      ? "completed"
-      : "upcoming"
-  }`}
+  className="session-card-banner"
+  style={{
+    backgroundImage: `url(${sessionBanner})`,
+  }}
 >
-  {session.computed_status === "LIVE"
-    ? "LIVE"
-    : session.computed_status === "COMPLETED"
-    ? "COMPLETED"
-    : "UPCOMING"}
+  <div
+    className={`session-badge ${
+      session.computed_status === "LIVE"
+        ? "live"
+        : session.computed_status === "COMPLETED"
+        ? "completed"
+        : "upcoming"
+    }`}
+  >
+    {session.computed_status === "LIVE"
+      ? "LIVE"
+      : session.computed_status === "COMPLETED"
+      ? "COMPLETED"
+      : "UPCOMING"}
+  </div>
 </div>
-
-    </div>
 
     <div className="session-card-content">
 
