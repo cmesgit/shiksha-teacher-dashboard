@@ -116,7 +116,7 @@
 }
 
 .session-card-banner {
-  height: 108px;
+  height: 100px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -127,7 +127,7 @@
   padding: 14px;
   display: flex;
   flex-direction: column;
-  height: 140px;
+  height: 130px;
 }
 
 .session-card-subject {
