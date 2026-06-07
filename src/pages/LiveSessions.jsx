@@ -30,8 +30,6 @@ export default function LiveSessions() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [historyPage, setHistoryPage] = useState(1);
-  const HISTORY_PAGE_SIZE = 5;
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -72,9 +70,11 @@ export default function LiveSessions() {
   const handleJoin = (session) => {
     const status = session.computed_status;
     if (status === "COMPLETED" || status === "CANCELLED") {
-      navigate(`/teacher/live-sessions/${session.id}/detail`);
-      return;
-    }
+  navigate(
+    `/teacher/classes/${session.subject_id}/session-recordings`
+  );
+  return;
+}
     if (!session.can_join) return;
     navigate(`/teacher/live/${session.id}`);
   };
@@ -108,15 +108,42 @@ export default function LiveSessions() {
   /* =====================================
      🔥 CATEGORIZE
   ===================================== */
-  const ongoing = sessions.filter(
-    (s) => s.computed_status === "LIVE" || s.computed_status === "PAUSED" ||
-      s.computed_status === "RECONNECTING" || s.computed_status === "WAITING_FOR_TEACHER" ||
-      s.computed_status === "SCHEDULED"
+ const today = new Date();
+
+const todaysSessions = sessions.filter((session) => {
+  const d = new Date(session.start_time);
+
+  return (
+    d.getDate() === today.getDate() &&
+    d.getMonth() === today.getMonth() &&
+    d.getFullYear() === today.getFullYear()
   );
-  const history = sessions.filter((s) => s.computed_status === "COMPLETED" || s.computed_status === "CANCELLED").sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
-  const historyTotal = history.length;
-  const historyPages = Math.ceil(historyTotal / HISTORY_PAGE_SIZE);
-  const historyPaged = history.slice((historyPage - 1) * HISTORY_PAGE_SIZE, historyPage * HISTORY_PAGE_SIZE);
+});
+
+const statusOrder = {
+  LIVE: 0,
+  PAUSED: 0,
+  RECONNECTING: 0,
+
+  SCHEDULED: 1,
+  WAITING_FOR_TEACHER: 1,
+
+  COMPLETED: 2,
+  CANCELLED: 2,
+};
+
+const sortedSessions = [...todaysSessions].sort((a, b) => {
+  const orderDiff =
+    (statusOrder[a.computed_status] ?? 99) -
+    (statusOrder[b.computed_status] ?? 99);
+
+  if (orderDiff !== 0) return orderDiff;
+
+  return (
+    new Date(a.start_time) -
+    new Date(b.start_time)
+  );
+});
 
   /* =====================================
      🔥 RENDER SESSION CARD
@@ -125,77 +152,91 @@ export default function LiveSessions() {
     const startDate = new Date(session.start_time);
     const endDate = new Date(session.end_time);
 
-    return (
+   return (
+  <div
+    key={session.id}
+    className="session-card"
+    onClick={() => handleJoin(session)}
+  >
+    <div className="session-card-banner">
+
       <div
-        key={session.id}
-        className={`session-card ${!session.can_join ? "disabled" : ""}`}
-        onClick={() => handleJoin(session)}
+        className={`session-badge ${
+          session.computed_status === "LIVE"
+            ? "live"
+            : session.computed_status === "COMPLETED"
+            ? "completed"
+            : "upcoming"
+        }`}
       >
-        <div className="session-card-info">
-          <h4 className="session-card-subject">{session.subject_name}</h4>
-          <p className="session-card-course">{session.course_name}</p>
-          <p className="session-card-topic">{session.title}</p>
-          <p className="session-card-teacher">👨‍🏫 {session.teacher || "You"}</p>
-        </div>
-
-        <div className="session-card-meta">
-          <span className={`status ${session.computed_status}`}>
-            {session.computed_status}
-          </span>
-
-          {session.computed_status === "LIVE" && (
-            <span className="live-badge">🔴 LIVE</span>
-          )}
-          {new Date(session.start_time) > new Date() && session.computed_status !== "COMPLETED" && session.computed_status !== "CANCELLED" && (
-            <button
-              className="session-cancel-btn"
-              onClick={(e) => handleCancel(e, session.id)}
-              title="Cancel session"
-            >
-              <MdCancel /> Cancel
-            </button>
-          )}
-          {new Date(session.start_time) <= new Date() && (session.computed_status === "WAITING_FOR_TEACHER" || session.computed_status === "LIVE" || session.computed_status === "PAUSED" || session.computed_status === "RECONNECTING") && (
-            <button
-              className="session-cancel-btn"
-              style={{ background: "#b91c1c" }}
-              onClick={(e) => handleEnd(e, session.id)}
-              title="End session permanently"
-            >
-              <MdCancel /> End
-            </button>
-          )}
-        </div>
-
-        <div className="session-card-bottom">
-          <span>
-            {startDate.toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
-          </span>
-          <span>
-            {startDate.toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
-          </span>
-          <span>
-            Ends:{" "}
-            {endDate.toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
-          </span>
-          {(session.computed_status === "SCHEDULED" || session.computed_status === "LIVE") && (
-            <span className="starts-in">{getCountdown(session.start_time)}</span>
-          )}
-        </div>
+        {session.computed_status}
       </div>
-    );
+
+    </div>
+
+    <div className="session-card-content">
+
+      <h4 className="session-card-subject">
+        {session.subject_name}
+      </h4>
+
+      <p className="session-card-course">
+        {session.course_name}
+      </p>
+
+      <div className="session-card-time">
+        {startDate.toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })}
+        {" - "}
+        {endDate.toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })}
+      </div>
+
+      {(session.computed_status === "SCHEDULED" ||
+        session.computed_status === "LIVE") && (
+        <div className="session-countdown">
+          {getCountdown(session.start_time)}
+        </div>
+      )}
+
+      {new Date(session.start_time) > new Date() &&
+        session.computed_status !== "COMPLETED" &&
+        session.computed_status !== "CANCELLED" && (
+          <button
+            className="session-cancel-btn"
+            onClick={(e) => handleCancel(e, session.id)}
+          >
+            <MdCancel />
+            Cancel
+          </button>
+        )}
+
+      {new Date(session.start_time) <= new Date() &&
+        (
+          session.computed_status === "WAITING_FOR_TEACHER" ||
+          session.computed_status === "LIVE" ||
+          session.computed_status === "PAUSED" ||
+          session.computed_status === "RECONNECTING"
+        ) && (
+          <button
+            className="session-cancel-btn"
+            style={{ background: "#b91c1c" }}
+            onClick={(e) => handleEnd(e, session.id)}
+          >
+            <MdCancel />
+            End
+          </button>
+        )}
+
+    </div>
+  </div>
+);
   };
 
   const renderEmpty = (message) => (
@@ -215,7 +256,7 @@ export default function LiveSessions() {
 
       <div className="live-sessions-header">
         <h2 className="live-sessions-title">
-          Schedule for Interactive Sessions
+          Live Sessions
         </h2>
       </div>
 
@@ -243,49 +284,10 @@ export default function LiveSessions() {
         )}
 
         {!loading && !error && (
-          <div className="live-sessions-columns">
-            {/* Column 1: Ongoing & Upcoming */}
-            <div className="live-sessions-column">
-              <h3 className="live-sessions-column-title ongoing">
-                🟢 Ongoing & Upcoming
-              </h3>
-              <div className="live-sessions-column-cards">
-                {ongoing.length > 0
-                  ? ongoing.map(renderCard)
-                  : renderEmpty("No upcoming sessions")}
-              </div>
-            </div>
-
-            {/* Column 2: History */}
-            <div className="live-sessions-column">
-              <h3 className="live-sessions-column-title history">
-                📋 History ({historyTotal})
-              </h3>
-              <div className="live-sessions-column-cards">
-                {historyPaged.length > 0
-                  ? historyPaged.map(renderCard)
-                  : renderEmpty("No past sessions")}
-              </div>
-              {historyPages > 1 && (
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 12 }}>
-                  <button
-                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                    disabled={historyPage === 1}
-                    style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ccc", cursor: historyPage === 1 ? "not-allowed" : "pointer", opacity: historyPage === 1 ? 0.4 : 1 }}
-                  >
-                    ‹
-                  </button>
-                  <span style={{ fontSize: 13, color: "#555" }}>{historyPage} / {historyPages}</span>
-                  <button
-                    onClick={() => setHistoryPage((p) => Math.min(historyPages, p + 1))}
-                    disabled={historyPage === historyPages}
-                    style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ccc", cursor: historyPage === historyPages ? "not-allowed" : "pointer", opacity: historyPage === historyPages ? 0.4 : 1 }}
-                  >
-                    ›
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="today-sessions-grid">
+            {sortedSessions.length > 0
+              ? sortedSessions.map(renderCard)
+              : renderEmpty("No live sessions scheduled today")}
           </div>
         )}
       </div>
