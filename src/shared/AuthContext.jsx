@@ -197,7 +197,43 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be inside AuthProvider");
+
+  if (!ctx) {
+    console.warn("useAuth called outside AuthProvider");
+
+    return {
+      user: null,
+      profiles: [],
+      teacherInfo: null,
+      context: null,
+      activeProfile: null,
+
+      isAuthenticated: false,
+      needsProfileSelection: false,
+      isTeacherContext: false,
+      isLearnerContext: false,
+      loading: false,
+
+      api,
+
+      login: async () => null,
+      selectProfile: async () => null,
+      switchProfile: async () => null,
+      enterTeacherMode: async () => ({ ok: false }),
+      setTeacherPassword: async () => ({ ok: false }),
+      signup: async () => null,
+      checkEmail: async () => ({
+        exists: false,
+        has_student: false,
+        has_teacher: false,
+        is_verified: false,
+      }),
+      logout: () => {},
+      hasRole: () => false,
+      bootstrap: async () => null,
+    };
+  }
+
   return ctx;
 }
 
