@@ -38,6 +38,8 @@ import PrivateRequestDetail from "../pages/PrivateRequestDetail";
 import PrivateSessionAvailability from "../pages/PrivateSessionAvailability";
 import PrivateSessionDetail from "../pages/PrivateSessionDetail";
 import ChangePassword from "../pages/ChangePassword";
+import Chat from "../pages/Chat";
+import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
@@ -110,6 +112,8 @@ export default function TeacherRoutes() {
         <Route path="classes" element={<ClassesList />} />
         <Route path="classes/:subjectId" element={<Classes />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="chat" element={<Chat />} />
+        <Route path="settings/teacher-password" element={<TeacherPasswordSettings />} />
 
         {/* Assignments */}
         <Route path="classes/:subjectId/assignments" element={<Assignments />} />

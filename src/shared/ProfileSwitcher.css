@@ -1,0 +1,38 @@
+/* shared/ProfileSwitcher.css — tokens mirror skilldev design (forest/teal). */
+.ps-root { position: relative; font-family: var(--font-body, "Poppins", system-ui, sans-serif); }
+.ps-avatar { border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.ps-avatar-fallback {
+  display: grid; place-items: center; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #1b9c85, #1dcaab);
+}
+.ps-trigger {
+  display: flex; align-items: center; gap: 10px; background: transparent;
+  border: 1px solid var(--c-border, rgba(9,62,5,.16)); border-radius: 12px;
+  padding: 5px 10px; cursor: pointer; color: inherit;
+}
+.ps-trigger-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
+.ps-name { font-weight: 700; font-size: 13.5px; }
+.ps-sub { font-size: 10.5px; opacity: .6; }
+.ps-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 264px; z-index: 50;
+  background: #fff; border: 1px solid var(--c-border, rgba(9,62,5,.16));
+  border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.18); padding: 8px;
+}
+.ps-section-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .8px; opacity: .5; padding: 6px 10px; }
+.ps-item {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  background: transparent; border: none; border-radius: 9px; padding: 9px 10px;
+  font-size: 13.5px; cursor: pointer; color: inherit;
+}
+.ps-item:hover:not(:disabled) { background: rgba(27,156,133,.10); }
+.ps-item:disabled { opacity: .55; cursor: not-allowed; }
+.ps-item-active { background: rgba(29,202,171,.16); font-weight: 700; }
+.ps-tag { margin-left: auto; font-size: 9.5px; background: #e8e0cc; color: #6b5b22; border-radius: 6px; padding: 1px 6px; }
+.ps-lock { margin-left: 6px; font-size: 11px; }
+.ps-teach { color: #125027; font-weight: 700; }
+.ps-logout { color: #b23b3b; }
+.ps-divider { height: 1px; background: var(--c-border, rgba(9,62,5,.12)); margin: 6px 4px; }
+.ps-pin { display: flex; gap: 6px; padding: 6px 10px; }
+.ps-pin input { flex: 1; padding: 7px 9px; border: 1px solid #dcdcdc; border-radius: 8px; font-size: 13px; }
+.ps-pin button { background: linear-gradient(135deg,#1b9c85,#1dcaab); color:#fff; border:none; border-radius:8px; padding:0 14px; font-weight:700; cursor:pointer; }
+.ps-error { color: #b23b3b; font-size: 12px; padding: 6px 10px; }
