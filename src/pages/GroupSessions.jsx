@@ -13,7 +13,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
 import api from "../api/apiClient";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
 import "../styles/groupSessions.css";
@@ -982,8 +981,23 @@ function HostSessionDialog({ open, busy, error, onClose, onInstant, onScheduled 
 ═══════════════════════════════════════════════════════════ */
 export default function GroupSessions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+const [user, setUser] = useState(null);
 
+useEffect(() => {
+  let cancelled = false;
+
+  api.get("/accounts/me/")
+    .then((res) => {
+      if (!cancelled) setUser(res.data || null);
+    })
+    .catch(() => {
+      if (!cancelled) setUser(null);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
   const [subjectGroups, setSubjectGroups] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [groups, setGroups] = useState([]);
