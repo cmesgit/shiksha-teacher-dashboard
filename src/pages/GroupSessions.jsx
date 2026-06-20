@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/apiClient";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
-import "../styles/groupSessions.css";
+import "../styles/teacherGroupSessions.css";
 
 /* ═══════════════════════════════════════════════════════════
    HELPERS
