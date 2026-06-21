@@ -56,7 +56,11 @@ const ENV = isDev ? DEV : PROD;
 
 export const HOME_URL    = import.meta.env.VITE_HOME_URL    || ENV.HOME;
 export const APP_URL     = import.meta.env.VITE_APP_URL     || ENV.APP;
-export const TEACHER_URL = import.meta.env.VITE_TEACHER_URL || ENV.TEACHER;
+// TEACHER_URL — normalise: strip any /teacher/dashboard suffix the env var
+// may already include (old convention), so TEACHER_DASHBOARD_URL is never doubled.
+const _teacherRaw  = import.meta.env.VITE_TEACHER_URL || ENV.TEACHER;
+export const TEACHER_URL          = _teacherRaw.replace(/\/teacher\/dashboard\/?$/, "");
+export const TEACHER_DASHBOARD_URL = TEACHER_URL + "/teacher/dashboard";
 export const API_URL     = import.meta.env.VITE_API_URL     || ENV.API + "/api";
 export const WS_HOST     = import.meta.env.VITE_WS_HOST     || ENV.WS;
 
@@ -67,6 +71,6 @@ export const SIGNUP_URL       = HOME_URL + "/signup";
 export const FORM_FILLUP_URL  = HOME_URL + "/form-fillup";
 
 // Teacher dashboard entry point (with path)
-export const TEACHER_DASHBOARD_URL = TEACHER_URL + "/teacher/dashboard";
+
 // Student dashboard entry point
 export const APP_DASHBOARD_URL     = APP_URL;
