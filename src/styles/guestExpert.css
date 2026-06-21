@@ -1,327 +1,405 @@
 /**
  * src/styles/guestExpert.css
- * Guest-expert dashboard — faithful to the Figma DashShell design:
- *   • Dark forest banner (--c-forest-dk) with radial teal glow
- *   • Avatar initials + greeting in the banner
- *   • Stat tiles on frosted glass inside the banner
- *   • Tabs sit on the banner's bottom edge, teal underline on active
- *   • Cream-2 body below the banner
- *   • TYPE_BOTH switcher sits inside the banner header row
- * All rules scoped under .ge-root.
+ * Faithful port of the AuthFlow rd-* design tokens for the teacher dashboard.
+ * Matches screenshots: #c9d1de body, #425f7f sidebar, teal live cards,
+ * white content cards, Faculty/Expert pill toggle in header.
  */
-@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap");
 
-/* ── Reset & scope ─────────────────────────────────────────────────────── */
-.ge-root, .ge-root * { box-sizing: border-box; }
-.ge-root {
-  --c-forest-dk: #003223;
-  --c-forest:    #125027;
-  --c-forest-mid:#1b9c85;
-  --c-teal:      #1dcaab;
-  --c-orange:    #ff8f01;
-  --c-cream-2:   #f7f1de;
-  --c-ink:       #0e1c0f;
-  --c-ink-soft:  rgba(14,28,15,.65);
-  --c-border:    rgba(9,62,5,.16);
-  --font-head:   "Montserrat", system-ui, sans-serif;
-  --font-body:   "Poppins", system-ui, sans-serif;
-  font-family: var(--font-body);
-  color: var(--c-ink);
-  background: var(--c-cream-2);
-  min-height: 100%;
-}
-.ge-root h1,.ge-root h2,.ge-root h3,.ge-root h4 { font-family: var(--font-head); margin: 0; }
-.ge-root p { margin: 0; }
-.ge-root button { font-family: var(--font-body); cursor: pointer; }
-
-/* ── Banner (dark forest header, matches Figma DashShell) ─────────────── */
-.ge-banner {
-  background: var(--c-forest-dk);
-  color: #fff;
-  padding: 26px 32px 0;
-  position: relative;
+/* ── Body wrapper — fills teacher-content area ──────────────────────── */
+.ge-body-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #c9d1de;
+  font-family: Arial, "Segoe UI", sans-serif;
   overflow: hidden;
 }
-/* Radial teal glow in the top-right — exact Figma decoration */
-.ge-banner::before {
-  content: "";
-  position: absolute;
-  width: 340px; height: 340px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(29,202,171,.25), transparent 70%);
-  top: -160px; right: 40px;
-  pointer-events: none;
-}
 
-.ge-banner__inner {
-  max-width: 1080px;
-  margin: 0 auto;
-  position: relative;
-}
-
-/* ── Avatar + greeting row ─────────────────────────────────────────────── */
-.ge-banner__top {
+/* ── Header ──────────────────────────────────────────────────────────── */
+.ge-head {
+  height: 64px;
   display: flex;
   align-items: center;
-  gap: 14px;
-}
-.ge-avatar-circle {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.14);
-  border: 2px solid rgba(255,255,255,.25);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-head);
-  font-weight: 800; font-size: 20px;
+  justify-content: space-between;
+  padding: 0 22px;
   flex-shrink: 0;
+  gap: 14px;
+  background: #c9d1de;
+  border-bottom: 1px solid rgba(0,0,0,.06);
 }
-.ge-banner__eyebrow {
-  font-size: 11.5px;
-  color: rgba(255,255,255,.6);
-  font-weight: 600;
-  letter-spacing: .4px;
-  text-transform: uppercase;
+.ge-head__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+  line-height: 1.2;
 }
-.ge-banner__title {
-  font-family: var(--font-head);
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -.6px;
-  line-height: 1.1;
+.ge-head__sub {
+  font-size: 12px;
+  color: #666;
 }
 
-/* ── Dashboard type-switcher pill (TYPE_BOTH only) ─────────────────────── */
-.ge-switcher {
+/* ── Faculty / Expert toggle pill ───────────────────────────────────── */
+.ge-switch {
+  display: inline-flex;
+  background: #d9cfce;
+  border-radius: 100px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.ge-switch__btn {
+  all: unset;
+  cursor: pointer;
+  padding: 7px 15px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b5e5d;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255,255,255,.10);
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 12px;
-  padding: 4px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.ge-switcher__btn {
-  padding: 7px 16px;
-  border-radius: 9px;
-  font-size: 12.5px;
-  font-weight: 700;
-  border: none;
-  background: transparent;
-  color: rgba(255,255,255,.65);
+  gap: 6px;
+  line-height: 1;
   transition: background .15s, color .15s;
-  white-space: nowrap;
 }
-.ge-switcher__btn:hover {
+/* Active pill uses faculty blue (#425f7f) for Faculty, orange for Skill Dev.
+   Here Expert/Skill Dev is always the active one on this page. */
+.ge-switch__btn--on {
+  background: #425f7f;
   color: #fff;
-  background: rgba(255,255,255,.08);
-}
-.ge-switcher__btn--active {
-  background: rgba(255,255,255,.18);
-  color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
 }
 
-/* ── Stats strip ───────────────────────────────────────────────────────── */
-.ge-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin: 22px 0 18px;
-}
-.ge-stat {
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 14px;
-  padding: 14px 16px;
-}
-.ge-stat__value {
-  font-family: var(--font-head);
-  font-weight: 900;
-  font-size: 24px;
-  letter-spacing: -.5px;
-  color: #fff;
-}
-.ge-stat__label {
-  font-size: 11.5px;
-  color: rgba(255,255,255,.65);
-  margin-top: 2px;
-}
-
-/* ── Tabs row (bottom of banner) ───────────────────────────────────────── */
-.ge-tabs {
+/* ── Right side of header ────────────────────────────────────────────── */
+.ge-head__right {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
-.ge-tab {
+
+/* Notification bell */
+.ge-profwrap  { position: relative; }
+.ge-bell {
+  position: relative;
   background: none;
   border: none;
+  cursor: pointer;
+  padding: 7px;
+  display: flex;
+  color: #374151;
+  border-radius: 8px;
+  transition: background .15s;
+}
+.ge-bell:hover { background: rgba(0,0,0,.06); }
+.ge-badge {
+  position: absolute;
+  top: 1px; right: 1px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* Notification dropdown */
+.ge-notif {
+  position: absolute;
+  top: 48px; right: 0;
+  width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.18);
+  z-index: 60;
+  overflow: hidden;
+}
+.ge-notif__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid #f1f1f1;
+}
+.ge-notif__title { font-size: 14px; font-weight: 800; color: #111827; }
+.ge-notif__clr   { background: none; border: none; color: #888; font-size: 11.5px; cursor: pointer; }
+.ge-notif__list  { max-height: 340px; overflow-y: auto; }
+.ge-notif__item  {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
   padding: 11px 16px;
+  border-bottom: 1px solid #f7f7f7;
+  cursor: pointer;
+}
+.ge-notif__item:hover { background: #fafafa; }
+.ge-notif__ic {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.ge-notif__tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 2px 6px;
+  border-radius: 100px;
+}
+
+/* Avatar button */
+.ge-avatar-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #425f7f;
+  transition: box-shadow .15s;
+}
+.ge-avatar-btn:hover { box-shadow: 0 0 0 2px #425f7f; }
+
+/* Profile dropdown */
+.ge-prof {
+  position: absolute;
+  top: 46px; right: 0;
+  width: 248px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.18);
+  z-index: 60;
+  overflow: hidden;
+}
+.ge-prof__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 15px 16px;
+}
+.ge-prof__av {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: #425f7f;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.ge-prof__name  { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+.ge-prof__email { font-size: 11px; color: #888; }
+.ge-prof__sec {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: #9aa0a6;
+  padding: 8px 16px 4px;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+}
+.ge-prof__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  background: #fafafa;
+  transition: background .15s;
+}
+.ge-prof__item:hover  { background: #f0f0f0; }
+.ge-prof__item--on    { color: #015865; font-weight: 600; }
+.ge-prof__pav {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.ge-prof__tick { margin-left: auto; color: #2f9d42; display: flex; }
+.ge-prof__menu { padding: 6px 0; }
+.ge-prof__mi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: background .15s;
+}
+.ge-prof__mi:hover           { background: #f5f5f5; }
+.ge-prof__mi--logout         { color: #c0392b; border-top: 1px solid #eee; }
+
+/* ── Main grid (2-col: 2fr 1fr) ──────────────────────────────────────── */
+.ge-grid {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 18px 18px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 2fr 1fr;
+  overflow: auto;
+}
+.ge-col-left, .ge-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ── White content card ───────────────────────────────────────────────── */
+.ge-card {
+  background: #f4f7f8;
+  border-radius: 18px;
+  border: none;
+  box-shadow: 0 6px 14px rgba(0,0,0,.10);
+  padding: 16px;
+}
+.ge-card h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  font-family: Arial, sans-serif;
+}
+.ge-card-empty {
+  font-size: 12px;
+  color: #999;
+  padding: 8px 0;
+}
+
+/* ── Live session cards row ───────────────────────────────────────────── */
+.ge-live-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.ge-live-row::-webkit-scrollbar { height: 4px; }
+.ge-live-row::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 10px; }
+
+.ge-livecard {
+  background: #13899b;
+  color: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 6px 12px rgba(0,0,0,.16);
+  min-width: 180px;
+  flex-shrink: 0;
+}
+.ge-livecard h5 { margin: 0 0 3px; font-size: 14px; font-weight: 700; }
+.ge-livecard p  { margin: 0 0 2px; font-size: 12px; opacity: .92; }
+
+/* ── 2-column sub-row inside left col ────────────────────────────────── */
+.ge-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Assignment row (matches the acc-item style) */
+.ge-assign-row {
+  background: #f7f4f4;
+  border-left: 8px solid #59d97f;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
   font-size: 12.5px;
   font-weight: 700;
-  color: rgba(255,255,255,.6);
-  border-bottom: 3px solid transparent;
-  white-space: nowrap;
-  transition: color .15s, border-color .15s;
+  color: #1b1b1b;
 }
-.ge-tab:hover { color: #fff; }
-.ge-tab--on {
+.ge-assign-row:last-child { margin-bottom: 0; }
+
+/* Activity row */
+.ge-act-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+.ge-act-row:last-child { margin-bottom: 0; }
+.ge-act-bar {
+  width: 8px;
+  min-height: 20px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+.ge-act-text {
+  font-size: 12.5px;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* ── Calendar ─────────────────────────────────────────────────────────── */
+.ge-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  font-size: 11px;
+  text-align: center;
+  color: #475569;
+}
+.ge-cal__hd { font-weight: 700; padding: 2px 0; }
+.ge-cal__day {
+  padding: 4px 0;
+  border-radius: 50%;
+  cursor: default;
+}
+.ge-cal__day--today {
+  background: #ff5252;
   color: #fff;
-  border-bottom-color: var(--c-teal);
+  font-weight: 700;
 }
 
-/* ── Body ──────────────────────────────────────────────────────────────── */
-.ge-body {
-  padding: 26px 32px 60px;
-  max-width: 1080px;
-  margin: 0 auto;
-}
-
-/* ── Demo badge ────────────────────────────────────────────────────────── */
-.ge-demo {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 11px; color: rgba(255,255,255,.5);
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 100px;
-  padding: 3px 10px;
-  margin-left: 12px;
-}
-.ge-demo__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-orange); }
-
-/* ── Section title row ─────────────────────────────────────────────────── */
-.ge-section {
-  display: flex; align-items: baseline;
-  justify-content: space-between; gap: 12px;
-  margin-bottom: 14px;
-}
-.ge-section h3 {
-  font-family: var(--font-head);
-  font-weight: 800; font-size: 16px;
-  color: var(--c-forest); letter-spacing: -.3px;
-}
-
-/* ── Shared buttons (body zone, Figma sd-btn palette) ──────────────────── */
-.ge-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  border: none; border-radius: 10px;
-  padding: 9px 16px;
-  font-size: 13px; font-weight: 600;
-  transition: all .15s;
-}
-.ge-btn--primary { background: var(--c-forest); color: #fff; }
-.ge-btn--primary:hover { background: var(--c-forest-dk); transform: translateY(-1px); }
-.ge-btn--accent {
-  background: var(--c-orange); color: #fff;
-  box-shadow: 0 6px 18px rgba(255,143,1,.32);
-}
-.ge-btn--accent:hover { transform: translateY(-1px); }
-.ge-btn--ghost {
-  background: transparent; color: var(--c-forest);
-  border: 1.5px solid var(--c-border);
-}
-.ge-btn--ghost:hover { background: rgba(18,80,39,.06); border-color: var(--c-forest-mid); }
-
-/* ── Cards ─────────────────────────────────────────────────────────────── */
-.ge-list { display: flex; flex-direction: column; gap: 12px; }
-.ge-card {
+/* ── Bottom right list items (Booking Requests / Today's Classes) ─────── */
+.ge-list-item {
   background: #fff;
-  border: 1px solid var(--c-border);
-  border-radius: 16px;
-  padding: 18px;
-  display: flex; align-items: center; gap: 16px;
-  box-shadow: 0 4px 14px rgba(18,80,39,.05);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1f2d3d;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
 }
-.ge-thumb {
-  width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 800;
-}
-.ge-grow { flex: 1; min-width: 0; }
-.ge-row-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.ge-name {
-  font-family: var(--font-head);
-  font-weight: 800; font-size: 15px; color: var(--c-forest);
-}
-.ge-meta {
-  display: flex; gap: 14px; flex-wrap: wrap;
-  margin-top: 6px; font-size: 12px; color: var(--c-ink-soft);
-}
-.ge-meta span { display: inline-flex; align-items: center; gap: 5px; }
-.ge-amount { text-align: right; flex-shrink: 0; }
-.ge-amount__num {
-  font-family: var(--font-head);
-  font-weight: 900; font-size: 17px; color: var(--c-forest);
-}
-.ge-amount__cap { font-size: 10.5px; color: var(--c-ink-soft); }
+.ge-list-item:last-child { margin-bottom: 0; }
 
-/* ── Badges ────────────────────────────────────────────────────────────── */
-.ge-pill {
-  font-size: 10.5px; font-weight: 700;
-  padding: 2px 9px; border-radius: 100px;
-  text-transform: uppercase; letter-spacing: .3px;
-}
-.ge-pill--published { color: var(--c-forest-mid); background: rgba(29,202,171,.14); }
-.ge-pill--draft     { color: var(--c-orange);     background: rgba(255,143,1,.14);  }
-.ge-pill--enroll    { color: var(--c-forest-mid); background: rgba(29,202,171,.14); }
-.ge-pill--session   { color: var(--c-orange);     background: rgba(255,143,1,.14);  }
-
-/* ── Avatar (applications / profile) ───────────────────────────────────── */
-.ge-face {
-  width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 17px;
-}
-.ge-face--lg { width: 72px; height: 72px; border-radius: 14px; font-size: 26px; }
-
-/* ── Expert profile card ────────────────────────────────────────────────── */
-.ge-profile { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; padding: 24px; }
-.ge-profile__top { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-.ge-verified { font-size: 11px; color: var(--c-forest-mid); display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
-.ge-profile__bio { font-size: 13.5px; line-height: 1.6; margin-top: 16px; }
-.ge-label { font-size: 12px; font-weight: 700; color: var(--c-ink-soft); text-transform: uppercase; letter-spacing: .4px; display: block; }
-.ge-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.ge-skill { font-size: 12px; padding: 5px 12px; border-radius: 100px; background: rgba(18,80,39,.07); color: var(--c-forest); font-weight: 600; }
-.ge-block { margin-top: 16px; }
-
-/* ── Earnings layout ────────────────────────────────────────────────────── */
-.ge-earn { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
-.ge-earn__card {
-  background: var(--c-forest); color: #fff;
-  border-radius: 16px; padding: 22px;
-}
-.ge-earn__cap { font-size: 11.5px; color: rgba(255,255,255,.65); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
-.ge-earn__big { font-family: var(--font-head); font-weight: 900; font-size: 34px; letter-spacing: -1px; margin-top: 6px; }
-.ge-earn__next { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 4px; }
-.ge-payouts { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; padding: 8px; }
-.ge-payout { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; }
-.ge-payout + .ge-payout { border-top: 1px solid var(--c-border); }
-.ge-payout__label { font-size: 13px; font-weight: 600; color: var(--c-ink); }
-.ge-payout__when  { font-size: 11px; color: var(--c-ink-soft); margin-top: 1px; }
-.ge-payout__amt   { font-family: var(--font-head); font-weight: 800; color: var(--c-forest); }
-
-/* ── Empty state ────────────────────────────────────────────────────────── */
-.ge-empty {
-  text-align: center; padding: 40px 0;
-  color: var(--c-ink-soft); font-size: 13.5px;
-}
-
-/* ── Loading ────────────────────────────────────────────────────────────── */
+/* ── Loading ────────────────────────────────────────────────────────────*/
 .ge-loading {
-  padding: 60px 0; text-align: center;
-  color: var(--c-ink-soft); font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 14px;
+  color: #666;
+  background: #c9d1de;
 }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 760px) {
-  .ge-banner  { padding: 20px 16px 0; }
-  .ge-body    { padding: 20px 16px 48px; }
-  .ge-stats   { grid-template-columns: repeat(2, 1fr); }
-  .ge-earn    { grid-template-columns: 1fr; }
-  .ge-card    { flex-wrap: wrap; }
-  .ge-amount  { text-align: left; }
-  .ge-switcher { margin-left: 0; margin-top: 12px; }
-  .ge-banner__top { flex-wrap: wrap; }
-  .ge-banner__title { font-size: 21px; }
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ge-grid { grid-template-columns: 1fr; overflow-y: auto; }
+  .ge-col-right { flex-direction: row; flex-wrap: wrap; }
+  .ge-col-right .ge-card { flex: 1 1 240px; }
+}
+@media (max-width: 600px) {
+  .ge-two-col { grid-template-columns: 1fr; }
+  .ge-head    { height: auto; padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+  .ge-grid    { padding: 10px 12px 14px; }
 }

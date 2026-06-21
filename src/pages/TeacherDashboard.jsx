@@ -284,33 +284,36 @@ export default function TeacherDashboard() {
       {isBoth && (
         <div style={{
           display: "flex", alignItems: "center", gap: 6,
-          marginBottom: 18, padding: "10px 16px",
-          background: "#f9fafb", border: "1px solid #e5e7eb",
-          borderRadius: 14,
+          marginBottom: 18, padding: "4px",
+          background: "#d9cfce", borderRadius: 100,
+          width: "fit-content",
         }}>
-          <span style={{ fontSize: 12.5, color: "#6b7280", fontWeight: 600, marginRight: 4 }}>
-            Dashboard:
-          </span>
-          {/* Academic is active here */}
+          {/* Faculty — active on this page */}
           <button style={{
-            padding: "6px 16px", borderRadius: 9, fontSize: 12.5, fontWeight: 700,
-            background: "#125027", color: "#fff",
-            border: "1.5px solid #125027", cursor: "default",
+            padding: "7px 15px", borderRadius: 100,
+            fontSize: 12, fontWeight: 700,
+            background: "#425f7f", color: "#fff",
+            border: "none", cursor: "default",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            boxShadow: "0 2px 6px rgba(0,0,0,.18)",
           }}>
-            📚 Academic
+            📚 Faculty
           </button>
+          {/* Expert — inactive, navigates */}
           <button
             onClick={() => navigate("/teacher/expert")}
             style={{
-              padding: "6px 16px", borderRadius: 9, fontSize: 12.5, fontWeight: 700,
-              background: "transparent", color: "#125027",
-              border: "1.5px solid rgba(9,62,5,.2)", cursor: "pointer",
+              padding: "7px 15px", borderRadius: 100,
+              fontSize: 12, fontWeight: 700,
+              background: "transparent", color: "#6b5e5d",
+              border: "none", cursor: "pointer",
+              display: "inline-flex", alignItems: "center", gap: 6,
               transition: ".15s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(18,80,39,.06)"; e.currentTarget.style.borderColor = "#1b9c85"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(9,62,5,.2)"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.06)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
-            🎯 Skills (Expert)
+            🎯 Expert
           </button>
         </div>
       )}

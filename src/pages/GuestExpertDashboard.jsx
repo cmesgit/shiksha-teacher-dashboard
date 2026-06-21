@@ -1,20 +1,16 @@
 /**
  * src/pages/GuestExpertDashboard.jsx
- * ─────────────────────────────────────────────────────────────────────
- * Guest-expert (Skills) dashboard — faithful to the Figma DashShell:
+ * ─────────────────────────────────────────────────────────────────
+ * Faithful port of the AuthFlow design's TeacherDash component.
  *
- *   Banner (dark forest, radial glow)
- *     ├─ Avatar initials · "Hi <name> 👋" · TYPE_BOTH switcher
- *     ├─ 4 frosted-glass stat tiles
- *     └─ Tabs: Courses Created · Applications · Expert Profile · Earnings
- *   Cream-2 body below
- *     └─ Tab content (cards, earnings grid, profile card)
+ * Layout (matches screenshots exactly):
+ *   .rd-body.teacher  (background: #c9d1de)
+ *     .rd-head          — "Hi Eric 👋" · subtitle · Faculty/Expert pills · bell · avatar
+ *     .rd-grid          — 2-col: [left col: Live Sessions + 2-col cards] [right: Calendar + list]
  *
- * The TYPE_BOTH switcher lives in the banner header row — no extra bar below
- * the header. TeacherLayout hides its own switch banner when this page is
- * active.
- *
- * Data via expertService: tries live endpoints, falls back gracefully.
+ * The sidebar is handled by TeacherLayout / Sidebar.jsx.
+ * The Faculty/Expert toggle only appears for TYPE_BOTH teachers.
+ * Pure GUEST only ever sees the Expert view (no toggle).
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,50 +18,51 @@ import { useAuth } from "../contexts/AuthContext";
 import expertService from "../api/expertService";
 import "../styles/guestExpert.css";
 
-/* ── Inline SVG icons (matches Figma token set exactly) ─────────────── */
+/* ── Inline SVG icons matching the design token set ─────────────────── */
 const Ic = {
-  plus:    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>,
-  users:   <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  doc:     <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>,
-  cal:     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
-  check:   <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
-  x:       <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>,
-  shield:  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
-  star:    <svg width={11} height={11} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>,
-  user:    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  bell: (
+    <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+  ),
+  cap: (sz=15) => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+      <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+    </svg>
+  ),
+  spark: (sz=13) => (
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+    </svg>
+  ),
+  check: (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
+  ),
 };
 
-const rupee  = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
-const initOf = (s) => (s || "?").trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-
-/* Category colour seeded from the Figma skill-category data */
-const CAT_COLORS = {
-  design: "#9b5de5", coding: "#0077b6", music: "#e76f51",
-  lang: "#2a9d8f",   business: "#e9c46a", sports: "#43aa8b",
-  default: "var(--c-forest-mid)",
-};
-const catColor = (cat) => CAT_COLORS[cat] || CAT_COLORS.default;
-
-const TABS = [
-  ["courses",      "Courses Created"],
-  ["applications", "Applications"],
-  ["profile",      "Expert Profile"],
-  ["earnings",     "Earnings"],
-];
+const initOf = (s = "") =>
+  (s || "?").trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
 export default function GuestExpertDashboard() {
   const { user, teacherInfo } = useAuth();
   const navigate = useNavigate();
 
-  const isBoth = teacherInfo?.type === "BOTH";
+  /* TYPE_BOTH can toggle; pure GUEST is always expert */
+  const isBoth  = teacherInfo?.type === "BOTH";
+  const [mode, setMode] = useState("expert"); // "expert" | "faculty"
+  const isExpert = mode === "expert";
 
-  const [tab,          setTab]          = useState("courses");
   const [loading,      setLoading]      = useState(true);
-  const [live,         setLive]         = useState(true);
   const [profile,      setProfile]      = useState(null);
   const [courses,      setCourses]      = useState([]);
   const [applications, setApplications] = useState([]);
-  const [earnings,     setEarnings]     = useState({ available: 0, next_payout: "", payouts: [] });
+  const [earnings,     setEarnings]     = useState({ available: 0, payouts: [] });
+  const [showNotif,    setShowNotif]    = useState(false);
+  const [showMenu,     setShowMenu]     = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,12 +76,11 @@ export default function GuestExpertDashboard() {
         ]);
         if (cancelled) return;
         setProfile(p);
-        setCourses(c.courses  || []);
+        setCourses(c.courses || []);
         setApplications(a.applications || []);
-        setEarnings(e.earnings || { available: 0, next_payout: "", payouts: [] });
-        setLive(Boolean(c.live && a.live && e.live));
+        setEarnings(e.earnings || { available: 0, payouts: [] });
       } catch (err) {
-        console.error("Expert dashboard load error:", err);
+        console.error("Expert dashboard load:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -92,300 +88,290 @@ export default function GuestExpertDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const respond = async (id, action) => {
-    setApplications(prev => prev.filter(r => r.id !== id));
-    try { await expertService.respondToApplication(id, action); }
-    catch (err) { console.error("Respond failed:", err); }
-  };
+  /* Close dropdowns on outside click */
+  useEffect(() => {
+    const close = () => { setShowNotif(false); setShowMenu(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
 
-  /* ── Derived stats ── */
-  const published     = courses.filter(c => c.status === "Published").length;
-  const totalStudents = courses.reduce((a, c) => a + (c.students || 0), 0);
-  const totalEarned   = (earnings.payouts || []).reduce((a, p) => a + (p.amt || 0), 0);
-  const stats = [
-    { value: published,                          label: "Published courses"   },
-    { value: totalStudents,                      label: "Total students"      },
-    { value: applications.length,                label: "Pending applications"},
-    { value: `₹${(totalEarned/1000).toFixed(1)}k`, label: "Earned this month"},
-  ];
-
-  /* ── Display name from profile or auth ── */
   const firstName = (
     profile?.name && profile.name !== "Your profile"
       ? profile.name
       : user?.active_profile?.display_name || user?.username || "there"
   ).split(" ")[0];
 
+  const subtitle = isExpert
+    ? (profile?.title || "Guest expert")
+    : (teacherInfo?.faculty_subject
+        ? `${teacherInfo.faculty_subject} Faculty · CBSE`
+        : "Faculty");
+
   const avatarStr = initOf(
     profile?.name && profile.name !== "Your profile"
       ? profile.name
-      : user?.username || "GE"
+      : user?.username || "TE"
   );
 
-  /* ── Tab label with pending count ── */
-  const tabLabel = (id, base) =>
-    id === "applications" && applications.length > 0
-      ? `${base} (${applications.length})`
-      : base;
+  /* ── Expert live sessions (from courses/bookings) ── */
+  const liveSessions = isExpert
+    ? courses.slice(0, 2).map(c => ({ subj: c.title, topic: "Next session", when: "Coming up" }))
+    : [
+        { subj: "Mathematics", topic: "Trigonometry · Class 10", when: "Thu · 9:00 AM" },
+        { subj: "Mathematics", topic: "Algebra · Class 9",       when: "Fri · 10:30 AM" },
+      ];
+
+  /* ── Bottom 2-col cards content ── */
+  const assignItems = isExpert
+    ? courses.slice(0, 2).map(c => c.title || "Course")
+    : ["Algebra set 4 · 24 submissions", "Geometry quiz · 18 submissions"];
+  const assignTitle = isExpert ? "Assignments" : "Assignments to grade";
+
+  const actItems = isExpert
+    ? [["#94a0eb", "Quiz submitted by Ruati"], ["#57d982", "New enrollment · Andrew"]]
+    : [["#94a0eb", "Quiz submitted by Ruati · Class 10"], ["#57d982", "Assignment graded · Class 9"]];
+
+  /* ── Right col: calendar + bottom card ── */
+  const rightListTitle  = isExpert ? "Booking Requests"  : "Today's Classes";
+  const rightListItems  = isExpert
+    ? applications.slice(0, 2).map(r => `${r.name} · ${r.course}`)
+    : ["Class 10 · Maths · 9:00 AM", "Class 9 · Maths · 10:30 AM"];
+
+  /* ── Notifications ── */
+  const notifs = isExpert
+    ? [
+        { m: "New booking request · Zovi (UX Research)", t: "1h",  tag: "Expert",  c: "#ff8f01" },
+        { m: "Andrew enrolled in Figma from Zero to Hire", t: "3h", tag: "Expert",  c: "#ff8f01" },
+        { m: "Payout of ₹1,999 processed",               t: "1d",  tag: "Expert",  c: "#ff8f01" },
+      ]
+    : [
+        { m: "Ruati submitted Algebra set 4 · Class 10",   t: "30m", tag: "Faculty", c: "#425f7f" },
+        { m: "5 students joined your Class 9 live session", t: "2h",  tag: "Faculty", c: "#425f7f" },
+        { m: "Geometry quiz auto-graded · 18 attempts",    t: "5h",  tag: "Faculty", c: "#425f7f" },
+      ];
+
+  /* Simple June 2026 calendar */
+  const calDays = ["M","T","W","T","F","S","S"];
+  // June 1 2026 is a Monday — day 1 starts in column 1
+  const today = 21; // June 21
 
   if (loading) {
-    return (
-      <div className="ge-root">
-        <div className="ge-loading">Loading your expert dashboard…</div>
-      </div>
-    );
+    return <div className="ge-loading">Loading your dashboard…</div>;
   }
 
   return (
-    <div className="ge-root">
+    <div className="ge-body-wrap">
 
-      {/* ══════════════════ BANNER ══════════════════ */}
-      <div className="ge-banner">
-        <div className="ge-banner__inner">
+      {/* ── HEADER ─────────────────────────────────────────────── */}
+      <div className="ge-head">
+        {/* Greeting */}
+        <div>
+          <div className="ge-head__title">Hi {firstName} 👋</div>
+          <div className="ge-head__sub">{subtitle}</div>
+        </div>
 
-          {/* Row: avatar · greeting · optional TYPE_BOTH switcher */}
-          <div className="ge-banner__top">
-            <div className="ge-avatar-circle">{avatarStr}</div>
-            <div style={{ flex: 1 }}>
-              <div className="ge-banner__eyebrow">
-                {isBoth ? "Expert teacher · Skills" : "Guest expert"}
-                {!live && (
-                  <span className="ge-demo">
-                    <span className="ge-demo__dot" /> sample data
-                  </span>
-                )}
-              </div>
-              <div className="ge-banner__title">Hi {firstName} 👋</div>
-            </div>
+        {/* Faculty / Expert toggle — only for TYPE_BOTH */}
+        {isBoth && (
+          <div
+            className="ge-switch"
+            onMouseDown={e => e.stopPropagation()}
+          >
+            <button
+              className={`ge-switch__btn ${!isExpert ? "ge-switch__btn--on" : ""}`}
+              onClick={() => { setMode("faculty"); navigate("/teacher/dashboard"); }}
+            >
+              {Ic.cap(13)} Faculty
+            </button>
+            <button
+              className={`ge-switch__btn ${isExpert ? "ge-switch__btn--on" : ""}`}
+              onClick={() => setMode("expert")}
+            >
+              {Ic.spark(13)} Expert
+            </button>
+          </div>
+        )}
 
-            {/* Dashboard switcher — only for TYPE_BOTH, lives in the banner */}
-            {isBoth && (
-              <div className="ge-switcher" role="group" aria-label="Switch dashboard">
-                <button
-                  className="ge-switcher__btn"
-                  onClick={() => navigate("/teacher/dashboard")}
-                  title="Academic (Faculty) dashboard"
-                >
-                  📚 Academic
-                </button>
-                <button
-                  className="ge-switcher__btn ge-switcher__btn--active"
-                  aria-current="page"
-                  title="Skills (Expert) dashboard — currently active"
-                >
-                  🎯 Skills
-                </button>
+        {/* Right controls */}
+        <div className="ge-head__right" onMouseDown={e => e.stopPropagation()}>
+          {/* Notification bell */}
+          <div className="ge-profwrap">
+            <button
+              className="ge-bell"
+              onClick={() => { setShowNotif(n => !n); setShowMenu(false); }}
+            >
+              {Ic.bell}
+              {notifs.length > 0 && (
+                <span className="ge-badge">{notifs.length}</span>
+              )}
+            </button>
+            {showNotif && (
+              <div className="ge-notif" onMouseDown={e => e.stopPropagation()}>
+                <div className="ge-notif__head">
+                  <span className="ge-notif__title">Notifications</span>
+                  <button className="ge-notif__clr" onClick={() => setShowNotif(false)}>
+                    Mark all read
+                  </button>
+                </div>
+                <div className="ge-notif__list">
+                  {notifs.map((n, i) => (
+                    <div key={i} className="ge-notif__item">
+                      <span className="ge-notif__ic" style={{ background: n.c + "22", color: n.c }}>
+                        {n.tag === "Expert" ? Ic.spark(15) : Ic.cap(15)}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span className="ge-notif__tag" style={{ background: n.c + "1f", color: n.c }}>
+                            {n.tag}
+                          </span>
+                          <span style={{ fontSize: 10.5, color: "#aaa", marginLeft: "auto" }}>{n.t}</span>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: "#333", lineHeight: 1.4 }}>{n.m}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Stats */}
-          <div className="ge-stats">
-            {stats.map(s => (
-              <div key={s.label} className="ge-stat">
-                <div className="ge-stat__value">{s.value}</div>
-                <div className="ge-stat__label">{s.label}</div>
+          {/* Avatar / profile menu */}
+          <div className="ge-profwrap">
+            <button
+              className="ge-avatar-btn"
+              onClick={() => { setShowMenu(m => !m); setShowNotif(false); }}
+            >
+              {avatarStr}
+            </button>
+            {showMenu && (
+              <div className="ge-prof" onMouseDown={e => e.stopPropagation()}>
+                <div className="ge-prof__head">
+                  <div className="ge-prof__av">{avatarStr}</div>
+                  <div>
+                    <div className="ge-prof__name">{profile?.name || user?.username || "Teacher"}</div>
+                    <div className="ge-prof__email">{user?.email || ""}</div>
+                  </div>
+                </div>
+                {isBoth && (
+                  <>
+                    <div className="ge-prof__sec">Active dashboard</div>
+                    <div
+                      className={`ge-prof__item ${isExpert ? "ge-prof__item--on" : ""}`}
+                      onClick={() => { setMode("expert"); setShowMenu(false); }}
+                    >
+                      <span className="ge-prof__pav" style={{ background: "rgba(47,157,66,.16)", color: "#2f9d42" }}>
+                        {Ic.spark(13)}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div>Skill Dev</div>
+                        <div style={{ fontSize: 10.5, color: "#999" }}>Expert teacher</div>
+                      </div>
+                      {isExpert && <span className="ge-prof__tick">{Ic.check}</span>}
+                    </div>
+                    <div
+                      className={`ge-prof__item ${!isExpert ? "ge-prof__item--on" : ""}`}
+                      onClick={() => { setMode("faculty"); setShowMenu(false); navigate("/teacher/dashboard"); }}
+                    >
+                      <span className="ge-prof__pav" style={{ background: "rgba(66,95,127,.16)", color: "#425f7f" }}>
+                        {Ic.cap(13)}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div>Academy</div>
+                        <div style={{ fontSize: 10.5, color: "#999" }}>Faculty</div>
+                      </div>
+                      {!isExpert && <span className="ge-prof__tick">{Ic.check}</span>}
+                    </div>
+                  </>
+                )}
+                <div className="ge-prof__menu">
+                  <div className="ge-prof__mi">Settings</div>
+                  <div className="ge-prof__mi ge-prof__mi--logout" onClick={() => { /* logout */ }}>
+                    Log out
+                  </div>
+                </div>
               </div>
-            ))}
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── GRID ───────────────────────────────────────────────── */}
+      <div className="ge-grid">
+
+        {/* ── LEFT COLUMN ── */}
+        <div className="ge-col-left">
+
+          {/* Live Sessions */}
+          <div className="ge-card">
+            <h4>Upcoming Live Sessions</h4>
+            <div className="ge-live-row">
+              {liveSessions.length === 0 ? (
+                <div className="ge-card-empty">No upcoming sessions</div>
+              ) : liveSessions.map((s, i) => (
+                <div key={i} className="ge-livecard">
+                  <h5>{s.subj}</h5>
+                  <p>{s.topic}</p>
+                  <p style={{ marginTop: 8, fontWeight: 700 }}>{s.when}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="ge-tabs" role="tablist">
-            {TABS.map(([id, base]) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={tab === id}
-                className={`ge-tab${tab === id ? " ge-tab--on" : ""}`}
-                onClick={() => setTab(id)}
-              >
-                {tabLabel(id, base)}
-              </button>
-            ))}
+          {/* 2-col: Assignments + Recent Activity */}
+          <div className="ge-two-col">
+            <div className="ge-card">
+              <h4>{assignTitle}</h4>
+              {assignItems.length === 0
+                ? <div className="ge-card-empty">None yet</div>
+                : assignItems.map((t, i) => (
+                  <div key={i} className="ge-assign-row">{t}</div>
+                ))
+              }
+            </div>
+            <div className="ge-card">
+              <h4>Recent Activity</h4>
+              {actItems.map(([c, t], i) => (
+                <div key={i} className="ge-act-row">
+                  <span className="ge-act-bar" style={{ background: c }} />
+                  <span className="ge-act-text">{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── RIGHT COLUMN ── */}
+        <div className="ge-col-right">
+
+          {/* Calendar */}
+          <div className="ge-card">
+            <h4>June 2026</h4>
+            <div className="ge-cal">
+              {calDays.map((d, i) => (
+                <div key={i} className="ge-cal__hd">{d}</div>
+              ))}
+              {/* June 2026: starts Monday (offset 0) */}
+              {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
+                <div key={d} className={`ge-cal__day${d === today ? " ge-cal__day--today" : ""}`}>
+                  {d}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Booking Requests / Today's Classes */}
+          <div className="ge-card">
+            <h4>{rightListTitle}</h4>
+            {rightListItems.length === 0
+              ? <div className="ge-card-empty">None yet</div>
+              : rightListItems.map((t, i) => (
+                <div key={i} className="ge-list-item">{t}</div>
+              ))
+            }
           </div>
 
         </div>
       </div>
-      {/* ══════════════════ /BANNER ══════════════════ */}
-
-      {/* ══════════════════ BODY ══════════════════ */}
-      <div className="ge-body">
-
-        {/* ── Courses Created ── */}
-        {tab === "courses" && (
-          <>
-            <div className="ge-section">
-              <h3>Courses you've created</h3>
-              <button className="ge-btn ge-btn--primary">{Ic.plus} Create course</button>
-            </div>
-            {courses.length === 0
-              ? <div className="ge-empty">No courses yet. Create your first course so learners can find and enrol with you.</div>
-              : (
-                <div className="ge-list">
-                  {courses.map(c => {
-                    const draft = c.status === "Draft";
-                    const cc    = catColor(c.cat);
-                    return (
-                      <div key={c.id} className="ge-card">
-                        <div className="ge-thumb" style={{ background: cc + "22", color: cc }}>
-                          {Ic.doc}
-                        </div>
-                        <div className="ge-grow">
-                          <div className="ge-row-title">
-                            <span className="ge-name">{c.title}</span>
-                            <span className={`ge-pill ${draft ? "ge-pill--draft" : "ge-pill--published"}`}>
-                              {c.status}
-                            </span>
-                          </div>
-                          <div className="ge-meta">
-                            <span>{Ic.users} {c.students || 0} students</span>
-                            <span>{Ic.doc} {c.lessons || 0} lessons</span>
-                            <span>{rupee(c.price)}</span>
-                          </div>
-                        </div>
-                        <div className="ge-amount">
-                          <div className="ge-amount__num">{rupee(c.revenue)}</div>
-                          <div className="ge-amount__cap">revenue</div>
-                        </div>
-                        <button className="ge-btn ge-btn--ghost">{draft ? "Publish" : "Edit"}</button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            }
-          </>
-        )}
-
-        {/* ── Applications ── */}
-        {tab === "applications" && (
-          <>
-            <div className="ge-section"><h3>Student applications &amp; requests</h3></div>
-            {applications.length === 0
-              ? <div className="ge-empty">No pending applications. New course enrollments and session requests land here.</div>
-              : (
-                <div className="ge-list">
-                  {applications.map(r => (
-                    <div key={r.id} className="ge-card">
-                      {r.img
-                        ? <img src={r.img} alt="" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-                        : <div className="ge-face" style={{ background: "var(--c-forest)", color: "#fff" }}>{initOf(r.name)}</div>
-                      }
-                      <div className="ge-grow">
-                        <div className="ge-row-title">
-                          <span style={{ fontWeight: 700, fontSize: 14, color: "var(--c-forest)" }}>{r.name}</span>
-                          <span className={`ge-pill ${r.kind === "enroll" ? "ge-pill--enroll" : "ge-pill--session"}`}>
-                            {r.kind === "enroll" ? "Course enroll" : "1:1 session"}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 12.5, color: "var(--c-ink-soft)", marginTop: 3 }}>{r.course}</div>
-                        <div style={{ fontSize: 12, color: "var(--c-ink-soft)", marginTop: 3, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          {Ic.cal} {r.when}{r.rate ? ` · ${rupee(r.rate)}/hr` : ""}
-                        </div>
-                      </div>
-                      <button className="ge-btn ge-btn--ghost"  onClick={() => respond(r.id, "decline")}>{Ic.x}    Decline</button>
-                      <button className="ge-btn ge-btn--primary" onClick={() => respond(r.id, "accept")} >{Ic.check} Accept</button>
-                    </div>
-                  ))}
-                </div>
-              )
-            }
-          </>
-        )}
-
-        {/* ── Expert Profile ── */}
-        {tab === "profile" && profile && (
-          <>
-            <div className="ge-section">
-              <h3>Your public expert profile</h3>
-              <button className="ge-btn ge-btn--primary">{Ic.user} Edit profile</button>
-            </div>
-            <div className="ge-profile">
-              <div className="ge-profile__top">
-                {profile.img
-                  ? <img src={profile.img} alt="" style={{ width: 72, height: 72, borderRadius: 14, objectFit: "cover" }} />
-                  : <div className="ge-face ge-face--lg" style={{ background: "var(--c-forest)", color: "#fff" }}>{avatarStr}</div>
-                }
-                <div style={{ flex: 1 }}>
-                  <div className="ge-row-title">
-                    <span className="ge-name" style={{ fontSize: 18 }}>{profile.name !== "Your profile" ? profile.name : firstName}</span>
-                    {profile.verified && <span className="ge-verified">{Ic.shield} Verified</span>}
-                  </div>
-                  <div style={{ fontSize: 13, color: "var(--c-ink-soft)", marginTop: 2 }}>{profile.title}</div>
-                  {(profile.rating || profile.sessions) && (
-                    <div style={{ fontSize: 12.5, color: "var(--c-ink-soft)", marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
-                      {Ic.star} {profile.rating ? `${profile.rating} · ` : ""}{profile.sessions} sessions taught
-                    </div>
-                  )}
-                </div>
-                {profile.rate && (
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontFamily: "var(--font-head)", fontWeight: 900, fontSize: 22, color: "var(--c-forest)" }}>{rupee(profile.rate)}/hr</div>
-                    <div style={{ fontSize: 11, color: "var(--c-ink-soft)" }}>your rate</div>
-                  </div>
-                )}
-              </div>
-
-              {profile.bio
-                ? <p className="ge-profile__bio">{profile.bio}</p>
-                : <p className="ge-profile__bio" style={{ color: "var(--c-ink-soft)" }}>Add a short bio so learners can understand your background and teaching style.</p>
-              }
-
-              <div className="ge-block">
-                <span className="ge-label">Skills you teach</span>
-                <div className="ge-skills">
-                  {profile.skills?.length > 0
-                    ? profile.skills.map(s => <span key={s} className="ge-skill">{s}</span>)
-                    : <span style={{ fontSize: 13, color: "var(--c-ink-soft)" }}>No skills listed yet — add them from "Edit profile".</span>
-                  }
-                </div>
-              </div>
-
-              <div className="ge-block">
-                <span className="ge-label">Availability</span>
-                <div style={{ fontSize: 13, color: "var(--c-ink-soft)", marginTop: 4 }}>
-                  {profile.availability || "Set your weekly availability so learners can book you."}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Earnings ── */}
-        {tab === "earnings" && (
-          <>
-            <div className="ge-section"><h3>Earnings</h3></div>
-            <div className="ge-earn">
-              <div className="ge-earn__card">
-                <div className="ge-earn__cap">Available to withdraw</div>
-                <div className="ge-earn__big">{rupee(earnings.available)}</div>
-                {earnings.next_payout && (
-                  <div className="ge-earn__next">Next payout · {earnings.next_payout}</div>
-                )}
-                <button className="ge-btn ge-btn--accent" style={{ marginTop: 16, width: "100%", justifyContent: "center" }}>
-                  Withdraw to bank
-                </button>
-              </div>
-              <div className="ge-payouts">
-                {(earnings.payouts || []).length === 0
-                  ? <div className="ge-empty">No payouts yet.</div>
-                  : (earnings.payouts || []).map((p, i) => (
-                    <div key={p.id || i} className="ge-payout">
-                      <div>
-                        <div className="ge-payout__label">{p.label}</div>
-                        <div className="ge-payout__when">{p.when}</div>
-                      </div>
-                      <div className="ge-payout__amt">+{rupee(p.amt)}</div>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
-          </>
-        )}
-
-      </div>
-      {/* ══════════════════ /BODY ══════════════════ */}
 
     </div>
   );

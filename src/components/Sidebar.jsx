@@ -72,6 +72,15 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     return meta ? ` (${meta})` : "";
   };
 
+  const isExpertRoute = location.pathname.startsWith("/teacher/expert");
+  // Sidebar subtitle matches the design screenshots:
+  //   Expert route   → "Expert Teacher"
+  //   Faculty route  → "Faculty Portal"
+  //   Pure guest     → always "Expert Teacher"
+  const sidebarSubtitle =
+    isGuest ? "Expert Teacher" :
+    isExpertRoute ? "Expert Teacher" : "Faculty Portal";
+
   return (
     <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
       <div className="sidebar-top">
@@ -79,7 +88,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
           <img src={logo} alt="ShikshaCom" />
           <div>
             <h3>ShikshaCom</h3>
-            <p>Empowerment Through Education</p>
+            <p>{sidebarSubtitle}</p>
           </div>
         </div>
 
@@ -95,13 +104,52 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
       <nav>
         {/* Primary dashboard link(s) — guests get the expert dashboard */}
         {isGuest ? (
-          <div
-            className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
-            onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}
-          >
-            <MdDashboard />
-            <span>Expert Dashboard</span>
-          </div>
+          <>
+            <div className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}>
+              <MdDashboard /><span>Dashboard</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/courses") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/courses"); setSidebarOpen(false); }}>
+              <FaChalkboardTeacher /><span>My Courses</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/private-sessions") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/private-sessions"); setSidebarOpen(false); }}>
+              <RiLockLine /><span>Bookings</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}>
+              <RiLiveLine /><span>Live Sessions</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/chat") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/chat"); setSidebarOpen(false); }}>
+              <FiUsers /><span>Messages</span>
+            </div>
+          </>
+        ) : isExpertRoute && isBoth ? (
+          /* TYPE_BOTH on the Expert route — show expert nav */
+          <>
+            <div className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}>
+              <MdDashboard /><span>Dashboard</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/courses") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/courses"); setSidebarOpen(false); }}>
+              <FaChalkboardTeacher /><span>My Courses</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/private-sessions") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/private-sessions"); setSidebarOpen(false); }}>
+              <RiLockLine /><span>Bookings</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}>
+              <RiLiveLine /><span>Live Sessions</span>
+            </div>
+            <div className={`menu-item ${isActive("/teacher/chat") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/chat"); setSidebarOpen(false); }}>
+              <FiUsers /><span>Messages</span>
+            </div>
+          </>
         ) : (
           <>
             <div
@@ -111,15 +159,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
               <MdDashboard />
               <span>Dashboard</span>
             </div>
-            {isBoth && (
-              <div
-                className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
-                onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}
-              >
-                <FaChalkboardTeacher />
-                <span>Expert Dashboard</span>
-              </div>
-            )}
           </>
         )}
 
