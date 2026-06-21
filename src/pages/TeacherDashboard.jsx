@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import "../styles/dashboard.css";
+import { useAuth } from "../contexts/AuthContext";
 
 import LiveSessionCard  from "../components/LiveSessionCard";
 import CalendarWidget   from "../components/CalendarWidget";
@@ -53,6 +54,8 @@ export default function TeacherDashboard() {
   const outletContext = useOutletContext();
   const active        = outletContext?.active || "sessions";
   const navigate      = useNavigate();
+  const { teacherInfo } = useAuth();
+  const isBoth = teacherInfo?.type === "BOTH";
 
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -276,6 +279,41 @@ export default function TeacherDashboard() {
   // ── DESKTOP ───────────────────────────────────────────────
   return (
     <div className="dashboard">
+
+      {/* Dashboard type switcher — only visible for TYPE_BOTH teachers */}
+      {isBoth && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          marginBottom: 18, padding: "10px 16px",
+          background: "#f9fafb", border: "1px solid #e5e7eb",
+          borderRadius: 14,
+        }}>
+          <span style={{ fontSize: 12.5, color: "#6b7280", fontWeight: 600, marginRight: 4 }}>
+            Dashboard:
+          </span>
+          {/* Academic is active here */}
+          <button style={{
+            padding: "6px 16px", borderRadius: 9, fontSize: 12.5, fontWeight: 700,
+            background: "#125027", color: "#fff",
+            border: "1.5px solid #125027", cursor: "default",
+          }}>
+            📚 Academic
+          </button>
+          <button
+            onClick={() => navigate("/teacher/expert")}
+            style={{
+              padding: "6px 16px", borderRadius: 9, fontSize: 12.5, fontWeight: 700,
+              background: "transparent", color: "#125027",
+              border: "1.5px solid rgba(9,62,5,.2)", cursor: "pointer",
+              transition: ".15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(18,80,39,.06)"; e.currentTarget.style.borderColor = "#1b9c85"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(9,62,5,.2)"; }}
+          >
+            🎯 Skills (Expert)
+          </button>
+        </div>
+      )}
 
       {/* Row 1: Live Sessions */}
       <div className="dash-live-section">
