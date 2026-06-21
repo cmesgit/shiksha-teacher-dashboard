@@ -6,9 +6,10 @@
  * marketplace and teacher dashboard so all three apps share one session.
  */
 import axios from "axios";
+import { API_URL, LOGIN_URL } from "../config/urls";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "https://api.shikshacom.com/api",
+  baseURL: API_URL,
   withCredentials: true,
 });
 
@@ -40,14 +41,14 @@ api.interceptors.response.use(
     isRefreshing = true;
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_URL || "https://api.shikshacom.com/api"}/accounts/refresh/`,
+        `${API_URL}/accounts/refresh/`,
         {}, { withCredentials: true }
       );
       processQueue(null);
       return api(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError);
-      window.location.href = (import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com") + "/login";
+      window.location.href = LOGIN_URL;
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

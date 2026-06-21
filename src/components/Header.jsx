@@ -15,8 +15,7 @@ import NotificationBell from "./NotificationBell";
 import "../styles/header.css";
 import "../shared/ProfileSwitcher.css";
 
-const HOME_URL = import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com";
-const APP_URL = import.meta.env.VITE_APP_URL || "https://app.shikshacom.com";
+import { HOME_URL, APP_URL } from "../config/urls";
 
 export default function Header({ onMenuClick }) {
   const navigate = useNavigate();

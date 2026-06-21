@@ -43,11 +43,11 @@ import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
+import { LOGIN_URL } from "../config/urls";
 
 function RedirectToMainLogin() {
   useEffect(() => {
-    window.location.href =
-      (import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com") + "/login";
+    window.location.href = LOGIN_URL;
   }, []);
   return null;
 }
