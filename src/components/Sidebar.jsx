@@ -6,6 +6,7 @@ import { IoClose } from "react-icons/io5";
 import { RiLockLine, RiLiveLine, RiGroupLine } from "react-icons/ri";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/apiClient";
+import { useAuth } from "../contexts/AuthContext";
 import logo from "../assets/Shiksha.svg";
 import "../styles/sidebar.css";
 import { HOME_URL } from "../config/urls";
@@ -13,6 +14,9 @@ import { HOME_URL } from "../config/urls";
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { teacherInfo } = useAuth();
+  const isGuest = teacherInfo?.type === "GUEST";
+  const isBoth  = teacherInfo?.type === "BOTH";
   const [classes, setClasses] = useState([]);
   const [classesOpen, setClassesOpen] = useState(
     location.pathname.startsWith("/teacher/classes")
@@ -89,17 +93,38 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
       </div>
 
       <nav>
-        <div
-          className={`menu-item ${isActive("/teacher/dashboard") ? "active" : ""}`}
-          onClick={() => {
-            navigate("/teacher/dashboard");
-            setSidebarOpen(false);
-          }}
-        >
-          <MdDashboard />
-          <span>Dashboard</span>
-        </div>
+        {/* Primary dashboard link(s) — guests get the expert dashboard */}
+        {isGuest ? (
+          <div
+            className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
+            onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}
+          >
+            <MdDashboard />
+            <span>Expert Dashboard</span>
+          </div>
+        ) : (
+          <>
+            <div
+              className={`menu-item ${isActive("/teacher/dashboard") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/dashboard"); setSidebarOpen(false); }}
+            >
+              <MdDashboard />
+              <span>Dashboard</span>
+            </div>
+            {isBoth && (
+              <div
+                className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
+                onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}
+              >
+                <FaChalkboardTeacher />
+                <span>Expert Dashboard</span>
+              </div>
+            )}
+          </>
+        )}
 
+        {!isGuest && (
+        <>
         {/* Student List — navigates to /teacher/students */}
         <div
           className={`menu-item ${isActive("/teacher/students") ? "active" : ""}`}
@@ -181,6 +206,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
           <RiGroupLine />
           <span>Group Sessions</span>
         </div>
+        </>
+        )}
             </nav>
       <div className="sidebar__bottom">
         <a

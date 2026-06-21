@@ -29,6 +29,10 @@ export default function TeacherLayout() {
   const isClassesPage = location.pathname.startsWith("/teacher/classes");
   const hideTopSliderOnMobile = isMobile && isClassesPage;
 
+  // The guest-expert dashboard has its own tab bar, so suppress the faculty
+  // top-slider tabs on that route.
+  const isExpertPage = location.pathname.startsWith("/teacher/expert");
+
   // ───── LIVE SESSION FULLSCREEN MODE ─────
   if (isLiveSession) {
     return (
@@ -58,7 +62,7 @@ export default function TeacherLayout() {
       <div className="teacher-main">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        {!hideTopSliderOnMobile && (
+        {!hideTopSliderOnMobile && !isExpertPage && (
           <TeacherTopSliderTabs
             active={active}
             setActive={setActive}

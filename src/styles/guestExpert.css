@@ -1,0 +1,162 @@
+/**
+ * src/styles/guestExpert.css
+ * Guest-expert dashboard. All rules are scoped under `.ge-root` so the
+ * design system (forest / teal / cream, Montserrat + Poppins) styles this
+ * feature only and never leaks into the rest of the teacher dashboard.
+ * Tokens mirror the design package's SkillDevelopment.css.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap");
+
+.ge-root {
+  --c-forest-dk: #003223;
+  --c-forest:    #125027;
+  --c-forest-mid:#1b9c85;
+  --c-teal:      #1dcaab;
+  --c-orange:    #ff8f01;
+  --c-cream:     #f5eedb;
+  --c-cream-2:   #f7f1de;
+  --c-ink:       #0e1c0f;
+  --c-ink-soft:  rgba(14, 28, 15, .65);
+  --c-border:    rgba(9, 62, 5, .16);
+  --font-head:   "Montserrat", system-ui, sans-serif;
+  --font-body:   "Poppins", system-ui, sans-serif;
+
+  font-family: var(--font-body);
+  color: var(--c-ink);
+  padding: 18px 20px 48px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.ge-root h1, .ge-root h2, .ge-root h3, .ge-root h4 { font-family: var(--font-head); margin: 0; }
+.ge-root button { font-family: var(--font-body); cursor: pointer; }
+
+/* ── Header: greeting + stat strip ─────────────────────────────────────── */
+.ge-head { margin-bottom: 18px; }
+.ge-eyebrow {
+  font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--c-forest-mid);
+}
+.ge-title { font-size: 24px; font-weight: 900; color: var(--c-forest); margin-top: 2px; letter-spacing: -.4px; }
+.ge-sub { font-size: 13.5px; color: var(--c-ink-soft); margin-top: 4px; }
+
+.ge-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px;
+}
+.ge-stat {
+  background: #fff; border: 1px solid var(--c-border); border-radius: 14px; padding: 14px 16px;
+}
+.ge-stat__value { font-family: var(--font-head); font-weight: 900; font-size: 22px; color: var(--c-forest); letter-spacing: -.5px; }
+.ge-stat__label { font-size: 11.5px; color: var(--c-ink-soft); margin-top: 2px; }
+
+/* ── Tabs ──────────────────────────────────────────────────────────────── */
+.ge-tabs {
+  display: flex; gap: 6px; border-bottom: 1px solid var(--c-border);
+  margin: 8px 0 20px; overflow-x: auto;
+}
+.ge-tab {
+  border: none; background: none; padding: 12px 14px; font-size: 13.5px; font-weight: 600;
+  color: var(--c-ink-soft); border-bottom: 2px solid transparent; white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.ge-tab:hover { color: var(--c-forest); }
+.ge-tab--on { color: var(--c-forest); border-bottom-color: var(--c-forest); }
+
+/* ── Section title row ─────────────────────────────────────────────────── */
+.ge-section {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;
+}
+.ge-section h3 { font-size: 16px; font-weight: 800; color: var(--c-forest); }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.ge-btn {
+  display: inline-flex; align-items: center; gap: 7px; border-radius: 10px;
+  padding: 9px 15px; font-size: 13px; font-weight: 600; border: none; transition: .15s;
+}
+.ge-btn--primary { background: var(--c-forest); color: #fff; }
+.ge-btn--primary:hover { background: var(--c-forest-dk); transform: translateY(-1px); }
+.ge-btn--accent { background: var(--c-orange); color: #fff; box-shadow: 0 6px 18px rgba(255, 143, 1, .3); }
+.ge-btn--accent:hover { transform: translateY(-1px); }
+.ge-btn--ghost { background: transparent; color: var(--c-forest); border: 1.5px solid var(--c-border); }
+.ge-btn--ghost:hover { background: rgba(18, 80, 39, .06); border-color: var(--c-forest-mid); }
+
+/* ── Cards / rows ──────────────────────────────────────────────────────── */
+.ge-list { display: flex; flex-direction: column; gap: 12px; }
+.ge-card {
+  background: #fff; border: 1px solid var(--c-border); border-radius: 16px; padding: 18px;
+  display: flex; align-items: center; gap: 16px;
+}
+.ge-thumb {
+  width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(29, 202, 171, .14); color: var(--c-forest-mid); font-size: 22px; font-weight: 800;
+}
+.ge-grow { flex: 1; min-width: 0; }
+.ge-row-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ge-name { font-family: var(--font-head); font-weight: 800; font-size: 15px; color: var(--c-forest); }
+.ge-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--c-ink-soft); }
+.ge-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.ge-amount { text-align: right; flex-shrink: 0; }
+.ge-amount__num { font-family: var(--font-head); font-weight: 900; font-size: 17px; color: var(--c-forest); }
+.ge-amount__cap { font-size: 10.5px; color: var(--c-ink-soft); }
+
+/* ── Pills / badges ────────────────────────────────────────────────────── */
+.ge-pill {
+  font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 100px;
+  text-transform: uppercase; letter-spacing: .3px;
+}
+.ge-pill--published { color: var(--c-forest-mid); background: rgba(29, 202, 171, .14); }
+.ge-pill--draft     { color: var(--c-orange);     background: rgba(255, 143, 1, .14); }
+.ge-pill--enroll    { color: var(--c-forest-mid); background: rgba(29, 202, 171, .14); }
+.ge-pill--session   { color: var(--c-orange);     background: rgba(255, 143, 1, .14); }
+
+/* ── Empty state ───────────────────────────────────────────────────────── */
+.ge-empty {
+  border: 1.5px dashed var(--c-border); border-radius: 16px; padding: 34px 20px;
+  text-align: center; color: var(--c-ink-soft); font-size: 13.5px; background: var(--c-cream-2);
+}
+
+/* ── Avatar (applications / profile) ───────────────────────────────────── */
+.ge-avatar {
+  width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--c-forest); color: #fff; font-weight: 700; font-size: 17px;
+}
+.ge-avatar--lg { width: 72px; height: 72px; border-radius: 14px; font-size: 26px; }
+
+/* ── Expert profile ────────────────────────────────────────────────────── */
+.ge-profile { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; padding: 24px; }
+.ge-profile__top { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.ge-verified { font-size: 11px; color: var(--c-forest-mid); display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.ge-profile__bio { font-size: 13.5px; color: var(--c-ink); line-height: 1.6; margin-top: 16px; }
+.ge-label { font-size: 12px; font-weight: 700; color: var(--c-ink-soft); text-transform: uppercase; letter-spacing: .4px; }
+.ge-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ge-skill { font-size: 12px; padding: 5px 12px; border-radius: 100px; background: rgba(18, 80, 39, .07); color: var(--c-forest); font-weight: 600; }
+.ge-block { margin-top: 16px; }
+
+/* ── Earnings ──────────────────────────────────────────────────────────── */
+.ge-earn { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+.ge-earn__card { background: var(--c-forest); color: #fff; border-radius: 16px; padding: 22px; }
+.ge-earn__cap { font-size: 11.5px; color: rgba(255, 255, 255, .65); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
+.ge-earn__big { font-family: var(--font-head); font-weight: 900; font-size: 32px; letter-spacing: -1px; margin-top: 6px; }
+.ge-earn__next { font-size: 12px; color: rgba(255, 255, 255, .6); margin-top: 4px; }
+.ge-payouts { background: #fff; border: 1px solid var(--c-border); border-radius: 16px; padding: 8px; }
+.ge-payout { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; }
+.ge-payout + .ge-payout { border-top: 1px solid var(--c-border); }
+.ge-payout__amt { font-family: var(--font-head); font-weight: 800; color: var(--c-forest); }
+
+/* ── Loading + banner ──────────────────────────────────────────────────── */
+.ge-loading { padding: 60px 0; text-align: center; color: var(--c-ink-soft); font-size: 14px; }
+.ge-demo {
+  display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--c-ink-soft);
+  background: var(--c-cream-2); border: 1px solid var(--c-border); border-radius: 100px;
+  padding: 4px 12px; margin-top: 10px;
+}
+.ge-demo__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-orange); }
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .ge-stats { grid-template-columns: repeat(2, 1fr); }
+  .ge-earn { grid-template-columns: 1fr; }
+  .ge-card { flex-wrap: wrap; }
+  .ge-amount { text-align: left; }
+}

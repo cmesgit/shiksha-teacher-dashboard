@@ -1,9 +1,11 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 
+import { useAuth } from "../contexts/AuthContext";
 import PrivateSessionLive from "../pages/PrivateSessionLive";
 import TeacherLayout from "../layout/TeacherLayout";
 import TeacherDashboard from "../pages/TeacherDashboard";
+import GuestExpertDashboard from "../pages/GuestExpertDashboard";
 import ClassesList from "../pages/ClassesList";
 import Classes from "../pages/Classes";
 import TeacherLiveSession from "../pages/TeacherLiveSession";
@@ -50,6 +52,19 @@ function RedirectToMainLogin() {
     window.location.href = LOGIN_URL;
   }, []);
   return null;
+}
+
+/**
+ * /teacher/dashboard is the shared entry point. Pure guest experts get the
+ * guest-expert dashboard; faculty (and "both") get the academic dashboard.
+ * Guests can still reach /teacher/expert directly.
+ */
+function DashboardEntry() {
+  const { teacherInfo } = useAuth();
+  if (teacherInfo?.type === "GUEST") {
+    return <Navigate to="/teacher/expert" replace />;
+  }
+  return <TeacherDashboard />;
 }
 
 export default function TeacherRoutes() {
@@ -106,7 +121,8 @@ export default function TeacherRoutes() {
       >
         <Route path="profile" element={<Profile />} />
         <Route path="private-details" element={<PrivateDetails />} />
-        <Route path="dashboard" element={<TeacherDashboard />} />
+        <Route path="dashboard" element={<DashboardEntry />} />
+        <Route path="expert" element={<GuestExpertDashboard />} />
         <Route path="students" element={<AllStudents />} />
         <Route path="students/:studentId" element={<AllStudentDetail />} />
         <Route path="classes" element={<ClassesList />} />
