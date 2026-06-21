@@ -1,14 +1,9 @@
 /**
- * teacher_dashboard/src/routes/ProtectedTeacherRoute.jsx  (FULL REPLACEMENT)
- *
- * Requires the JWT to be in TEACHER context (not just authenticated).
- * If the user is authenticated but in learner/account context, redirects them
- * to the marketplace pick-profile page where they can enter teacher mode.
+ * src/routes/ProtectedTeacherRoute.jsx  ·  UPDATED — imports from config/urls.js
  */
 import { useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-
-const HOME_URL = import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com";
+import { LOGIN_URL, PICK_PROFILE_URL } from "../config/urls";
 
 export default function ProtectedTeacherRoute({ children }) {
   const { isAuthenticated, isTeacherContext, loading, context } = useAuth();
@@ -16,12 +11,11 @@ export default function ProtectedTeacherRoute({ children }) {
   useEffect(() => {
     if (loading) return;
     if (!isAuthenticated) {
-      window.location.href = HOME_URL + "/login";
+      window.location.href = LOGIN_URL;
       return;
     }
     if (!isTeacherContext) {
-      // In account or learner context — go to the picker to enter teacher mode
-      window.location.href = HOME_URL + "/pick-profile";
+      window.location.href = PICK_PROFILE_URL;
     }
   }, [loading, isAuthenticated, isTeacherContext, context]);
 

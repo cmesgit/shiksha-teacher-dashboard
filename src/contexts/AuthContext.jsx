@@ -1,24 +1,20 @@
 /**
- * AuthContext.jsx  ·  SHARED — copy into all 3 apps' src/contexts/
- * ─────────────────────────────────────────────────────────────────
- * Single-password model:
- *   • ONE email, ONE password — no separate teacher password
- *   • Teacher context entered with the SAME account password
- *   • Learner profiles are PIN-gated (4–6 digit numeric)
+ * AuthContext.jsx  ·  UPDATED — imports from config/urls.js
+ * ──────────────────────────────────────────────────────────
+ * Copy into all three apps: src/contexts/AuthContext.jsx
+ * All URL fallbacks now come from ../config/urls
+ * (or ../../config/urls for landing page if contexts/ is one level deeper).
  *
- * Set VITE_APP_TYPE="landing" | "student" | "teacher" in each app's .env
- * to control post-logout redirect behaviour.
- *
- * REMOVED vs old versions:
- *   - setTeacherPassword()  ← no separate teacher password
- *   - enterTeacherMode() no longer needs a different password
+ * For landing_page: the import path is "../config/urls"
+ * For student/teacher dashboards: same "../config/urls"
  */
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
+import { API_URL, LOGIN_URL } from "../config/urls";
 
-// ── Axios client ─────────────────────────────────────────────────────────────
+// ── Axios client ──────────────────────────────────────────────────────────────
 const api = axios.create({
-  baseURL:         import.meta.env.VITE_API_URL || "https://api.shikshacom.com/api",
+  baseURL:         API_URL,
   withCredentials: true,
 });
 
@@ -55,8 +51,7 @@ api.interceptors.response.use(
       return api(orig);
     } catch (e) {
       _flush(e);
-      const home = import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com";
-      window.location.href = home + "/login";
+      window.location.href = LOGIN_URL;
       return Promise.reject(e);
     } finally {
       _isRefreshing = false;
@@ -87,7 +82,7 @@ export function AuthProvider({ children }) {
   const [user,        setUser]        = useState(null);
   const [profiles,    setProfiles]    = useState([]);
   const [teacherInfo, setTeacherInfo] = useState(null);
-  const [context,     setContext]     = useState(null); // "account"|"learner"|"teacher"
+  const [context,     setContext]     = useState(null);
   const [loading,     setLoading]     = useState(true);
 
   const isAuthenticated       = !!user;
@@ -127,8 +122,7 @@ export function AuthProvider({ children }) {
       const data = res.data;
       setProfiles(data.profiles || []);
       setTeacherInfo(data.teacher || null);
-      setContext(data.context);   // may already be "learner" if backend auto-selected
-
+      setContext(data.context);
       if (data.context === "learner") {
         setLoading(true);
         await bootstrap();
@@ -139,7 +133,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Step 2A — select / switch learner profile (PIN-gated) ─────────────────
+  // ── Step 2A — select / switch learner profile ──────────────────────────────
   const selectProfile = async (profileId, pin) => {
     try {
       await api.post("/accounts/profiles/select/", { profile_id: profileId, pin });
@@ -150,18 +144,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const switchProfile = selectProfile; // alias
+  const switchProfile = selectProfile;
 
-  // ── Step 2B — enter teacher context (ACCOUNT password — same as login) ─────
-  /**
-   * Enter teacher mode with the same password used to log in.
-   *
-   * Returns:
-   *   { ok: true }           → switched to teacher context
-   *   { needsSignup: true }  → no teacher identity on this account
-   *   { notApproved: true }  → pending admin approval
-   *   throws { message }     → wrong password / other error
-   */
+  // ── Step 2B — enter teacher context (account password) ────────────────────
   const enterTeacherMode = async (password) => {
     try {
       await api.post("/accounts/context/teacher/", { password });
@@ -176,7 +161,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Profile PIN helpers ────────────────────────────────────────────────────
+  // ── Profile PIN ────────────────────────────────────────────────────────────
   const setProfilePin = async (profileId, pin) => {
     try {
       const res = await api.post("/accounts/profiles/pin/", {
@@ -227,14 +212,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try { await api.post("/accounts/logout/"); } catch { /* ignore */ }
     setUser(null); setProfiles([]); setTeacherInfo(null); setContext(null);
-
-    const appType = import.meta.env.VITE_APP_TYPE;
-    if (appType === "landing") {
-      window.location.href = "/login";
-    } else {
-      const home = import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com";
-      window.location.href = home + "/login";
-    }
+    window.location.href = LOGIN_URL;
   };
 
   // ── Role check ─────────────────────────────────────────────────────────────
@@ -252,8 +230,7 @@ export function AuthProvider({ children }) {
         isAuthenticated, needsProfileSelection, isTeacherContext, isLearnerContext,
         loading, api,
         login, selectProfile, switchProfile,
-        enterTeacherMode,   // uses account password — NO separate teacher password
-        setProfilePin,
+        enterTeacherMode, setProfilePin,
         signup, lookupEmail, checkEmail, logout, hasRole, bootstrap,
       }}
     >
