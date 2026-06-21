@@ -74,3 +74,17 @@ export const FORM_FILLUP_URL  = HOME_URL + "/form-fillup";
 
 // Student dashboard entry point
 export const APP_DASHBOARD_URL     = APP_URL;
+
+// ── Academy / Skill-dev track destinations (added for the track switcher) ──
+// "academy" maps to the Faculty dashboard, "skill" to the Guest-expert one.
+export const TEACHER_ACADEMY_URL = TEACHER_URL + "/teacher/dashboard";
+export const TEACHER_SKILL_URL   = TEACHER_URL + "/teacher/expert";
+
+// Where a student is sent to enroll in a track they are not in yet.
+export const ACADEMY_BROWSE_URL = HOME_URL + "/courses";
+export const SKILL_BROWSE_URL   = HOME_URL + "/skill-development";
+
+// Signup deep-link for adding a teaching track to an already-signed-in account
+// (skips the email / username step). track = "academy" | "skill".
+export const signupAddTrackUrl = (track) =>
+  `${HOME_URL}/signup?role=teacher&add_track=${encodeURIComponent(track)}`;

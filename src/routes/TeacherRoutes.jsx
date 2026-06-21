@@ -55,13 +55,17 @@ function RedirectToMainLogin() {
 }
 
 /**
- * /teacher/dashboard is the shared entry point. Pure guest experts get the
- * guest-expert dashboard; faculty (and "both") get the academic dashboard.
- * Guests can still reach /teacher/expert directly.
+ * /teacher/dashboard is the shared entry point. Pure guest experts — and any
+ * teacher whose active track is Skill-dev — get the guest-expert dashboard;
+ * everyone else (faculty / academy) gets the academic dashboard. Either way,
+ * the header switch lets approved teachers move between the two.
  */
 function DashboardEntry() {
   const { teacherInfo } = useAuth();
-  if (teacherInfo?.type === "GUEST") {
+  const goesToExpert =
+    teacherInfo?.type === "GUEST" ||
+    teacherInfo?.active_track === "skill";
+  if (goesToExpert) {
     return <Navigate to="/teacher/expert" replace />;
   }
   return <TeacherDashboard />;

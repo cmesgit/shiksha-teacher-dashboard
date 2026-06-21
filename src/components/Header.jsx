@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
 import { useAuth } from "../contexts/AuthContext";
 import ProfileSwitcher from "../shared/ProfileSwitcher";
+import TrackSwitcher from "./TrackSwitcher";
 import NotificationBell from "./NotificationBell";
 import "../styles/header.css";
 import "../shared/ProfileSwitcher.css";
@@ -28,6 +29,9 @@ export default function Header({ onMenuClick }) {
       </button>
 
       <div style={{ flex: 1 }} />
+
+      {/* Academy ⟷ Skill-dev switch (locked tracks deep-link to signup) */}
+      <TrackSwitcher />
 
       <NotificationBell />
 

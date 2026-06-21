@@ -1,0 +1,59 @@
+/* TrackSwitcher — segmented pill that sits in the teacher header. */
+.trackSwitcher {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(31, 45, 61, 0.15);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+  margin-right: 14px;
+}
+
+.trackSwitcher__seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #1f2d3d;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.trackSwitcher__seg:hover:not(.is-active):not(.is-pending) {
+  background: rgba(31, 45, 61, 0.06);
+}
+
+.trackSwitcher__seg.is-active {
+  background: #14706e;
+  color: #ffffff;
+}
+
+.trackSwitcher__seg.is-locked { color: #7c8a99; }
+.trackSwitcher__seg.is-pending { color: #9a7b18; cursor: default; }
+
+.trackSwitcher__lock { font-size: 14px; }
+
+.trackSwitcher__badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: rgba(154, 123, 24, 0.15);
+  color: #9a7b18;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .trackSwitcher { margin-right: 8px; }
+  .trackSwitcher__seg { padding: 6px 10px; font-size: 12px; }
+  .trackSwitcher__seg .trackSwitcher__badge { display: none; }
+}

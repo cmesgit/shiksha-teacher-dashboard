@@ -261,10 +261,17 @@ export default function ProfileSwitcher({
             <div className="ps-dropdown__divider" />
             <a
               className="ps-dropdown__item ps-dropdown__item--manage"
+              href={`${HOME_URL}/manage-profiles?add=1`}
+            >
+              <span className="ps-dropdown__item-icon">+</span>
+              <span className="ps-dropdown__item-name">Add account</span>
+            </a>
+            <a
+              className="ps-dropdown__item ps-dropdown__item--manage"
               href={`${HOME_URL}/manage-profiles`}
             >
               <span className="ps-dropdown__item-icon">⚙</span>
-              <span className="ps-dropdown__item-name">Manage profiles</span>
+              <span className="ps-dropdown__item-name">Manage accounts</span>
             </a>
             <button className="ps-dropdown__item ps-dropdown__item--logout" onClick={logout}>
               <span className="ps-dropdown__item-icon">↩</span> Sign out

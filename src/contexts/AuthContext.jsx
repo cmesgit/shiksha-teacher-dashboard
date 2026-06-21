@@ -169,16 +169,18 @@ export function AuthProvider({ children }) {
   const switchProfile = selectProfile;
 
   // ── Step 2B — enter teacher context (account password) ────────────────────
-  const enterTeacherMode = async (password) => {
+  const enterTeacherMode = async (password, track) => {
     try {
-      await api.post("/accounts/context/teacher/", { password });
+      await api.post("/accounts/context/teacher/", { password, track });
       setLoading(true);
       await bootstrap();
       return { ok: true };
     } catch (err) {
       const code = err?.response?.data?.code;
-      if (code === "no_teacher")   return { needsSignup: true };
-      if (code === "not_approved") return { notApproved: true };
+      if (code === "no_teacher")    return { needsSignup: true };
+      if (code === "not_approved")  return { notApproved: true };
+      if (code === "track_pending") return { trackPending: true };
+      if (code === "track_locked")  return { trackLocked: true };
       return Promise.reject({ message: extractError(err), raw: err });
     }
   };
