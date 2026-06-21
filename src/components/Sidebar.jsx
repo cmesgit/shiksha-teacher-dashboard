@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/apiClient";
 import logo from "../assets/Shiksha.svg";
 import "../styles/sidebar.css";
+import { HOME_URL } from "../config/urls";
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate();
@@ -183,7 +184,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
             </nav>
       <div className="sidebar__bottom">
         <a
-          href={import.meta.env.VITE_HOME_URL || "https://shikshacom.com"}
+          href={HOME_URL}
           className="sidebar__homeBtn"
         >
           <FiHome />

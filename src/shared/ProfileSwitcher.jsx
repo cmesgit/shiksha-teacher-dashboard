@@ -17,6 +17,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
+import { HOME_URL } from "../config/urls";
 
 const DEFAULT_EMOJI = "📚";
 
@@ -258,6 +259,13 @@ export default function ProfileSwitcher({
             )}
 
             <div className="ps-dropdown__divider" />
+            <a
+              className="ps-dropdown__item ps-dropdown__item--manage"
+              href={`${HOME_URL}/manage-profiles`}
+            >
+              <span className="ps-dropdown__item-icon">⚙</span>
+              <span className="ps-dropdown__item-name">Manage profiles</span>
+            </a>
             <button className="ps-dropdown__item ps-dropdown__item--logout" onClick={logout}>
               <span className="ps-dropdown__item-icon">↩</span> Sign out
             </button>
