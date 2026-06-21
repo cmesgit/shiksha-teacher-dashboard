@@ -31,6 +31,16 @@ api.interceptors.response.use(
     const orig = error.config;
     const st   = error.response?.status;
     const url  = orig?.url || "";
+
+    // FIX 1: never intercept /me/ or /notifications/ calls.
+    // Bootstrap calls /me/ → if it gets a 401 the interceptor would fire,
+    // refresh would fail, and window.location.href = LOGIN_URL would cause a
+    // hard reload of the login page → bootstrap runs again → loop forever.
+    // Bootstrap already handles /me/ 401s itself (manual refresh + retry).
+    if (url.includes("/me/") || url.includes("/notifications/")) {
+      return Promise.reject(error);
+    }
+
     if (
       st !== 401 || orig._retry ||
       url.includes("/accounts/refresh/") ||
@@ -51,7 +61,19 @@ api.interceptors.response.use(
       return api(orig);
     } catch (e) {
       _flush(e);
-      window.location.href = LOGIN_URL;
+      // FIX 2: only redirect if we are NOT already on an auth page.
+      // Without this guard, a failed refresh on any auth page sends the user
+      // back to /login, which boots the app, which fires the redirect again.
+      const p = window.location.pathname;
+      const onAuthPage =
+        p === "/login" ||
+        p === "/signup" ||
+        p.startsWith("/verify-email") ||
+        p.startsWith("/forgot-password") ||
+        p.startsWith("/email-verified");
+      if (!onAuthPage) {
+        window.location.href = LOGIN_URL;
+      }
       return Promise.reject(e);
     } finally {
       _isRefreshing = false;
