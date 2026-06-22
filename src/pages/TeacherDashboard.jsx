@@ -280,43 +280,8 @@ export default function TeacherDashboard() {
   return (
     <div className="dashboard">
 
-      {/* Dashboard type switcher — only visible for TYPE_BOTH teachers */}
-      {isBoth && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          marginBottom: 18, padding: "4px",
-          background: "#d9cfce", borderRadius: 100,
-          width: "fit-content",
-        }}>
-          {/* Faculty — active on this page */}
-          <button style={{
-            padding: "7px 15px", borderRadius: 100,
-            fontSize: 12, fontWeight: 700,
-            background: "#425f7f", color: "#fff",
-            border: "none", cursor: "default",
-            display: "inline-flex", alignItems: "center", gap: 6,
-            boxShadow: "0 2px 6px rgba(0,0,0,.18)",
-          }}>
-            📚 Faculty
-          </button>
-          {/* Expert — inactive, navigates */}
-          <button
-            onClick={() => navigate("/teacher/expert")}
-            style={{
-              padding: "7px 15px", borderRadius: 100,
-              fontSize: 12, fontWeight: 700,
-              background: "transparent", color: "#6b5e5d",
-              border: "none", cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 6,
-              transition: ".15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,.06)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          >
-            🎯 Expert
-          </button>
-        </div>
-      )}
+      {/* The Faculty/Expert switch now lives in the shared header
+         (TrackSwitcher) — removed here to avoid a duplicate. */}
 
       {/* Row 1: Live Sessions */}
       <div className="dash-live-section">

@@ -12,10 +12,11 @@
  */
 import { useState, useRef, useEffect } from "react";
 import {
-  RiAddLine, RiGroupLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine,
+  RiAddLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine, RiSettings3Line,
 } from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
+import SettingsModal from "./SettingsModal";
 import { HOME_URL } from "../config/urls";
 
 const DEFAULT_EMOJI = "📚";
@@ -114,6 +115,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
   const [open, setOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState(null);
   const [showPwModal, setShowPwModal] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [modalError, setModalError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
   const ref = useRef(null);
@@ -220,9 +222,9 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
               <a className="ps-mi" href={`${HOME_URL}/manage-profiles?add=1`} role="menuitem">
                 <RiAddLine /> Add account
               </a>
-              <a className="ps-mi" href={`${HOME_URL}/manage-profiles`} role="menuitem">
-                <RiGroupLine /> Manage profiles
-              </a>
+              <button className="ps-mi" onClick={() => { setOpen(false); setSettingsOpen(true); }} role="menuitem">
+                <RiSettings3Line /> Settings
+              </button>
               <button className="ps-mi ps-mi--logout" onClick={logout} role="menuitem">
                 <RiLogoutBoxRLine /> Log out
               </button>
@@ -242,6 +244,8 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
           onCancel={() => { setShowPwModal(false); setModalError(""); }}
           loading={modalLoading} error={modalError} />
       )}
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }
