@@ -1,16 +1,17 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    trackSwitcher.css  ·  Academy ⟷ Skill Dev pill toggle
-   Matches the Auth Flow / student-dashboard design:
-     pill bg      : #d9cfce  (warm taupe)
-     inactive text: #6b5e5d  (warm brown)
-     Academy active: #41565b (dark teal-charcoal, teacher context)
-     Skill Dev active: #ff8f01 (orange — matches screenshot)
-   ctx-teacher class on the wrapper keeps both pills in the "teacher" palette.
+   Spec from Auth Flow handoff doc (rd-switch):
+     Pill track bg : #d9cfce  (warm taupe — same as student)
+     Inactive text : #6b5e5d  (warm brown)
+     ctx-teacher active : #425f7f  (slate blue — BOTH tabs, teacher context)
+     ctx-skill active   : #ff8f01  (orange — only for student Skill Dev)
+   The teacher dashboard always uses ctx-teacher, so both pills use #425f7f
+   when active.  The component adds ctx-skill only on student app.
 ───────────────────────────────────────────────────────────────────────────── */
 
 .trackSwitcher {
   display: inline-flex;
-  background: rgba(217, 207, 206, 0.55);
+  background: #d9cfce;
   border-radius: 100px;
   padding: 3px;
   gap: 2px;
@@ -25,57 +26,56 @@
   border-radius: 100px;
   font-size: 12px;
   font-weight: 700;
-  color: rgba(255,255,255,0.65);
+  color: #6b5e5d;
   line-height: 1;
   border: none;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .trackSwitcher__seg:hover:not(.is-active):not(.is-locked) {
-  color: rgba(255,255,255,0.85);
-  background: rgba(255,255,255,0.08);
+  background: rgba(0, 0, 0, 0.06);
+  color: #3d3533;
 }
 
-/* ── Active states ── */
-/* Academy active → dark teal pill */
+/* ── Active: student academy default (teal #015865) ── */
 .trackSwitcher__seg.is-active {
-  background: #fff;
-  color: #1a3035;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  background: #015865;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
-/* Skill Dev active → orange pill (ctx-skill on wrapper) */
+/* ── Student Skill Dev → orange ── */
 .trackSwitcher.ctx-skill .trackSwitcher__seg.is-active {
   background: #ff8f01;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(255,143,1,0.40);
+  box-shadow: 0 2px 6px rgba(255, 143, 1, 0.35);
 }
 
-/* Teacher in Academy mode → white pill with dark text (clean, professional) */
+/* ── Teacher context → slate #425f7f for BOTH tabs ── */
 .trackSwitcher.ctx-teacher .trackSwitcher__seg.is-active {
-  background: #fff;
-  color: #41565b;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+  background: #425f7f;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(66, 95, 127, 0.30);
 }
 
 /* ── Locked ── */
 .trackSwitcher__seg.is-locked {
-  color: rgba(255,255,255,0.35);
+  color: #9a8f8e;
   cursor: default;
 }
 
 .trackSwitcher__seg.is-locked:hover {
   background: transparent;
-  color: rgba(255,255,255,0.35);
+  color: #9a8f8e;
 }
 
 .trackSwitcher__lock {
-  font-size: 11px;
-  opacity: 0.7;
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 /* ── Pending badge ── */
@@ -84,13 +84,16 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  background: rgba(255,143,1,0.22);
-  color: #ff8f01;
+  background: rgba(154, 123, 24, 0.18);
+  color: #9a7b18;
   padding: 2px 6px;
   border-radius: 100px;
 }
 
 @media (max-width: 600px) {
+  .trackSwitcher {
+    margin-right: 8px;
+  }
   .trackSwitcher__seg {
     padding: 6px 10px;
     font-size: 11px;

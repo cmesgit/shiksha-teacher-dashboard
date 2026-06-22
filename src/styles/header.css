@@ -1,20 +1,31 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    header.css  ·  Teacher dashboard header
-   Dark forest green (#041f09 → #0b2e12 gradient) to match Auth Flow design.
-   Right-aligns: TrackSwitcher · NotificationBell · ProfileSwitcher avatar.
+   Spec from Auth Flow handoff doc:
+     Faculty (Academy):  body bg #c9d1de — header matches
+     Expert (Skill Dev): body bg #f3e2da — header matches
+   The header background is set via a class on .teacher-main so it matches
+   whichever mode is active. Default (faculty) = #c9d1de.
+   The .header--expert modifier switches to #f3e2da.
 ───────────────────────────────────────────────────────────────────────────── */
 
 .header {
-  height: 58px;
+  height: 60px;
   display: flex;
-  align-items: center;
   justify-content: flex-end;
+  align-items: center;
   padding: 0 20px;
-  background: linear-gradient(135deg, #041f09 0%, #0b2e12 100%);
+  background: #c9d1de;            /* faculty / academy default */
   position: relative;
   z-index: 100;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(66, 95, 127, 0.12);
+}
+
+/* Expert / Skill Dev mode — body and header both shift warm */
+.header--expert {
+  background: #f3e2da;
+  border-bottom-color: rgba(180, 64, 46, 0.12);
 }
 
 /* ── Hamburger (mobile only) ── */
@@ -25,119 +36,67 @@
   padding: 0;
   margin-right: auto;
   cursor: pointer;
-  color: rgba(255,255,255,0.85);
+  color: #1f2d3d;
   line-height: 1;
 }
 
 .hamburgerBtn svg {
-  font-size: 28px;
+  font-size: 30px;
 }
 
 .hamburgerBtn:hover {
-  color: #fff;
+  color: #000;
 }
 
-/* ── Notification Bell — inherits from existing notif-bell-* classes ── */
-/* Override bell button colour for the dark header */
+/* ── Notification bell colour on each mode ── */
 .notif-bell-btn {
-  color: rgba(255,255,255,0.75);
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  color: #374151;
   border-radius: 8px;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s;
 }
 
 .notif-bell-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: rgba(0, 0, 0, 0.07);
 }
 
 .notif-bell-badge {
-  background: #ff8f01;
-}
-
-/* ── ProfileSwitcher avatar button — override for dark header ── */
-.ps-avatar-btn {
-  background: rgba(255,255,255,0.12);
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #ef4444;
   color: #fff;
-  border: 1.5px solid rgba(255,255,255,0.18);
-  transition: background 0.15s, box-shadow 0.15s;
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.ps-avatar-btn:hover {
-  background: rgba(255,255,255,0.2);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.28);
-}
-
-/* ── Profile menu dropdown stays white, positioned normally ── */
-.ps-prof {
-  top: 50px;
-}
-
-/* ── Divider spacer between TrackSwitcher and bell ── */
-.header__spacer {
-  width: 1px;
-  height: 22px;
-  background: rgba(255,255,255,0.12);
-  flex-shrink: 0;
-  margin: 0 4px;
-}
-
-/* ─────────── RESPONSIVE ─────────── */
-@media (max-width: 768px) {
-  .header {
-    padding: 0 14px;
-    gap: 4px;
-  }
-
-  .hamburgerBtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* On mobile the TrackSwitcher is hidden (the mobile top slider tabs handle navigation) */
-  .header .trackSwitcher {
-    display: none;
-  }
-
-  .header__spacer {
-    display: none;
-  }
-}
-
-@media (min-width: 769px) {
-  .hamburgerBtn {
-    display: none;
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Notification bell dropdown (unchanged behaviour, colour tweaks only)
-───────────────────────────────────────────────────────────────────────────── */
-
+/* ── Notification dropdown (unchanged) ── */
 .notif-bell-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.notif-bell-btn {
-  position: relative;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 7px;
-  display: flex;
-  align-items: center;
-}
-
 .notif-bell-dropdown {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
   width: 320px;
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 12px 44px rgba(0,0,0,0.22);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   overflow: hidden;
 }
@@ -147,7 +106,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -155,23 +114,19 @@
 .notif-clear-btn {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 12px;
   cursor: pointer;
   font-family: inherit;
 }
 
-.notif-clear-btn:hover {
-  color: #374151;
-}
-
 .notif-bell-list {
-  max-height: 360px;
+  max-height: 380px;
   overflow-y: auto;
 }
 
 .notif-bell-empty {
-  padding: 28px;
+  padding: 24px;
   text-align: center;
   color: #9ca3af;
   font-size: 13px;
@@ -184,7 +139,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid #f9fafb;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.15s;
 }
 
 .notif-bell-item:hover {
@@ -208,4 +163,27 @@
   font-size: 11px;
   color: #9ca3af;
   margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .header {
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+
+  .hamburgerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 769px) {
+  .hamburgerBtn {
+    display: none;
+  }
 }

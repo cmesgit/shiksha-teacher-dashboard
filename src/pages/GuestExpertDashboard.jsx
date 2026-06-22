@@ -1,12 +1,11 @@
-// src/pages/GuestExpertDashboard.jsx  — REDESIGNED
+// src/pages/GuestExpertDashboard.jsx  — REDESIGNED (correct colours)
 // ──────────────────────────────────────────────────────────────────────
-// Skill Dev / Expert teacher dashboard.
-// Design: warm cream body (#f5eedb from layout), white cards, orange
-// CTAs, dark forest-green text — matching Auth Flow student screenshot.
-//
-// Route:   /teacher/expert  (inside TeacherLayout)
-// Who:     GUEST teachers always land here.
-//          BOTH teachers land here when active_track === "skill".
+// Expert / Skill Dev teacher dashboard.
+// Colours per Auth Flow handoff doc:
+//   body bg  #f3e2da  (warm blush — from .teacher-content--expert)
+//   sidebar  #b3402e  (from .sidebar--expert)
+//   accent   #c0492f  (buttons, active elements, progress bar)
+// White/light cards (#f4f7f8) on warm blush background.
 // ──────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from "react";
@@ -19,7 +18,7 @@ import "../styles/guestExpert.css";
 /* ── Inline SVG icons ─────────────────────────────────────────────── */
 const Ic = {
   Users: () => (
-    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
       <circle cx="9" cy="7" r="4"/>
       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -27,19 +26,19 @@ const Ic = {
     </svg>
   ),
   Trending: () => (
-    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
       <polyline points="17 6 23 6 23 12"/>
     </svg>
   ),
   Bell: () => (
-    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
   ),
   Check: () => (
-    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
       <polyline points="22 4 12 14.01 9 11.01"/>
     </svg>
@@ -54,7 +53,7 @@ const Ic = {
 const initOf = (s = "") =>
   (s || "?").trim().split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
-const ACTIVITY_COLORS = ["#2f9d42", "#13899b", "#ff8f01", "#7c6fcd", "#2f9d42"];
+const ACTIVITY_COLORS = ["#c0492f", "#13899b", "#e07055", "#9b59b6", "#c0492f"];
 
 export default function GuestExpertDashboard() {
   const { user, teacherInfo } = useAuth();
@@ -163,10 +162,8 @@ export default function GuestExpertDashboard() {
       {/* ── Main grid ── */}
       <div className="ge-grid">
 
-        {/* Left column */}
+        {/* Left column — session queue */}
         <div className="ge-col-left">
-
-          {/* Next up today */}
           <div className="ge-card">
             <h4>Next up today</h4>
 
@@ -190,7 +187,7 @@ export default function GuestExpertDashboard() {
                     <div className="ge-session-name">{name}</div>
                     {(sessionNo || topic) && (
                       <div className="ge-session-meta">
-                        {sessionNo}{sessionNo && topic ? ` · ` : ""}{topic}
+                        {sessionNo}{sessionNo && topic ? " · " : ""}{topic}
                       </div>
                     )}
                     {time && (
@@ -220,13 +217,11 @@ export default function GuestExpertDashboard() {
               View all bookings →
             </button>
           </div>
-
         </div>
 
-        {/* Right column */}
+        {/* Right column — earnings + activity */}
         <div className="ge-col-right">
 
-          {/* Earnings */}
           <div className="ge-earnings-card">
             <h4>This month</h4>
             <div className="ge-earnings-amount">
@@ -237,17 +232,13 @@ export default function GuestExpertDashboard() {
             </div>
             <div className="ge-earnings-sub">Earned · {monthSessions} sessions</div>
             <div className="ge-progress-bar">
-              <div
-                className="ge-progress-fill"
-                style={{ width: `${goalPct}%` }}
-              />
+              <div className="ge-progress-fill" style={{ width: `${goalPct}%` }} />
             </div>
             <div className="ge-progress-label">
               {goalPct}% to your ₹{(monthGoal / 1000).toFixed(0)}k goal
             </div>
           </div>
 
-          {/* Recent activity */}
           <div className="ge-activity-card">
             <h4>Recent activity</h4>
             <div className="ge-activity-list">

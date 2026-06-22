@@ -1,11 +1,13 @@
 /**
  * teacher_dashboard/src/components/Header.jsx  (REDESIGNED)
  *
- * Dark forest-green header (#041f09 → #0b2e12 gradient) matching the
- * Auth Flow student-side design. Right-aligns:
- *   TrackSwitcher · [divider] · NotificationBell · ProfileSwitcher
+ * Colours per Auth Flow handoff doc:
+ *   Faculty mode  → bg #c9d1de  (cool blue-grey — isExpertPage=false)
+ *   Expert mode   → bg #f3e2da  (warm blush    — isExpertPage=true)
+ * The .header--expert CSS class handles the switch.
+ *
+ * TrackSwitcher always uses ctx-teacher so both pills use #425f7f when active.
  */
-import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
 import { useAuth } from "../contexts/AuthContext";
@@ -17,12 +19,9 @@ import "../shared/ProfileSwitcher.css";
 
 import { HOME_URL, APP_URL } from "../config/urls";
 
-export default function Header({ onMenuClick }) {
-  const { user } = useAuth();
-
+export default function Header({ onMenuClick, isExpertPage }) {
   return (
-    <header className="header">
-      {/* Hamburger — mobile only, shown via CSS */}
+    <header className={`header${isExpertPage ? " header--expert" : ""}`}>
       <button
         className="hamburgerBtn"
         onClick={onMenuClick}
@@ -32,18 +31,13 @@ export default function Header({ onMenuClick }) {
         <HiOutlineMenuAlt3 />
       </button>
 
-      {/* Push everything to the right on desktop */}
       <div style={{ flex: 1 }} />
 
-      {/* Academy ⟷ Skill Dev switch */}
+      {/* Academy ⟷ Skill Dev switch — always ctx-teacher on the teacher app */}
       <TrackSwitcher />
-
-      {/* Visual divider */}
-      <div className="header__spacer" aria-hidden="true" />
 
       <NotificationBell />
 
-      {/* ProfileSwitcher avatar */}
       <ProfileSwitcher
         teacherSignupUrl={`${HOME_URL}/signup?role=teacher`}
         learnUrl={APP_URL}

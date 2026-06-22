@@ -20,12 +20,11 @@ export default function TeacherLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const isLiveSession = location.pathname.startsWith("/live/");
-  const isClassesPage = location.pathname.startsWith("/teacher/classes");
+  const isLiveSession  = location.pathname.startsWith("/live/");
+  const isClassesPage  = location.pathname.startsWith("/teacher/classes");
   const hideTopSliderOnMobile = isMobile && isClassesPage;
 
-  // The guest-expert dashboard has its own tab bar — suppress the faculty
-  // top-slider tabs on that route.
+  // Expert / Skill Dev route — drives sidebar + body bg colour change
   const isExpertPage = location.pathname.startsWith("/teacher/expert");
 
   // ── LIVE SESSION FULLSCREEN ──────────────────────────────
@@ -42,20 +41,34 @@ export default function TeacherLayout() {
   // ── NORMAL LAYOUT ────────────────────────────────────────
   return (
     <div className="teacher-layout">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      {/* Sidebar: --expert modifier switches bg from #425f7f → #b3402e */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        isExpertPage={isExpertPage}
+      />
 
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
       <div className="teacher-main">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        {/* Header: --expert modifier switches bg from #c9d1de → #f3e2da */}
+        <Header
+          onMenuClick={() => setSidebarOpen(true)}
+          isExpertPage={isExpertPage}
+        />
 
+        {/* Top slider tabs: only on faculty routes (not expert, not classes-mobile) */}
         {!hideTopSliderOnMobile && !isExpertPage && (
           <TeacherTopSliderTabs active={active} setActive={setActive} />
         )}
 
-        <main className="teacher-content" {...swipeHandlers}>
+        {/* Content area: --expert modifier switches bg from #c9d1de → #f3e2da */}
+        <main
+          className={`teacher-content${isExpertPage ? " teacher-content--expert" : ""}`}
+          {...swipeHandlers}
+        >
           <Outlet context={{ active, setActive }} />
         </main>
       </div>
