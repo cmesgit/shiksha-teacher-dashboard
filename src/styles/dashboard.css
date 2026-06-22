@@ -1,29 +1,35 @@
-/* ===== DASHBOARD — 4-column grid ===== */
+/* ─────────────────────────────────────────────────────────────────────────────
+   dashboard.css  ·  Faculty (academy) teacher dashboard
+   Updated card colours to sit well on #f5eedb cream background.
+   Cards: white (#fff) instead of #f4f7f8.
+   Header gradient bar: dark forest green to match overall theme.
+───────────────────────────────────────────────────────────────────────────── */
 
+/* ── DASHBOARD GRID ── */
 .dashboard {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
   grid-template-rows: 2fr 3fr;
   gap: 14px;
-  height: 100vh;
-  padding: 16px;
+  height: 100%;
+  padding: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
 
-/* ── UPCOMING LIVE SESSIONS  (col 1-3, row 1) ── */
-
+/* ── UPCOMING LIVE SESSIONS (col 1-3, row 1) ── */
 .dash-live-section {
   grid-column: 1 / 4;
   grid-row: 1;
-  background: #f4f7f8;
+  background: #fff;
   border-radius: 18px;
   padding: 14px 16px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(4,31,9,0.09);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  border: 1px solid rgba(4,31,9,0.06);
 }
 
 .dash-live-header {
@@ -36,14 +42,17 @@
 
 .dash-section-title {
   font-size: 15px;
-  font-weight: 600;
-  color: #1f2d3d;
+  font-weight: 700;
+  color: #0e2d14;
 }
 
 .dash-remaining {
   font-size: 11px;
-  font-weight: 500;
-  color: #5a6a72;
+  font-weight: 600;
+  color: rgba(14,45,20,0.5);
+  background: rgba(14,45,20,0.06);
+  padding: 3px 10px;
+  border-radius: 100px;
 }
 
 .dash-live-row {
@@ -59,18 +68,17 @@
 
 .dash-live-row::-webkit-scrollbar { width: 4px; height: 4px; }
 .dash-live-row::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,.15);
+  background: rgba(4,31,9,.15);
   border-radius: 10px;
 }
 
 /* ── LIVE SESSION CARDS ── */
-
 .live-card {
-  background: #13899b;
+  background: linear-gradient(135deg, #0e4d26 0%, #13899b 100%);
   border-radius: 14px;
   overflow: hidden;
-  color: white;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(4,31,9,0.22);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -109,19 +117,19 @@
   margin: 0;
 }
 
-/* ── CALENDAR  (col 4, row 1) ── */
-
+/* ── CALENDAR (col 4, row 1) ── */
 .calendar {
   grid-column: 4;
   grid-row: 1;
-  background: #f4f7f8;
+  background: #fff;
   border-radius: 18px;
   padding: 14px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(4,31,9,0.09);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  border: 1px solid rgba(4,31,9,0.06);
 }
 
 .calendar-header {
@@ -135,16 +143,16 @@
 .cal-arrow {
   cursor: pointer;
   font-size: 14px;
-  color: #343434;
+  color: #0e2d14;
 }
 
 .cal-select {
-  border: 1px solid #d6d6d6;
+  border: 1.5px solid #d6d6d6;
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #222;
+  color: #0e2d14;
   background: white;
   cursor: pointer;
   outline: none;
@@ -163,14 +171,11 @@
 
 .cal-day-name {
   font-size: 0.72rem;
-  font-weight: 600;
-  color: #3e3e3e;
+  font-weight: 700;
+  color: rgba(14,45,20,0.55);
   padding: 2px 0;
 }
 
-/* ── Calendar date cell ──
-   KEY FIX: removed width/height/border-radius:50%.
-   Cell is a flex column — number on top, dots below. */
 .cal-date {
   font-size: 0.72rem;
   line-height: 1;
@@ -182,33 +187,30 @@
   justify-content: center;
   padding: 2px 1px;
   min-height: 0;
-  color: #5b5b5b;
-  transition: background 0.15s;
+  color: #3a4a3d;
+  transition: background 0.12s;
 }
 
 .cal-date:hover {
-  background: rgba(19, 137, 155, 0.08);
+  background: rgba(14,45,20,0.07);
 }
 
-/* Today — red rounded rect */
 .cal-today {
-  background: #ff5252;
-  color: white;
+  background: #ff8f01;
+  color: #fff;
   font-weight: 700;
   border-radius: 6px;
 }
 
-.cal-today:hover { background: #ef4444; }
+.cal-today:hover { background: #e07f00; }
 
-/* Selected — teal outline */
 .cal-selected {
-  outline: 2.5px solid #13899b;
+  outline: 2.5px solid #0e2d14;
   outline-offset: -2px;
   font-weight: 700;
   border-radius: 6px;
 }
 
-/* Event dots */
 .calDate__dots {
   display: flex;
   gap: 2px;
@@ -225,14 +227,13 @@
   display: block;
 }
 
-/* Calendar Legend */
 .cal-legend {
   display: flex;
   justify-content: center;
   gap: 6px 10px;
   margin-top: 8px;
   padding-top: 6px;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid rgba(4,31,9,0.07);
   flex-wrap: wrap;
   flex-shrink: 0;
   row-gap: 4px;
@@ -256,18 +257,18 @@
   flex-shrink: 0;
 }
 
-/* ── BOTTOM 4 CARDS  (row 2) ── */
-
+/* ── BOTTOM CARDS (row 2) ── */
 .dash-card {
   grid-row: 2;
-  background: #f4f7f8;
+  background: #fff;
   border-radius: 18px;
   padding: 16px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(4,31,9,0.09);
   min-height: 0;
   overflow: hidden;
+  border: 1px solid rgba(4,31,9,0.06);
 }
 
 .dashboard > :nth-child(3) { grid-column: 1; grid-row: 2; }
@@ -284,29 +285,29 @@
 }
 
 .dash-card-header h4 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0e2d14;
   margin: 0;
 }
 
 .dash-filter {
-  border: none;
+  border: 1.5px solid rgba(4,31,9,0.12);
   border-radius: 8px;
   padding: 5px 10px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #222;
-  background: white;
+  color: #0e2d14;
+  background: #f8f5ee;
   cursor: pointer;
   outline: none;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
+/* Pills */
 .dash-pills {
   display: flex;
   gap: 0;
-  background: #d7dfec;
+  background: rgba(14,45,20,0.08);
   border-radius: 10px;
   padding: 2px;
 }
@@ -315,24 +316,25 @@
   border: none;
   background: transparent;
   font-size: 12px;
-  font-weight: 400;
-  padding: 6px 12px;
-  border-radius: 10px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 8px;
   cursor: pointer;
+  color: rgba(14,45,20,0.55);
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
 }
 
-.pill-due { color: #4c5f86; }
-.pill-due.pill-active { background: #6c88b7; color: white; }
-.pill-overdue { color: #8394b2; }
-.pill-overdue.pill-active { background: #8ba0c4; color: white; }
-
-.dash-empty {
-  font-size: 11px;
-  color: #999;
-  text-align: center;
-  padding: 12px 0;
+.dash-pill:hover {
+  color: #0e2d14;
 }
 
+.pill-active {
+  background: #0e2d14;
+  color: #fff !important;
+}
+
+/* Body */
 .dash-card-body {
   flex: 1 1 0;
   overflow-y: auto;
@@ -341,39 +343,40 @@
 
 .dash-card-body::-webkit-scrollbar { width: 4px; }
 .dash-card-body::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,.12);
+  background: rgba(4,31,9,.1);
   border-radius: 10px;
 }
 
 .dash-card-body > p {
   font-size: 12px;
-  color: #999;
+  color: #9ca3af;
   text-align: center;
   padding: 16px 0;
   margin: 0;
 }
 
-/* ── ACCORDION ITEMS ── */
-
+/* ── ACTIVITY / NOTIFICATION ITEMS ── */
 .acc-item {
-  background: #f7f4f4;
-  border-radius: 14px;
-  margin-bottom: 12px;
+  background: #faf9f5;
+  border-radius: 12px;
+  margin-bottom: 10px;
   overflow: hidden;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
-  border-left: 8px solid #59d97f;
+  box-shadow: 0 2px 8px rgba(4,31,9,0.08);
+  border-left: 7px solid #59d97f;
+  border: 1px solid rgba(4,31,9,0.06);
+  border-left: 7px solid #59d97f;
 }
 
 .acc-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 14px 8px;
+  padding: 11px 13px 8px;
   cursor: pointer;
   user-select: none;
 }
 
-.acc-header:hover { background: rgba(89, 217, 127, 0.04); }
+.acc-header:hover { background: rgba(89,217,127,0.04); }
 
 .acc-id {
   font-size: 12px;
@@ -387,9 +390,7 @@
   flex-shrink: 0;
 }
 
-.acc-body {
-  padding: 0 14px 14px;
-}
+.acc-body { padding: 0 13px 13px; }
 
 .acc-line {
   font-size: 0.9rem;
@@ -397,46 +398,48 @@
   margin: 5px 0;
 }
 
-.acc-line strong { color: #151515; }
+.acc-line strong { color: #0e2d14; }
 
 .btn-view-sub {
-  margin-top: 12px;
-  background: #4b9ac8;
-  color: white;
+  margin-top: 10px;
+  background: #0e2d14;
+  color: #fff;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 8px 16px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
 }
 
-.btn-view-sub:hover { background: #3f89b4; }
+.btn-view-sub:hover { background: #1a4a25; }
 
-/* ── ACTIVITY / NOTIFICATION ITEMS ── */
-
+/* ── ACTIVITY ITEMS ── */
 .act-item {
   position: relative;
-  background: #f7f4f4;
-  border-radius: 14px;
-  padding: 12px 10px;
+  background: #faf9f5;
+  border-radius: 12px;
+  padding: 11px 10px;
   display: flex;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   align-items: flex-start;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
-  transition: background 0.15s;
+  box-shadow: 0 2px 8px rgba(4,31,9,0.07);
+  border: 1px solid rgba(4,31,9,0.05);
+  transition: background 0.12s;
 }
 
-.act-item--unread { background: #eff6ff; }
+.act-item--unread { background: #fffbf0; border-color: rgba(255,143,1,0.15); }
 .act-item--notification { cursor: pointer; }
+.act-item--notification:hover { background: #f7f5ee; }
 
 .act-day-badge {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: #e8ecf1;
-  color: #5a6a72;
+  background: rgba(14,45,20,0.08);
+  color: rgba(14,45,20,0.55);
   font-size: 0.68rem;
   font-weight: 600;
   padding: 2px 7px;
@@ -444,33 +447,31 @@
 }
 
 .act-bar {
-  width: 8px;
+  width: 7px;
   min-height: 100%;
   border-radius: 10px;
   flex-shrink: 0;
   align-self: stretch;
 }
 
-.act-bar.green  { background: #57d982; }
-.act-bar.yellow { background: #f7ef58; }
-.act-bar.purple { background: #94a0eb; }
-.act-bar.orange { background: #FF8A65; }
+.act-bar.green  { background: #2f9d42; }
+.act-bar.yellow { background: #e8b800; }
+.act-bar.purple { background: #7c6fcd; }
+.act-bar.orange { background: #ff8f01; }
 .act-bar.red    { background: #e85d5d; }
 .act-bar.blue   { background: #2563eb; }
+.act-bar.teal   { background: #13899b; }
 
 .act-unread-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #3b82f6;
+  background: #ff8f01;
   flex-shrink: 0;
   margin-top: 4px;
 }
 
-.act-content {
-  flex: 1;
-  min-width: 0;
-}
+.act-content { flex: 1; min-width: 0; }
 
 .act-header-row {
   display: flex;
@@ -480,24 +481,28 @@
 }
 
 .act-date {
-  font-size: 12px;
-  font-weight: 700;
-  color: #232323;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(14,45,20,0.55);
   margin: 0 0 3px;
 }
 
 .act-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   margin: 0 0 3px;
-  text-decoration: underline;
+  padding: 1px 7px;
+  border-radius: 100px;
+  display: inline-block;
 }
 
-.act-label.green  { color: #111; }
-.act-label.yellow { color: #111; }
-.act-label.purple { color: #111; }
-.act-label.red    { color: #111; }
-.act-label.blue   { color: #111; }
+.act-label.green  { background: rgba(47,157,66,0.12);  color: #1a5e25; }
+.act-label.yellow { background: rgba(232,184,0,0.15);  color: #7a5f00; }
+.act-label.purple { background: rgba(124,111,205,0.14); color: #4a3fa0; }
+.act-label.red    { background: rgba(232,93,93,0.12);  color: #a63030; }
+.act-label.blue   { background: rgba(37,99,235,0.12);  color: #1d4ed8; }
+.act-label.teal   { background: rgba(19,137,155,0.12); color: #0b6374; }
+.act-label.orange { background: rgba(255,143,1,0.12);  color: #b85f00; }
 
 .act-chevron {
   margin-left: auto;
@@ -507,9 +512,9 @@
 }
 
 .act-title {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  color: #1f2937;
+  color: #0e2d14;
   margin: 2px 0;
   white-space: nowrap;
   overflow: hidden;
@@ -518,7 +523,7 @@
 
 .act-line {
   font-size: 12px;
-  color: #333;
+  color: rgba(14,45,20,0.6);
   margin: 2px 0;
   line-height: 1.4;
   white-space: nowrap;
@@ -529,7 +534,7 @@
 .act-expand {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid rgba(4,31,9,0.08);
   font-size: 11px;
 }
 
@@ -548,15 +553,20 @@
 .act-view-btn {
   margin-top: 6px;
   font-size: 11px;
-  color: #13899b;
+  color: #0e2d14;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: inherit;
 }
 
-/* ── RESPONSIVE ── */
+.act-view-btn:hover { color: #ff8f01; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 1200px) {
   .dashboard {
@@ -564,20 +574,9 @@
     grid-template-rows: auto auto auto;
     overflow-y: auto;
   }
-
-  .dash-live-section {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    max-height: 280px;
-  }
-
-  .calendar {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
+  .dash-live-section { grid-column: 1 / -1; grid-row: 1; max-height: 280px; }
+  .calendar { grid-column: 1 / -1; grid-row: 2; }
   .dash-card { grid-row: auto; grid-column: auto; }
-
   .dashboard > :nth-child(3) { grid-column: 1; grid-row: auto; }
   .dashboard > :nth-child(4) { grid-column: 2; grid-row: auto; }
   .dashboard > :nth-child(5) { grid-column: 1; grid-row: auto; }
@@ -588,49 +587,22 @@
   .dashboard {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
-    padding: 12px;
+    padding: 0;
     gap: 12px;
     overflow-y: auto;
+    height: auto;
   }
-
   .dash-live-section { grid-column: 1; max-height: 260px; }
   .dash-live-row { grid-template-columns: repeat(6, minmax(180px, 1fr)); }
   .calendar { grid-column: 1; }
-
-  .dash-card {
-    grid-column: 1;
-    grid-row: auto;
-    max-height: 400px;
-  }
-
+  .dash-card { grid-column: 1; grid-row: auto; max-height: 400px; }
   .dashboard > :nth-child(3),
   .dashboard > :nth-child(4),
   .dashboard > :nth-child(5),
   .dashboard > :nth-child(6) { grid-column: 1; grid-row: auto; }
-
-  .cal-date {
-    min-height: 28px;
-    font-size: 0.75rem;
-  }
-
-  .dash-card-header {
-    gap: 8px;
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
+  .cal-date { min-height: 28px; font-size: 0.75rem; }
+  .dash-card-header { gap: 8px; align-items: flex-start; flex-direction: column; }
   .dash-pills { width: 100%; flex-wrap: wrap; }
   .dash-filter { width: 100%; max-width: 180px; }
-
-  .dash-card-body {
-    flex: unset;
-    overflow: visible;
-    min-height: auto;
-  }
+  .dash-card-body { flex: unset; overflow: visible; min-height: auto; }
 }
-
-
-
-/* Add to your dashboard.css — teal color for private session notifications */
-.act-bar.teal       { background: #015865; }
-.act-label.teal     { color: #015865; background: #e0f2f4; }

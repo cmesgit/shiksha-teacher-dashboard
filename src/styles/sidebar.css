@@ -1,100 +1,173 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   sidebar.css  ·  Teacher dashboard sidebar
+   Dark forest green (#0e2d14 → #041f09) to match Auth Flow design.
+   Orange accent (#ff8f01) on active items, matching the screenshot.
+───────────────────────────────────────────────────────────────────────────── */
+
 .sidebar {
   width: 240px;
-  background: #425f7f;
-  color: white;
-  padding: 20px 16px;
+  background: linear-gradient(180deg, #0e2d14 0%, #041f09 100%);
+  color: #fff;
+  padding: 20px 14px 20px;
   flex-shrink: 0;
   position: relative;
   z-index: 110;
-  transition: transform 0.3s ease;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── Logo / brand row ── */
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-shrink: 0;
 }
 
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 40px;
 }
 
 .sidebar-logo img {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
+  border-radius: 8px;
 }
 
 .sidebar-logo h3 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.2px;
 }
 
 .sidebar-logo p {
   font-size: 10px;
-  opacity: 0.75;
-  margin: 0;
-  line-height: 1.3;
+  color: rgba(255,255,255,0.5);
+  margin: 1px 0 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* ── Close button (mobile only) ── */
+.sidebar-close {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-close:hover {
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+}
+
+.sidebar-close svg {
+  font-size: 22px;
+}
+
+/* ── Nav section labels ── */
+.sidebar-section-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.35);
+  padding: 12px 12px 5px;
+}
+
+/* ── Nav items ── */
+nav {
+  flex: 1;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-size: 14px;
-  opacity: 0.9;
+  gap: 11px;
+  padding: 9px 12px;
   border-radius: 10px;
-  margin-bottom: 4px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.72);
+  margin-bottom: 2px;
+  transition: background 0.15s ease, color 0.15s ease;
   position: relative;
-  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.menu-item svg {
+  font-size: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.menu-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.95);
 }
 
 .menu-item.menu-label {
   cursor: default;
+  pointer-events: none;
 }
 
-.menu-item:hover {
-  background: rgba(255, 255, 255, 0.12);
-  opacity: 1;
-  transform: translateX(2px);
-}
-
+/* Active: orange left-stripe + subtle orange tint */
 .menu-item.active {
-  background: rgba(255, 255, 255, 0.18);
-  font-weight: 600;
-  opacity: 1;
-  box-shadow: inset 3px 0 0 #ffd166;
+  background: rgba(255,143,1,0.14);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 #ff8f01;
 }
 
+.menu-item.active svg {
+  opacity: 1;
+  color: #ff8f01;
+}
+
+/* Dropdown chevron */
 .menu-dropdown {
   justify-content: flex-start;
 }
 
 .menu-chevron {
   margin-left: auto;
-  font-size: 16px;
+  font-size: 15px;
   transition: transform 0.2s ease;
-  opacity: 0.8;
+  opacity: 0.6;
+  flex-shrink: 0;
 }
 
 .menu-chevron--open {
   transform: rotate(180deg);
 }
 
-.menu-icon {
-  font-size: 18px;
-}
-
+/* ── Submenu ── */
 .submenu {
-  margin: 2px 0 6px 0;
-  padding: 4px 0 4px 8px;
-  border-left: 2px solid rgba(255, 255, 255, 0.15);
-  margin-left: 18px;
+  margin: 2px 0 4px 0;
+  padding: 3px 0 3px 6px;
+  border-left: 2px solid rgba(255,255,255,0.1);
+  margin-left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .submenu p {
@@ -102,75 +175,77 @@
   padding: 7px 10px;
   margin: 0;
   border-radius: 8px;
-  opacity: 0.85;
+  color: rgba(255,255,255,0.65);
   cursor: pointer;
   line-height: 1.3;
-  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .submenu p:hover {
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 1;
-  transform: translateX(2px);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
 }
 
 .submenu p.submenu-active {
-  background: rgba(255, 209, 102, 0.18);
-  color: #ffd166;
-  opacity: 1;
+  background: rgba(255,143,1,0.14);
+  color: #ff8f01;
   font-weight: 600;
 }
 
 .submenu-empty {
   cursor: default !important;
-  opacity: 0.55 !important;
+  color: rgba(255,255,255,0.35) !important;
   font-style: italic;
 }
 
 .submenu-empty:hover {
   background: transparent !important;
-  transform: none !important;
 }
 
-.sidebar-close {
-  display: none;
-}
+/* ── Bottom: Return to Homepage ── */
 .sidebar__bottom {
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
 }
 
 .sidebar__homeBtn {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  font-size: 14px;
-  color: white;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
   text-decoration: none;
-  opacity: 0.9;
   border-radius: 10px;
-  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
 .sidebar__homeBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.85);
 }
 
+.sidebar__homeBtn svg {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — mobile slide-in
+───────────────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
-    width: 250px;
-    height: 100vh;
-    background: #425f7f;
+    width: 256px;
+    height: 100dvh;
     transform: translateX(-100%);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 24px 20px 28px;
+    box-shadow: 4px 0 28px rgba(0,0,0,0.38);
+    padding: 22px 16px 28px;
     border-radius: 0;
     z-index: 110;
   }
@@ -179,74 +254,40 @@
     transform: translateX(0);
   }
 
-  .sidebar-logo {
+  .sidebar-top {
+    margin-bottom: 28px;
     align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 34px;
-    padding-right: 44px;
+    padding-right: 8px;
   }
 
   .sidebar-logo img {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
   }
 
   .sidebar-logo h3 {
-    font-size: 17px;
-    font-weight: 700;
-  }
-
-  .sidebar-logo p {
-    font-size: 11px;
-    opacity: 0.9;
+    font-size: 16px;
   }
 
   .menu-item {
-    gap: 14px;
-    padding: 14px 12px;
-    font-size: 16px;
+    padding: 12px 12px;
+    font-size: 15px;
     font-weight: 600;
-    border-radius: 14px;
-    margin-bottom: 8px;
-  }
-
-  .menu-item.active {
-    background: rgba(255, 255, 255, 0.16);
-    padding-left: 12px;
-    border-radius: 14px;
-  }
-
-  .submenu {
-    margin-top: 4px;
+    border-radius: 12px;
+    margin-bottom: 4px;
   }
 
   .submenu p {
-    margin-left: 40px;
-    margin-top: 8px;
     font-size: 13px;
-    opacity: 0.85;
+    padding: 8px 10px;
   }
 
   .sidebar-close {
     display: flex;
     position: absolute;
-    top: 16px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: transparent;
-    color: white;
-    cursor: pointer;
-    padding: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    z-index: 111;
-  }
-
-  .sidebar-close svg {
-    font-size: 28px;
+    top: 14px;
+    right: 14px;
+    z-index: 1;
   }
 }
 

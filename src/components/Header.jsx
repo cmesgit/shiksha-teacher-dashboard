@@ -1,10 +1,9 @@
 /**
- * teacher_dashboard/src/components/Header.jsx  (FULL REPLACEMENT)
+ * teacher_dashboard/src/components/Header.jsx  (REDESIGNED)
  *
- * Adds ProfileSwitcher so teachers can:
- *   - Switch to their learner profile (go to student dashboard)
- *   - See their teacher identity
- * Removes the old localStorage-based avatar logic.
+ * Dark forest-green header (#041f09 → #0b2e12 gradient) matching the
+ * Auth Flow student-side design. Right-aligns:
+ *   TrackSwitcher · [divider] · NotificationBell · ProfileSwitcher
  */
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,23 +18,32 @@ import "../shared/ProfileSwitcher.css";
 import { HOME_URL, APP_URL } from "../config/urls";
 
 export default function Header({ onMenuClick }) {
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   return (
     <header className="header">
-      <button className="hamburgerBtn" onClick={onMenuClick} type="button" aria-label="Open sidebar">
+      {/* Hamburger — mobile only, shown via CSS */}
+      <button
+        className="hamburgerBtn"
+        onClick={onMenuClick}
+        type="button"
+        aria-label="Open sidebar"
+      >
         <HiOutlineMenuAlt3 />
       </button>
 
+      {/* Push everything to the right on desktop */}
       <div style={{ flex: 1 }} />
 
-      {/* Academy ⟷ Skill-dev switch (locked tracks deep-link to signup) */}
+      {/* Academy ⟷ Skill Dev switch */}
       <TrackSwitcher />
+
+      {/* Visual divider */}
+      <div className="header__spacer" aria-hidden="true" />
 
       <NotificationBell />
 
-      {/* ProfileSwitcher replaces the old profile image + dropdown */}
+      {/* ProfileSwitcher avatar */}
       <ProfileSwitcher
         teacherSignupUrl={`${HOME_URL}/signup?role=teacher`}
         learnUrl={APP_URL}
