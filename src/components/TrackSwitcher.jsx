@@ -1,60 +1,83 @@
-/**
- * TrackSwitcher.jsx — Faculty ⟷ Expert slider for the teacher dashboard.
- * Styled to match the Auth Flow prototype (rd-switch teacher variant): the
- * active side is blue. Approved tracks switch dashboards (Faculty = academic,
- * Expert = guest); a pending track shows a "review" badge; a track never
- * applied for is locked and deep-links to the add-a-track signup.
- */
+// src/components/TrackSwitcher.jsx  (teacher dashboard — full implementation)
+// ──────────────────────────────────────────────────────────────────────────
+// Academy ⟷ Skill Dev toggle for the teacher header.
+//
+// Behaviour:
+//  • Pure GUEST   → always on Skill Dev; toggle shows but Academy is locked
+//    (links to the homepage to buy an academy subscription)
+//  • TYPE_BOTH    → can switch freely; navigates between the two routes
+//  • Pure faculty → always on Academy; Skill Dev is locked
+//    (links to the homepage expert application)
+//
+// Active route decides the highlighted pill:
+//   /teacher/expert* → Skill Dev active
+//   anything else    → Academy active
+// ──────────────────────────────────────────────────────────────────────────
+
 import { useNavigate, useLocation } from "react-router-dom";
-import { RiGraduationCapFill, RiSparkling2Fill, RiLockLine } from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
-import { signupAddTrackUrl } from "../config/urls";
+import { RiGraduationCapFill, RiSparkling2Fill, RiLockLine } from "react-icons/ri";
+import { HOME_URL } from "../config/urls";
 import "../styles/trackSwitcher.css";
 
 const TRACKS = [
-  { key: "academy", label: "Faculty", path: "/teacher/dashboard", Icon: RiGraduationCapFill },
-  { key: "skill",   label: "Expert",  path: "/teacher/expert",    Icon: RiSparkling2Fill },
+  { key: "academy", label: "Academy",   Icon: RiGraduationCapFill, route: "/teacher/dashboard" },
+  { key: "skill",   label: "Skill Dev", Icon: RiSparkling2Fill,    route: "/teacher/expert"    },
 ];
 
 export default function TrackSwitcher() {
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
   const { pathname } = useLocation();
   const { teacherInfo } = useAuth();
-  if (!teacherInfo) return null;
 
-  const tracks = teacherInfo.tracks || {};
-  const statusOf = (k) => tracks[k] || "locked";
+  const isGuest  = teacherInfo?.type === "GUEST";
+  const isBoth   = teacherInfo?.type === "BOTH";
+  const isFaculty = !isGuest && !isBoth;
+
+  // Which pill is active based on the current URL
   const current = pathname.startsWith("/teacher/expert") ? "skill" : "academy";
 
-  const anyOther = TRACKS.some((t) => t.key !== current && statusOf(t.key) !== "locked");
-  const hasLocked = TRACKS.some((t) => statusOf(t.key) === "locked");
-  if (!anyOther && !hasLocked) return null;
-
-  const onClick = (t) => {
-    const st = statusOf(t.key);
-    if (st === "approved") { if (t.key !== current) navigate(t.path); return; }
-    if (st === "pending") return;                 // in review — not navigable
-    window.location.href = signupAddTrackUrl(t.key); // locked → apply
+  const canAccess = (key) => {
+    if (isGuest)    return key === "skill";
+    if (isFaculty)  return key === "academy";
+    return true; // BOTH can access both
   };
 
+  const handleClick = (track) => {
+    if (!canAccess(track.key)) {
+      // Locked — send them to the homepage to upgrade/apply
+      if (track.key === "academy") window.location.href = `${HOME_URL}?ref=upgrade-academy`;
+      else                         window.location.href = `${HOME_URL}/expert-apply`;
+      return;
+    }
+    if (track.key === current) return; // already here
+    navigate(track.route);
+  };
+
+  // Accent class mirrors the student switcher: ctx-skill on Skill Dev active
+  const ctx = current === "skill" ? "ctx-skill" : "";
+
   return (
-    <div className="trackSwitcher ctx-teacher" role="tablist" aria-label="Teaching track" title="Switch dashboard">
-      {TRACKS.map(({ key, label, Icon }) => {
-        const st = statusOf(key);
-        const active = st === "approved" && key === current;
+    <div className={`trackSwitcher ${ctx}`} role="tablist" aria-label="Learning track">
+      {TRACKS.map(({ key, label, Icon, route }) => {
+        const accessible = canAccess(key);
+        const active     = key === current;
         return (
           <button
-            key={key} type="button" role="tab" aria-selected={active}
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={active}
             className={[
-              "trackSwitcher__seg", active ? "is-active" : "",
-              st === "locked" ? "is-locked" : "", st === "pending" ? "is-pending" : "",
+              "trackSwitcher__seg",
+              active       ? "is-active" : "",
+              !accessible  ? "is-locked" : "",
             ].join(" ").trim()}
-            title={st === "pending" ? "In admin review" : st === "locked" ? `Apply to teach ${label}` : label}
-            onClick={() => onClick({ key })}
+            title={accessible ? label : `Not available on your current plan`}
+            onClick={() => handleClick({ key, route })}
           >
-            {st === "locked" ? <RiLockLine className="trackSwitcher__lock" /> : <Icon size={13} />}
+            {!accessible ? <RiLockLine className="trackSwitcher__lock" /> : <Icon size={13} />}
             <span>{label}</span>
-            {st === "pending" && <span className="trackSwitcher__badge">review</span>}
           </button>
         );
       })}
