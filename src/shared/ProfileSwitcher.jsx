@@ -5,19 +5,18 @@
  * `rd-prof` menu: a round avatar trigger that opens a card with the
  * account header, a "Switch profile · same email" list (tick on the
  * active one), an optional Teaching entry, and a menu footer
- * (Add account / Manage profiles / Log out).
+ * (Manage profiles / Global settings / Log out).
  *
  * Data wiring is unchanged — profiles, active profile, teacher identity,
  * PIN + account-password confirms all come from useAuth().
  */
 import { useState, useRef, useEffect } from "react";
 import {
-  RiAddLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine, RiSettings3Line,
+  RiGroupLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine, RiSettings3Line,
 } from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
 import SettingsModal from "./SettingsModal";
-import { HOME_URL } from "../config/urls";
 
 const DEFAULT_EMOJI = "📚";
 const initials = (name) =>
@@ -116,6 +115,8 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
   const [pinTarget, setPinTarget] = useState(null);
   const [showPwModal, setShowPwModal] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("profile");
+  const openSettings = (t) => { setOpen(false); setSettingsTab(t); setSettingsOpen(true); };
   const [modalError, setModalError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
   const ref = useRef(null);
@@ -219,11 +220,11 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
             )}
 
             <div className="ps-prof-menu">
-              <a className="ps-mi" href={`${HOME_URL}/manage-profiles?add=1`} role="menuitem">
-                <RiAddLine /> Add account
-              </a>
-              <button className="ps-mi" onClick={() => { setOpen(false); setSettingsOpen(true); }} role="menuitem">
-                <RiSettings3Line /> Settings
+              <button className="ps-mi" onClick={() => openSettings("profile")} role="menuitem">
+                <RiGroupLine /> Manage profiles
+              </button>
+              <button className="ps-mi" onClick={() => openSettings("account")} role="menuitem">
+                <RiSettings3Line /> Global settings
               </button>
               <button className="ps-mi ps-mi--logout" onClick={logout} role="menuitem">
                 <RiLogoutBoxRLine /> Log out
@@ -245,7 +246,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
           loading={modalLoading} error={modalError} />
       )}
 
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal open={settingsOpen} tab={settingsTab} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }
