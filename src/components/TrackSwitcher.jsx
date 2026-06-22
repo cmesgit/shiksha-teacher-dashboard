@@ -1,80 +1,59 @@
 /**
- * TrackSwitcher.jsx — Academy ⟷ Skill-dev switch for the teacher dashboard.
- *
- * Reads the per-track status from the teacher identity (useAuth().teacherInfo):
- *   approved → selectable; switches the dashboard (Academy = Faculty,
- *              Skill Dev = Guest-expert)
- *   pending  → shown with a "review" badge, not selectable
- *   locked   → never applied for; clicking deep-links to the add-a-track
- *              signup (email/username are skipped because the account exists)
- *
- * Switching between two already-approved tracks is pure client-side routing —
- * no password re-entry, since this is already a teacher session.
+ * TrackSwitcher.jsx — Faculty ⟷ Expert slider for the teacher dashboard.
+ * Styled to match the Auth Flow prototype (rd-switch teacher variant): the
+ * active side is blue. Approved tracks switch dashboards (Faculty = academic,
+ * Expert = guest); a pending track shows a "review" badge; a track never
+ * applied for is locked and deep-links to the add-a-track signup.
  */
 import { useNavigate, useLocation } from "react-router-dom";
-import { RiLockLine } from "react-icons/ri";
+import { RiGraduationCapFill, RiSparkling2Fill, RiLockLine } from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
 import { signupAddTrackUrl } from "../config/urls";
 import "../styles/trackSwitcher.css";
 
 const TRACKS = [
-  { key: "academy", label: "Academy",   path: "/teacher/dashboard" },
-  { key: "skill",   label: "Skill Dev", path: "/teacher/expert" },
+  { key: "academy", label: "Faculty", path: "/teacher/dashboard", Icon: RiGraduationCapFill },
+  { key: "skill",   label: "Expert",  path: "/teacher/expert",    Icon: RiSparkling2Fill },
 ];
 
 export default function TrackSwitcher() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { teacherInfo } = useAuth();
-
   if (!teacherInfo) return null;
 
-  const tracks  = teacherInfo.tracks || {};
+  const tracks = teacherInfo.tracks || {};
   const statusOf = (k) => tracks[k] || "locked";
-  // Which dashboard is on screen right now (drives the highlight).
   const current = pathname.startsWith("/teacher/expert") ? "skill" : "academy";
 
-  // Don't show a one-segment switch — nothing to switch to.
   const anyOther = TRACKS.some((t) => t.key !== current && statusOf(t.key) !== "locked");
   const hasLocked = TRACKS.some((t) => statusOf(t.key) === "locked");
   if (!anyOther && !hasLocked) return null;
 
   const onClick = (t) => {
     const st = statusOf(t.key);
-    if (st === "approved") {
-      if (t.key !== current) navigate(t.path);
-      return;
-    }
+    if (st === "approved") { if (t.key !== current) navigate(t.path); return; }
     if (st === "pending") return;                 // in review — not navigable
     window.location.href = signupAddTrackUrl(t.key); // locked → apply
   };
 
   return (
-    <div className="trackSwitcher" role="tablist" aria-label="Teaching track">
-      {TRACKS.map((t) => {
-        const st = statusOf(t.key);
-        const active = st === "approved" && t.key === current;
+    <div className="trackSwitcher ctx-teacher" role="tablist" aria-label="Teaching track" title="Switch dashboard">
+      {TRACKS.map(({ key, label, Icon }) => {
+        const st = statusOf(key);
+        const active = st === "approved" && key === current;
         return (
           <button
-            key={t.key}
-            type="button"
-            role="tab"
-            aria-selected={active}
+            key={key} type="button" role="tab" aria-selected={active}
             className={[
-              "trackSwitcher__seg",
-              active ? "is-active" : "",
-              st === "locked" ? "is-locked" : "",
-              st === "pending" ? "is-pending" : "",
+              "trackSwitcher__seg", active ? "is-active" : "",
+              st === "locked" ? "is-locked" : "", st === "pending" ? "is-pending" : "",
             ].join(" ").trim()}
-            title={
-              st === "pending" ? "In admin review"
-                : st === "locked" ? `Apply to teach ${t.label}`
-                : t.label
-            }
-            onClick={() => onClick(t)}
+            title={st === "pending" ? "In admin review" : st === "locked" ? `Apply to teach ${label}` : label}
+            onClick={() => onClick({ key })}
           >
-            {st === "locked" && <RiLockLine className="trackSwitcher__lock" />}
-            <span>{t.label}</span>
+            {st === "locked" ? <RiLockLine className="trackSwitcher__lock" /> : <Icon size={13} />}
+            <span>{label}</span>
             {st === "pending" && <span className="trackSwitcher__badge">review</span>}
           </button>
         );

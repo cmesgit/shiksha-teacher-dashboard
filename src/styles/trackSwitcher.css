@@ -1,59 +1,35 @@
-/* TrackSwitcher — segmented pill that sits in the teacher header. */
+/* TrackSwitcher — Academy/Skill (student) & Faculty/Expert (teacher) slider.
+   Matches the Auth Flow prototype's rd-switch:
+     · track:   #d9cfce pill
+     · active:  teal #015865 (student academy) — the default
+     · ctx-skill   → active turns orange #ff8f01 (student on the skill side)
+     · ctx-teacher → active is blue  #425f7f (teacher, either side) */
 .trackSwitcher {
-  display: inline-flex;
-  align-items: center;
-  background: #ffffff;
-  border: 1px solid rgba(31, 45, 61, 0.15);
-  border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
-  margin-right: 14px;
+  display: inline-flex; background: #d9cfce; border-radius: 100px;
+  padding: 3px; gap: 2px; margin-right: 14px;
 }
-
 .trackSwitcher__seg {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: #1f2d3d;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-  white-space: nowrap;
-  line-height: 1;
-  font-family: inherit;
+  cursor: pointer; padding: 7px 15px; border-radius: 100px;
+  font-size: 12px; font-weight: 700; color: #6b5e5d;
+  display: inline-flex; align-items: center; gap: 6px; line-height: 1;
+  border: none; background: transparent; font-family: inherit; white-space: nowrap;
 }
-
-.trackSwitcher__seg:hover:not(.is-active):not(.is-pending) {
-  background: rgba(31, 45, 61, 0.06);
-}
-
 .trackSwitcher__seg.is-active {
-  background: #14706e;
-  color: #ffffff;
+  background: #015865; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18);
 }
+.trackSwitcher.ctx-skill   .trackSwitcher__seg.is-active { background: #ff8f01; color: #fff; }
+.trackSwitcher.ctx-teacher .trackSwitcher__seg.is-active { background: #425f7f; color: #fff; }
 
-.trackSwitcher__seg.is-locked { color: #7c8a99; }
+.trackSwitcher__seg.is-locked  { color: #9a8f8e; }
 .trackSwitcher__seg.is-pending { color: #9a7b18; cursor: default; }
-
-.trackSwitcher__lock { font-size: 14px; }
-
+.trackSwitcher__lock { font-size: 13px; opacity: .8; }
 .trackSwitcher__badge {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  background: rgba(154, 123, 24, 0.15);
-  color: #9a7b18;
-  padding: 2px 6px;
-  border-radius: 8px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+  background: rgba(154,123,24,.18); color: #9a7b18; padding: 2px 6px; border-radius: 100px;
 }
 
 @media (max-width: 600px) {
   .trackSwitcher { margin-right: 8px; }
-  .trackSwitcher__seg { padding: 6px 10px; font-size: 12px; }
-  .trackSwitcher__seg .trackSwitcher__badge { display: none; }
+  .trackSwitcher__seg { padding: 7px 11px; }
+  .trackSwitcher__badge { display: none; }
 }

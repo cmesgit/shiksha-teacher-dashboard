@@ -1,61 +1,48 @@
 /**
- * ProfileSwitcher.jsx  ·  goes in src/shared/ProfileSwitcher.jsx
+ * ProfileSwitcher.jsx  ·  src/shared/ProfileSwitcher.jsx
  * ──────────────────────────────────────────────────────────────────
- * Drop-in replacement for student and teacher dashboard headers.
- * Already imported by the existing Header.jsx files as:
- *   import ProfileSwitcher from "../shared/ProfileSwitcher"
- *   import "../shared/ProfileSwitcher.css"
+ * Dashboard avatar dropdown — styled to match the Auth Flow prototype's
+ * `rd-prof` menu: a round avatar trigger that opens a card with the
+ * account header, a "Switch profile · same email" list (tick on the
+ * active one), an optional Teaching entry, and a menu footer
+ * (Add account / Manage profiles / Log out).
  *
- * REFACTORED: teacher mode is confirmed with the account password
- * (same password used to log in). No separate teacher password.
- *
- * Props (all optional — the component reads from useAuth):
- *   teacherSignupUrl  URL to send users who have no teacher identity
- *   learnUrl          URL of the student dashboard (for learn switch)
- *   teachUrl          URL of the teacher dashboard (for teach switch)
+ * Data wiring is unchanged — profiles, active profile, teacher identity,
+ * PIN + account-password confirms all come from useAuth().
  */
 import { useState, useRef, useEffect } from "react";
+import {
+  RiAddLine, RiGroupLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine,
+} from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
 import { HOME_URL } from "../config/urls";
 
 const DEFAULT_EMOJI = "📚";
+const initials = (name) =>
+  (name || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
-/* ── Avatar ── */
-function Avatar({ profile, size = 36 }) {
-  const style = { width: size, height: size };
-  if (!profile) {
-    return (
-      <span className="ps-avatar ps-avatar--emoji" style={style}>
-        {DEFAULT_EMOJI}
-      </span>
-    );
+/* ── Avatar (image / emoji / initials) ── */
+function Avatar({ profile, size = 36, fallback }) {
+  const style = { width: size, height: size, fontSize: Math.round(size * 0.42) };
+  if (profile?.avatar_type === "image" && profile.avatar) {
+    return <img src={profile.avatar} alt="" className="ps-av ps-av--img" style={style} />;
   }
-  if (profile.avatar_type === "image" && profile.avatar) {
-    return <img src={profile.avatar} alt={profile.display_name} className="ps-avatar ps-avatar--img" style={style} />;
+  if (profile?.avatar_type === "emoji" && profile.avatar) {
+    return <span className="ps-av ps-av--emoji" style={style}>{profile.avatar}</span>;
   }
-  return (
-    <span className="ps-avatar ps-avatar--emoji" style={style}>
-      {(profile.avatar_type === "emoji" && profile.avatar) || DEFAULT_EMOJI}
-    </span>
-  );
+  return <span className="ps-av ps-av--initials" style={style}>{fallback || initials(profile?.display_name) || DEFAULT_EMOJI}</span>;
 }
 
-/* ── PIN modal (4 digits) ── */
+/* ── PIN modal (unchanged behaviour) ── */
 function PinModal({ profile, onConfirm, onCancel, loading, error }) {
   const [pin, setPin] = useState("");
   const inputs = useRef([]);
-
   useEffect(() => { inputs.current[0]?.focus(); }, []);
-
   const handleKey = (i, e) => {
     if (e.key === "Backspace") {
-      if (pin[i]) {
-        setPin(pin.slice(0, i) + pin.slice(i + 1));
-      } else if (i > 0) {
-        inputs.current[i - 1]?.focus();
-        setPin(pin.slice(0, i - 1) + pin.slice(i));
-      }
+      if (pin[i]) setPin(pin.slice(0, i) + pin.slice(i + 1));
+      else if (i > 0) { inputs.current[i - 1]?.focus(); setPin(pin.slice(0, i - 1) + pin.slice(i)); }
     }
   };
   const handleChange = (i, e) => {
@@ -65,7 +52,6 @@ function PinModal({ profile, onConfirm, onCancel, loading, error }) {
     if (ch && i < 3) inputs.current[i + 1]?.focus();
     if (next.length === 4) onConfirm(next);
   };
-
   return (
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
@@ -76,10 +62,8 @@ function PinModal({ profile, onConfirm, onCancel, loading, error }) {
           {[0,1,2,3].map((i) => (
             <input key={i} ref={(el) => (inputs.current[i] = el)}
               type="password" inputMode="numeric" maxLength={1}
-              value={pin[i] || ""}
-              onChange={(e) => handleChange(i, e)}
-              onKeyDown={(e) => handleKey(i, e)}
-              className="ps-pin__cell" />
+              value={pin[i] || ""} onChange={(e) => handleChange(i, e)}
+              onKeyDown={(e) => handleKey(i, e)} className="ps-pin__cell" />
           ))}
         </div>
         {error && <p className="ps-modal__error">{error}</p>}
@@ -90,23 +74,21 @@ function PinModal({ profile, onConfirm, onCancel, loading, error }) {
   );
 }
 
-/* ── Account password confirm modal (for teacher context) ── */
+/* ── Account-password confirm (enter teacher mode) ── */
 function PasswordModal({ onConfirm, onCancel, loading, error }) {
-  const [pw, setPw]   = useState("");
+  const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
   const ref = useRef(null);
   useEffect(() => { ref.current?.focus(); }, []);
-
   return (
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
-        <span className="ps-avatar ps-avatar--emoji" style={{ width: 56, height: 56, fontSize: 28 }}>🎓</span>
+        <span className="ps-av ps-av--emoji" style={{ width: 56, height: 56, fontSize: 28 }}>🎓</span>
         <h3 className="ps-modal__title">Enter teacher mode</h3>
         <p className="ps-modal__sub">Confirm your account password</p>
         <div className="ps-pw-wrap">
           <input ref={ref} type={show ? "text" : "password"} value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            className="ps-pw-input" placeholder="Password"
+            onChange={(e) => setPw(e.target.value)} className="ps-pw-input" placeholder="Password"
             onKeyDown={(e) => e.key === "Enter" && pw && onConfirm(pw)} />
           <button type="button" className="ps-pw-eye" onClick={() => setShow((v) => !v)}>
             {show ? "🙈" : "👁️"}
@@ -122,24 +104,18 @@ function PasswordModal({ onConfirm, onCancel, loading, error }) {
   );
 }
 
-/* ── Main component ── */
-export default function ProfileSwitcher({
-  teacherSignupUrl,
-  learnUrl,
-  teachUrl,
-}) {
+/* ── Main ── */
+export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }) {
   const {
-    profiles, activeProfile, teacherInfo,
-    context, isTeacherContext,
-    selectProfile, enterTeacherMode, logout,
+    user, profiles, activeProfile, teacherInfo,
+    isTeacherContext, selectProfile, enterTeacherMode, logout,
   } = useAuth();
 
-  const [open,         setOpen]         = useState(false);
-  const [pinTarget,    setPinTarget]    = useState(null);
-  const [showPwModal,  setShowPwModal]  = useState(false);
-  const [modalError,   setModalError]   = useState("");
+  const [open, setOpen] = useState(false);
+  const [pinTarget, setPinTarget] = useState(null);
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [modalError, setModalError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
-
   const ref = useRef(null);
 
   useEffect(() => {
@@ -148,155 +124,123 @@ export default function ProfileSwitcher({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const closeAll = () => {
-    setOpen(false); setPinTarget(null); setShowPwModal(false); setModalError("");
-  };
+  const closeAll = () => { setOpen(false); setPinTarget(null); setShowPwModal(false); setModalError(""); };
 
-  /* pick a learner profile */
   const handleSelectProfile = (p) => {
     setOpen(false);
     if (p.requires_pin) { setModalError(""); setPinTarget(p); }
     else doSelect(p.id, "");
   };
-
   const doSelect = async (id, pin) => {
     setModalLoading(true); setModalError("");
     try {
       await selectProfile(id, pin || undefined);
       closeAll();
       if (learnUrl && isTeacherContext) window.location.href = learnUrl;
-    } catch (err) {
-      setModalError(err.message || "Wrong PIN.");
-    } finally {
-      setModalLoading(false);
-    }
+    } catch (err) { setModalError(err.message || "Wrong PIN."); }
+    finally { setModalLoading(false); }
   };
 
-  /* enter teacher mode */
   const handleTeacherClick = () => { setOpen(false); setModalError(""); setShowPwModal(true); };
-
   const doEnterTeacher = async (password) => {
     setModalLoading(true); setModalError("");
     try {
       const result = await enterTeacherMode(password);
-      if (result.ok) {
-        closeAll();
-        if (teachUrl) window.location.href = teachUrl;
-        return;
-      }
-      if (result.needsSignup) {
-        closeAll();
-        if (teacherSignupUrl) window.location.href = teacherSignupUrl;
-        return;
-      }
-      if (result.notApproved) {
-        setModalError("Your teacher account is awaiting admin approval.");
-        return;
-      }
-    } catch (err) {
-      setModalError(err.message || "Incorrect password.");
-    } finally {
-      setModalLoading(false);
-    }
+      if (result.ok) { closeAll(); if (teachUrl) window.location.href = teachUrl; return; }
+      if (result.needsSignup) { closeAll(); if (teacherSignupUrl) window.location.href = teacherSignupUrl; return; }
+      if (result.notApproved) { setModalError("Your teacher account is awaiting admin approval."); return; }
+    } catch (err) { setModalError(err.message || "Incorrect password."); }
+    finally { setModalLoading(false); }
   };
 
-  /* display */
-  const displayName = isTeacherContext
-    ? "Teacher mode"
-    : (activeProfile?.display_name || "Select profile");
+  const accountName = activeProfile?.display_name || user?.username || "Account";
+  const accountEmail = user?.email || "";
+  const teacherLabel = teacherInfo?.type === "GUEST" ? "Expert teacher" : "Faculty";
+  const subFor = (p) => (p.relationship === "DEPENDENT" ? "Child profile" : "Primary");
 
   return (
     <>
       <div className="ps-root" ref={ref}>
         <button
-          className={`ps-trigger ${isTeacherContext ? "ps-trigger--teacher" : ""}`}
+          className={`ps-avatar-btn ${isTeacherContext ? "ps-avatar-btn--teacher" : ""}`}
           onClick={() => setOpen((v) => !v)}
-          aria-haspopup="listbox"
-          aria-expanded={open}
+          aria-haspopup="menu" aria-expanded={open} title="Account & profiles"
         >
-          {isTeacherContext
-            ? <span className="ps-avatar ps-avatar--emoji" style={{ width: 32, height: 32, fontSize: 16 }}>🎓</span>
-            : <Avatar profile={activeProfile} size={32} />
-          }
-          <span className="ps-trigger__name">{displayName}</span>
-          <span className="ps-trigger__caret">{open ? "▲" : "▼"}</span>
+          {isTeacherContext ? "🎓" : initials(accountName)}
         </button>
 
         {open && (
-          <div className="ps-dropdown" role="listbox">
-            <p className="ps-dropdown__section-label">Learner profiles</p>
-            {profiles.map((p) => (
-              <button key={p.id}
-                className={`ps-dropdown__item ${!isTeacherContext && activeProfile?.id === p.id ? "ps-dropdown__item--active" : ""}`}
-                onClick={() => handleSelectProfile(p)}
-                role="option"
-                aria-selected={!isTeacherContext && activeProfile?.id === p.id}
-              >
-                <Avatar profile={p} size={28} />
-                <span className="ps-dropdown__item-name">{p.display_name}</span>
-                {p.requires_pin && <span className="ps-dropdown__lock">🔒</span>}
-                {!isTeacherContext && activeProfile?.id === p.id && <span className="ps-dropdown__check">✓</span>}
-              </button>
-            ))}
+          <div className="ps-prof" role="menu">
+            <div className="ps-prof-head">
+              <div className="ps-prof-head__av">{isTeacherContext ? "🎓" : initials(accountName)}</div>
+              <div className="ps-prof-head__txt">
+                <div className="ps-prof-head__nm">{isTeacherContext ? "Teacher mode" : accountName}</div>
+                {accountEmail && <div className="ps-prof-head__em">{accountEmail}</div>}
+              </div>
+            </div>
+
+            <div className="ps-prof-sec">Switch profile · same email</div>
+            {profiles.map((p) => {
+              const active = !isTeacherContext && activeProfile?.id === p.id;
+              return (
+                <button key={p.id} className={`ps-prof-item ${active ? "active" : ""}`}
+                  onClick={() => handleSelectProfile(p)} role="menuitem">
+                  <Avatar profile={p} size={26} />
+                  <div className="ps-prof-item__txt">
+                    <div className="ps-prof-item__nm">{p.display_name}</div>
+                    <div className="ps-prof-item__sub">{subFor(p)}</div>
+                  </div>
+                  {p.requires_pin && <RiLockLine className="ps-prof-item__lock" />}
+                  {active && <span className="ps-prof-item__tick"><RiCheckLine /></span>}
+                </button>
+              );
+            })}
 
             {teacherInfo && (
               <>
-                <div className="ps-dropdown__divider" />
-                <p className="ps-dropdown__section-label">Teacher</p>
+                <div className="ps-prof-sec">Teaching</div>
                 <button
-                  className={`ps-dropdown__item ps-dropdown__item--teacher ${isTeacherContext ? "ps-dropdown__item--active" : ""}`}
+                  className={`ps-prof-item ${isTeacherContext ? "active" : ""}`}
                   onClick={isTeacherContext ? undefined : handleTeacherClick}
-                  disabled={isTeacherContext}
-                  role="option"
+                  disabled={isTeacherContext} role="menuitem"
                 >
-                  <span className="ps-avatar ps-avatar--emoji" style={{ width: 28, height: 28, fontSize: 14 }}>🎓</span>
-                  <span className="ps-dropdown__item-name">
-                    {teacherInfo.type === "GUEST" ? "Expert teacher" : "Faculty"}
-                  </span>
-                  {isTeacherContext && <span className="ps-dropdown__check">✓</span>}
+                  <span className="ps-prof-item__av ps-prof-item__av--teacher">🎓</span>
+                  <div className="ps-prof-item__txt">
+                    <div className="ps-prof-item__nm">{teacherLabel}</div>
+                    <div className="ps-prof-item__sub">
+                      {isTeacherContext ? "Current mode" : "Switch to teaching"}
+                    </div>
+                  </div>
+                  {isTeacherContext && <span className="ps-prof-item__tick"><RiCheckLine /></span>}
                 </button>
               </>
             )}
 
-            <div className="ps-dropdown__divider" />
-            <a
-              className="ps-dropdown__item ps-dropdown__item--manage"
-              href={`${HOME_URL}/manage-profiles?add=1`}
-            >
-              <span className="ps-dropdown__item-icon">+</span>
-              <span className="ps-dropdown__item-name">Add account</span>
-            </a>
-            <a
-              className="ps-dropdown__item ps-dropdown__item--manage"
-              href={`${HOME_URL}/manage-profiles`}
-            >
-              <span className="ps-dropdown__item-icon">⚙</span>
-              <span className="ps-dropdown__item-name">Manage accounts</span>
-            </a>
-            <button className="ps-dropdown__item ps-dropdown__item--logout" onClick={logout}>
-              <span className="ps-dropdown__item-icon">↩</span> Sign out
-            </button>
+            <div className="ps-prof-menu">
+              <a className="ps-mi" href={`${HOME_URL}/manage-profiles?add=1`} role="menuitem">
+                <RiAddLine /> Add account
+              </a>
+              <a className="ps-mi" href={`${HOME_URL}/manage-profiles`} role="menuitem">
+                <RiGroupLine /> Manage profiles
+              </a>
+              <button className="ps-mi ps-mi--logout" onClick={logout} role="menuitem">
+                <RiLogoutBoxRLine /> Log out
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       {pinTarget && (
-        <PinModal
-          profile={pinTarget}
+        <PinModal profile={pinTarget}
           onConfirm={(pin) => doSelect(pinTarget.id, pin)}
           onCancel={() => { setPinTarget(null); setModalError(""); }}
-          loading={modalLoading}
-          error={modalError}
-        />
+          loading={modalLoading} error={modalError} />
       )}
-
       {showPwModal && (
-        <PasswordModal
-          onConfirm={doEnterTeacher}
+        <PasswordModal onConfirm={doEnterTeacher}
           onCancel={() => { setShowPwModal(false); setModalError(""); }}
-          loading={modalLoading}
-          error={modalError}
-        />
+          loading={modalLoading} error={modalError} />
       )}
     </>
   );
