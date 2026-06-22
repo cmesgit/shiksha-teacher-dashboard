@@ -1,79 +1,112 @@
-/* SettingsModal — matched to the uploaded Claude design (teal accents). */
+/* SettingsModal — teal #0a7d8c palette, matches the uploaded Claude design */
+
 .sm-overlay {
-  position: fixed; inset: 0; background: rgba(15,23,42,.45);
-  z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px;
+  position: fixed; inset: 0; background: rgba(15,23,42,.5);
+  z-index: 3000; display: flex; align-items: center; justify-content: center;
+  padding: 16px;
 }
 .sm-card {
-  background: #fff; width: 100%; max-width: 480px; max-height: 86vh;
-  border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.3);
-  display: flex; flex-direction: column; overflow: hidden;
-  font-family: inherit;
+  background: #fff; width: 100%; max-width: 480px; max-height: 88vh;
+  border-radius: 16px; box-shadow: 0 24px 64px rgba(0,0,0,.28);
+  display: flex; flex-direction: column; overflow: hidden; font-family: inherit;
 }
+
+/* ── head ── */
 .sm-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 20px 4px;
 }
 .sm-title { margin: 0; font-size: 18px; font-weight: 800; color: #111827; }
 .sm-x {
-  background: #f3f4f6; border: none; width: 30px; height: 30px; border-radius: 8px;
-  cursor: pointer; color: #374151; font-size: 13px; display: grid; place-items: center;
+  background: #f3f4f6; border: none; width: 30px; height: 30px;
+  border-radius: 8px; cursor: pointer; color: #374151; font-size: 13px;
+  display: grid; place-items: center;
 }
 .sm-x:hover { background: #e5e7eb; }
 .sm-email { padding: 0 20px 10px; font-size: 12px; color: #6b7280; }
 
+/* ── tabs ── */
 .sm-tabs { display: flex; gap: 18px; padding: 0 20px; border-bottom: 1px solid #eee; }
 .sm-tab {
   background: none; border: none; cursor: pointer; padding: 10px 0;
-  font-size: 14px; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent;
-  font-family: inherit;
+  font-size: 14px; font-weight: 600; color: #6b7280;
+  border-bottom: 2.5px solid transparent; font-family: inherit;
 }
 .sm-tab.on { color: #0a7d8c; border-bottom-color: #0a7d8c; }
 
+/* ── body ── */
 .sm-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
 
+/* ── section headers ── */
 .sm-sec {
-  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
-  color: #9aa0a6; margin: 16px 0 8px;
+  font-size: 10px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; color: #9aa0a6; margin: 18px 0 8px;
 }
 .sm-body > .sm-sec:first-child { margin-top: 4px; }
+.sm-sec--teacher {
+  color: #425f7f;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 14px; margin-top: 22px;
+}
 
+/* ── avatar ── */
 .sm-av {
   border-radius: 50%; background: #0a7d8c; color: #fff;
-  display: grid; place-items: center; font-weight: 800; flex-shrink: 0; object-fit: cover;
+  display: grid; place-items: center; font-weight: 800;
+  flex-shrink: 0; object-fit: cover;
 }
 .sm-av--sm { width: 36px; height: 36px; font-size: 13px; }
 .sm-av--lg { width: 56px; height: 56px; font-size: 20px; }
 
-.sm-editrow { display: flex; align-items: center; gap: 12px; }
+/* ── edit row ── */
+.sm-editrow { display: flex; align-items: center; gap: 10px; }
 .sm-select {
   flex: 1; padding: 10px 12px; border: 1.5px solid #d1d5db; border-radius: 10px;
-  font-size: 14px; color: #111827; background: #fff; cursor: pointer; font-family: inherit;
+  font-size: 13.5px; color: #111827; background: #fff;
+  cursor: pointer; font-family: inherit; min-width: 0;
 }
 
+/* ── photo ── */
 .sm-photorow { display: flex; align-items: center; gap: 14px; }
 .sm-photobtn {
   border: 1.5px solid #d1d5db; background: #fff; color: #111827;
-  padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  cursor: pointer;
 }
 .sm-photobtn:hover { background: #f9fafb; }
 
-.sm-label { display: block; font-size: 12.5px; font-weight: 600; color: #374151; margin: 14px 0 6px; }
+/* ── form fields ── */
+.sm-label { display: block; font-size: 12.5px; font-weight: 600; color: #374151; margin: 14px 0 5px; }
 .sm-input {
   width: 100%; box-sizing: border-box; padding: 10px 12px;
-  border: 1.5px solid #d1d5db; border-radius: 10px; font-size: 14px; color: #111827;
-  outline: none; font-family: inherit;
+  border: 1.5px solid #d1d5db; border-radius: 10px;
+  font-size: 14px; color: #111827; outline: none; font-family: inherit;
 }
 .sm-input:focus { border-color: #0a7d8c; }
 .sm-input[readonly] { background: #f7f8f8; color: #6b7280; }
 .sm-textarea { resize: vertical; min-height: 56px; }
+.sm-mb { margin-bottom: 8px; }
+.sm-mt { margin-top: 12px; }
 
+/* ── add form inline ── */
+.sm-addform { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.sm-addform .sm-input { margin: 0; min-width: 0; flex: 1; }
+
+/* ── PIN row ── */
+.sm-pinrow {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 4px 0;
+}
+.sm-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── toggle rows ── */
 .sm-togglerow {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 0; border-bottom: 1px solid #f3f4f6;
 }
 .sm-togglerow:last-child { border-bottom: none; }
 .sm-tg-title { font-size: 13.5px; font-weight: 600; color: #1f2937; }
-.sm-tg-sub { font-size: 11.5px; color: #9ca3af; margin-top: 2px; }
+.sm-tg-sub   { font-size: 11.5px; color: #9ca3af; margin-top: 2px; }
 
 .sm-toggle {
   width: 42px; height: 24px; border-radius: 100px; background: #d1d5db;
@@ -81,42 +114,46 @@
 }
 .sm-toggle.on { background: #0a7d8c; }
 .sm-toggle__dot {
-  position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; transition: transform .15s;
+  position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; transition: transform .15s;
 }
 .sm-toggle.on .sm-toggle__dot { transform: translateX(18px); }
 
-.sm-linkbtn {
-  display: inline-block; padding: 9px 14px; border-radius: 10px;
-  border: 1.5px solid #d1d5db; background: #fff; color: #0a7d8c;
-  font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; font-family: inherit;
+/* ── teacher identity section ── */
+.sm-teacher-note {
+  font-size: 12px; color: #6b7280; margin-bottom: 10px; line-height: 1.5;
 }
-.sm-linkbtn:hover { background: #f9fafb; }
-.sm-linkbtn--danger { color: #c0392b; border-color: rgba(192,57,43,.4); }
+.sm-track-list { display: flex; flex-direction: column; gap: 8px; }
+.sm-track-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border-radius: 12px; border: 1.5px solid #e5e7eb; background: #fafafa;
+}
+.sm-track-card--approved { border-color: rgba(10,125,140,.25); background: rgba(10,125,140,.04); }
+.sm-track-card--pending  { border-color: rgba(234,179,8,.35);  background: rgba(254,252,232,.6); }
+.sm-track-card--locked   { opacity: .75; }
 
-.sm-err {
-  margin-top: 12px; font-size: 12px; color: #dc2626;
-  background: #fef2f2; border-radius: 8px; padding: 8px 10px;
-}
+.sm-track-icon { font-size: 22px; flex-shrink: 0; }
+.sm-track-info { flex: 1; min-width: 0; }
+.sm-track-name { font-size: 13.5px; font-weight: 700; color: #111827; }
+.sm-track-sub  { font-size: 11.5px; color: #6b7280; margin-top: 2px; }
+.sm-track-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.sm-footer {
-  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-  padding: 12px 20px; border-top: 1px solid #eee; background: #fff;
+.sm-badge {
+  font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 100px;
+  white-space: nowrap;
 }
-.sm-cancel {
-  background: none; border: none; color: #6b7280; font-size: 14px; font-weight: 600;
-  cursor: pointer; padding: 9px 14px; font-family: inherit;
-}
-.sm-cancel:hover { color: #111827; }
-.sm-save {
-  background: #0a7d8c; color: #fff; border: none; border-radius: 10px;
-  padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
-}
-.sm-save:hover { background: #0a6e7b; }
-.sm-save:disabled { opacity: .6; cursor: default; }
+.sm-badge--green  { background: rgba(47,157,66,.14); color: #1a6e2e; }
+.sm-badge--yellow { background: rgba(234,179,8,.18);  color: #92400e; }
+.sm-badge--gray   { background: #f3f4f6; color: #6b7280; }
 
-/* ── comprehensive controls ── */
-.sm-editrow .sm-mini { flex-shrink: 0; }
+.sm-track-apply {
+  font-size: 12px; font-weight: 700; color: #425f7f; padding: 5px 10px;
+  border: 1.5px solid #425f7f; border-radius: 8px; text-decoration: none;
+  white-space: nowrap;
+}
+.sm-track-apply:hover { background: rgba(66,95,127,.08); }
+
+/* ── action buttons ── */
 .sm-mini {
   border: 1.5px solid #d1d5db; background: #fff; color: #0a7d8c;
   padding: 7px 12px; border-radius: 9px; font-size: 12.5px; font-weight: 600;
@@ -125,23 +162,44 @@
 .sm-mini:hover { background: #f9fafb; }
 .sm-mini--danger { color: #c0392b; border-color: rgba(192,57,43,.4); }
 
-.sm-addform { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-.sm-addform .sm-input { margin: 0; }
-
-.sm-pinrow {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0;
+.sm-linkbtn {
+  display: inline-block; padding: 9px 14px; border-radius: 10px;
+  border: 1.5px solid #d1d5db; background: #fff; color: #0a7d8c;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  cursor: pointer; font-family: inherit;
 }
-.sm-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.sm-linkbtn:hover { background: #f9fafb; }
+.sm-linkbtn--danger { color: #c0392b; border-color: rgba(192,57,43,.4); }
 
 .sm-save--sm { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
-.sm-mb { margin-bottom: 8px; }
-.sm-mt { margin-top: 12px; }
 
+/* ── messages ── */
 .sm-mini-msg { font-size: 12px; margin-top: 8px; }
 .sm-mini-msg.ok  { color: #2f9d42; }
 .sm-mini-msg.err { color: #dc2626; }
-
+.sm-err {
+  margin-top: 12px; font-size: 12px; color: #dc2626;
+  background: #fef2f2; border-radius: 8px; padding: 8px 10px;
+}
 .sm-ok {
   margin-top: 12px; font-size: 12px; color: #166534;
   background: #dcfce7; border-radius: 8px; padding: 8px 10px;
 }
+
+/* ── footer ── */
+.sm-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 12px 20px; border-top: 1px solid #eee; background: #fff;
+}
+.sm-cancel {
+  background: none; border: none; color: #6b7280; font-size: 14px;
+  font-weight: 600; cursor: pointer; padding: 9px 14px; font-family: inherit;
+}
+.sm-cancel:hover { color: #111827; }
+.sm-save {
+  background: #0a7d8c; color: #fff; border: none; border-radius: 10px;
+  padding: 10px 18px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.sm-save:hover { background: #0a6e7b; }
+.sm-save:disabled { opacity: .6; cursor: default; }
