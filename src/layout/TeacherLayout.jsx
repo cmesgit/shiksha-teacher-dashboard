@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import TeacherTopSliderTabs from "../components/TeacherTopSliderTabs";
 import useSwipeBack from "../utils/useSwipeBack";
+import { useAuth } from "../contexts/AuthContext";
 import "./layout.css";
 
 export default function TeacherLayout() {
@@ -13,6 +14,7 @@ export default function TeacherLayout() {
 
   const location = useLocation();
   const swipeHandlers = useSwipeBack();
+  const { teacherInfo } = useAuth();
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -24,8 +26,15 @@ export default function TeacherLayout() {
   const isClassesPage  = location.pathname.startsWith("/teacher/classes");
   const hideTopSliderOnMobile = isMobile && isClassesPage;
 
-  // Expert / Skill Dev route — drives sidebar + body bg colour change
-  const isExpertPage = location.pathname.startsWith("/teacher/expert");
+  // ── Expert / Skill Dev mode — single source of truth ──
+  // A pure GUEST is always in expert mode; a BOTH teacher is in expert mode
+  // only while on an /teacher/expert* route; faculty are never expert.
+  // This SAME flag drives the sidebar bg, header bg, body bg, and which top
+  // tabs show — so the three never disagree (no half-blue / half-red chrome).
+  const isGuest        = teacherInfo?.type === "GUEST";
+  const isBoth         = teacherInfo?.type === "BOTH";
+  const onExpertRoute  = location.pathname.startsWith("/teacher/expert");
+  const isExpertPage   = isGuest || (isBoth && onExpertRoute);
 
   // ── LIVE SESSION FULLSCREEN ──────────────────────────────
   if (isLiveSession) {

@@ -68,12 +68,17 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
   };
 
   const isExpertRoute = location.pathname.startsWith("/teacher/expert");
-  const sidebarSubtitle =
-    isGuest       ? "Expert Teacher" :
-    isExpertRoute ? "Expert Teacher" : "Faculty Portal";
+
+  // TeacherLayout already resolves the expert flag (guest OR both-on-expert-route)
+  // and passes it as isExpertPage. Trust it; fall back to local logic only if the
+  // prop is missing, so the two navs are always mutually exclusive.
+  const showExpertNav =
+    isExpertPage ?? (isGuest || (isBoth && isExpertRoute));
+
+  const sidebarSubtitle = showExpertNav ? "Expert Teacher" : "Faculty Portal";
 
   // Sidebar bg: faculty = #425f7f (default), expert = #b3402e (--expert modifier)
-  const sidebarClass = `sidebar${isExpertPage ? " sidebar--expert" : ""}${sidebarOpen ? " sidebar-open" : ""}`;
+  const sidebarClass = `sidebar${showExpertNav ? " sidebar--expert" : ""}${sidebarOpen ? " sidebar-open" : ""}`;
 
   return (
     <aside className={sidebarClass}>
@@ -96,32 +101,16 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
       </div>
 
       <nav>
-        {/* Guest expert nav */}
-        {isGuest ? (
-          <>
-            <div className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}>
-              <MdDashboard /><span>Dashboard</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/courses") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/courses"); setSidebarOpen(false); }}>
-              <FaChalkboardTeacher /><span>My Courses</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/private-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/private-sessions"); setSidebarOpen(false); }}>
-              <RiLockLine /><span>Bookings</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}>
-              <RiLiveLine /><span>Live Sessions</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/chat") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/chat"); setSidebarOpen(false); }}>
-              <FiUsers /><span>Messages</span>
-            </div>
-          </>
-        ) : isExpertRoute && isBoth ? (
-          /* TYPE_BOTH on Expert route */
+        {/* ──────────────────────────────────────────────────────────────
+            ONE rule decides the whole nav: are we in Skill Dev / Expert mode?
+              · pure GUEST                      → always expert
+              · BOTH teacher on /teacher/expert → expert
+              · everyone else (faculty)         → academy
+            The two navs are mutually exclusive so academy links (Live
+            Sessions, Private Sessions, …) never leak onto the expert page.
+        ────────────────────────────────────────────────────────────────── */}
+        {showExpertNav ? (
+          /* ── EXPERT / SKILL DEV NAV ── */
           <>
             <div className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
               onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}>
@@ -145,16 +134,15 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
             </div>
           </>
         ) : (
-          <div
-            className={`menu-item ${isActive("/teacher/dashboard") ? "active" : ""}`}
-            onClick={() => { navigate("/teacher/dashboard"); setSidebarOpen(false); }}
-          >
-            <MdDashboard /><span>Dashboard</span>
-          </div>
-        )}
-
-        {!isGuest && (
+          /* ── ACADEMY / FACULTY NAV ── */
           <>
+            <div
+              className={`menu-item ${isActive("/teacher/dashboard") ? "active" : ""}`}
+              onClick={() => { navigate("/teacher/dashboard"); setSidebarOpen(false); }}
+            >
+              <MdDashboard /><span>Dashboard</span>
+            </div>
+
             <div
               className={`menu-item ${isActive("/teacher/students") ? "active" : ""}`}
               onClick={() => { navigate("/teacher/students"); setSidebarOpen(false); }}
