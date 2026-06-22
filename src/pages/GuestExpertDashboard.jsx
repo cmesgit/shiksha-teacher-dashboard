@@ -18,10 +18,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import expertService from "../api/expertService";
 import useNotificationSocket from "../hooks/useNotificationSocket";
-import {
-  Users, TrendingUp, Bell, CheckCircle,
-  Play, Calendar, Clock, DollarSign
-} from "lucide-react";
+/* ── Inline SVG icons (no lucide-react dependency needed) ─────────── */
+const Ic = {
+  Users:       () => <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  TrendingUp:  () => <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  Bell:        () => <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  CheckCircle: () => <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  Play:        () => <svg width={12} height={12} viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+};
 
 /* ── Design tokens ─────────────────────────────────────────────────── */
 const C = {
@@ -62,8 +66,8 @@ function Avatar({ text, size = 42, bg = C.earth }) {
 function StatCard({ value, label, Icon }) {
   return (
     <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px 18px", boxShadow: "0 2px 10px rgba(18,80,39,.04)" }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: C.cream2, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-        <Icon size={18} color={C.forest} strokeWidth={1.8} />
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: C.cream2, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10, color: C.forest }}>
+        <Icon />
       </div>
       <div style={{ fontFamily: MH, fontWeight: 900, fontSize: 26, color: C.ink, letterSpacing: "-.6px" }}>{value}</div>
       <div style={{ fontSize: 12, color: C.soft, marginTop: 3, fontFamily: MP }}>{label}</div>
@@ -135,10 +139,10 @@ export default function GuestExpertDashboard() {
   const completedCount= profile?.completed_sessions ?? 0;
 
   const stats = [
-    { value: studentCount,   label: "Students taught",   Icon: Users       },
-    { value: activeLearners, label: "Active learners",    Icon: TrendingUp  },
-    { value: pendingCount,   label: "Pending requests",   Icon: Bell        },
-    { value: completedCount, label: "Completed",          Icon: CheckCircle },
+    { value: studentCount,   label: "Students taught",   Icon: Ic.Users       },
+    { value: activeLearners, label: "Active learners",    Icon: Ic.TrendingUp  },
+    { value: pendingCount,   label: "Pending requests",   Icon: Ic.Bell        },
+    { value: completedCount, label: "Completed",          Icon: Ic.CheckCircle },
   ];
 
   // Earnings summary
@@ -212,7 +216,7 @@ export default function GuestExpertDashboard() {
                     padding: "8px 14px", borderRadius: 10, background: C.orange, color: "#fff",
                     fontSize: 12, fontWeight: 700, flexShrink: 0, fontFamily: MP,
                   }}>
-                    <Play size={12} fill="white" color="white" /> Start class
+                    <Ic.Play /> Start class
                   </button>
                 ) : (
                   <span style={{ fontSize: 12, color: C.soft, flexShrink: 0, fontFamily: MP }}>
