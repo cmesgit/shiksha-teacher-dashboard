@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import "../styles/dashboard.css";
+import { useAuth } from "../contexts/AuthContext";
 
 import LiveSessionCard  from "../components/LiveSessionCard";
 import CalendarWidget   from "../components/CalendarWidget";
@@ -53,6 +54,8 @@ export default function TeacherDashboard() {
   const outletContext = useOutletContext();
   const active        = outletContext?.active || "sessions";
   const navigate      = useNavigate();
+  const { teacherInfo } = useAuth();
+  const isBoth = teacherInfo?.type === "BOTH";
 
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -276,6 +279,9 @@ export default function TeacherDashboard() {
   // ── DESKTOP ───────────────────────────────────────────────
   return (
     <div className="dashboard">
+
+      {/* The Faculty/Expert switch now lives in the shared header
+         (TrackSwitcher) — removed here to avoid a duplicate. */}
 
       {/* Row 1: Live Sessions */}
       <div className="dash-live-section">

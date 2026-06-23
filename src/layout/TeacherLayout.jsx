@@ -1,3 +1,8 @@
+/**
+ * src/layout/TeacherLayout.jsx  ·  ACADEMY / FACULTY layout
+ * Skill Dev now has its own SkillDevLayout, so this layout is always the
+ * Academy (slate #425f7f sidebar, #c9d1de body). No expert branching needed.
+ */
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -15,21 +20,15 @@ export default function TeacherLayout() {
   const swipeHandlers = useSwipeBack();
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Hide sidebar + header + top tabs in live session view
   const isLiveSession = location.pathname.startsWith("/live/");
-
   const isClassesPage = location.pathname.startsWith("/teacher/classes");
   const hideTopSliderOnMobile = isMobile && isClassesPage;
 
-  // ───── LIVE SESSION FULLSCREEN MODE ─────
   if (isLiveSession) {
     return (
       <div className="teacher-layout teacher-layout--live">
@@ -40,31 +39,15 @@ export default function TeacherLayout() {
     );
   }
 
-  // ───── NORMAL LAYOUT ─────
   return (
     <div className="teacher-layout">
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      />
-
-      {sidebarOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
       <div className="teacher-main">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-
         {!hideTopSliderOnMobile && (
-          <TeacherTopSliderTabs
-            active={active}
-            setActive={setActive}
-          />
+          <TeacherTopSliderTabs active={active} setActive={setActive} />
         )}
-
         <main className="teacher-content" {...swipeHandlers}>
           <Outlet context={{ active, setActive }} />
         </main>

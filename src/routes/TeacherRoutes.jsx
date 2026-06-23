@@ -1,8 +1,21 @@
-import { Routes, Route } from "react-router-dom";
+/**
+ * PLACEMENT: src/routes/TeacherRoutes.jsx
+ * ACTION:    Replace the entire file.
+ *
+ * Change from original:
+ *   Added import for SkillInbox and added route:
+ *     <Route path="inbox" element={<SkillInbox />} />
+ *   inside the /teacher/expert SkillDevLayout block.
+ *   This makes it accessible at /teacher/expert/inbox — the path that
+ *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
+ */
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 
+import { useAuth } from "../contexts/AuthContext";
 import PrivateSessionLive from "../pages/PrivateSessionLive";
 import TeacherLayout from "../layout/TeacherLayout";
+import SkillDevLayout from "../layout/SkillDevLayout";
 import TeacherDashboard from "../pages/TeacherDashboard";
 import ClassesList from "../pages/ClassesList";
 import Classes from "../pages/Classes";
@@ -38,16 +51,34 @@ import PrivateRequestDetail from "../pages/PrivateRequestDetail";
 import PrivateSessionAvailability from "../pages/PrivateSessionAvailability";
 import PrivateSessionDetail from "../pages/PrivateSessionDetail";
 import ChangePassword from "../pages/ChangePassword";
+import Chat from "../pages/Chat";
+import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 
+// Skill Dev (Expert) pages
+import ExpertDashboard from "../pages/skill/ExpertDashboard";
+import ExpertCourses from "../pages/skill/ExpertCourses";
+import ExpertBookings from "../pages/skill/ExpertBookings";
+import ExpertAvailability from "../pages/skill/ExpertAvailability";
+import ExpertEarnings from "../pages/skill/ExpertEarnings";
+import SkillInbox from "../pages/SkillInbox"; // NEW
+
+import { LOGIN_URL } from "../config/urls";
+
 function RedirectToMainLogin() {
-  useEffect(() => {
-    window.location.href =
-      (import.meta.env.VITE_HOME_URL || "https://www.shikshacom.com") + "/login";
-  }, []);
+  useEffect(() => { window.location.href = LOGIN_URL; }, []);
   return null;
+}
+
+function DashboardEntry() {
+  const { teacherInfo } = useAuth();
+  const goesToExpert =
+    teacherInfo?.type === "GUEST" ||
+    teacherInfo?.active_track === "skill";
+  if (goesToExpert) return <Navigate to="/teacher/expert" replace />;
+  return <TeacherDashboard />;
 }
 
 export default function TeacherRoutes() {
@@ -55,61 +86,39 @@ export default function TeacherRoutes() {
     <Routes>
       <Route path="/" element={<RedirectToMainLogin />} />
 
-      {/* ============================================
-          FULLSCREEN LIVE ROUTES — outside TeacherLayout
-          (no sidebar, no header, no top tabs)
-          ============================================ */}
+      {/* Fullscreen live routes */}
+      <Route path="/teacher/live/:id" element={<ProtectedTeacherRoute><TeacherLiveSession /></ProtectedTeacherRoute>} />
+      <Route path="/teacher/private-session/live/:id" element={<ProtectedTeacherRoute><PrivateSessionLive /></ProtectedTeacherRoute>} />
+      <Route path="/teacher/group-session/live/:id" element={<ProtectedTeacherRoute><GroupSessionLive /></ProtectedTeacherRoute>} />
 
-      {/* Live Class Session — fullscreen */}
+      {/* ── Skill Dev / Expert — SkillDevLayout ── */}
       <Route
-        path="/teacher/live/:id"
-        element={
-          <ProtectedTeacherRoute>
-            <TeacherLiveSession />
-          </ProtectedTeacherRoute>
-        }
-      />
+        path="/teacher/expert"
+        element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
+      >
+        <Route index element={<ExpertDashboard />} />
+        <Route path="courses" element={<ExpertCourses />} />
+        <Route path="bookings" element={<ExpertBookings />} />
+        <Route path="availability" element={<ExpertAvailability />} />
+        <Route path="earnings" element={<ExpertEarnings />} />
+        <Route path="inbox" element={<SkillInbox />} /> {/* NEW */}
+      </Route>
 
-      {/* Private Session Live — fullscreen */}
-      <Route
-        path="/teacher/private-session/live/:id"
-        element={
-          <ProtectedTeacherRoute>
-            <PrivateSessionLive />
-          </ProtectedTeacherRoute>
-        }
-      />
-
-      {/* Group Session Live — fullscreen */}
-      <Route
-        path="/teacher/group-session/live/:id"
-        element={
-          <ProtectedTeacherRoute>
-            <GroupSessionLive />
-          </ProtectedTeacherRoute>
-        }
-      />
-
-      {/* ============================================
-          NORMAL ROUTES — inside TeacherLayout
-          ============================================ */}
-
+      {/* ── Academy / Faculty — TeacherLayout ── */}
       <Route
         path="/teacher"
-        element={
-          <ProtectedTeacherRoute>
-            <TeacherLayout />
-          </ProtectedTeacherRoute>
-        }
+        element={<ProtectedTeacherRoute><TeacherLayout /></ProtectedTeacherRoute>}
       >
         <Route path="profile" element={<Profile />} />
         <Route path="private-details" element={<PrivateDetails />} />
-        <Route path="dashboard" element={<TeacherDashboard />} />
+        <Route path="dashboard" element={<DashboardEntry />} />
         <Route path="students" element={<AllStudents />} />
         <Route path="students/:studentId" element={<AllStudentDetail />} />
         <Route path="classes" element={<ClassesList />} />
         <Route path="classes/:subjectId" element={<Classes />} />
         <Route path="change-password" element={<ChangePassword />} />
+        <Route path="chat" element={<Chat />} />
+        <Route path="settings/teacher-password" element={<TeacherPasswordSettings />} />
 
         {/* Assignments */}
         <Route path="classes/:subjectId/assignments" element={<Assignments />} />
@@ -140,7 +149,7 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/students" element={<StudentsList />} />
         <Route path="classes/:subjectId/students/:studentId" element={<StudentDetail />} />
 
-        {/* Live Sessions list / detail (NOT the live room itself) */}
+        {/* Live Sessions */}
         <Route path="live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions/create" element={<TeacherCreateLiveSession />} />

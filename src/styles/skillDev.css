@@ -1,0 +1,507 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   skillDev.css  ·  Shared styles for all Skill Dev / Expert pages
+   Ported from the prototype's rd-* / sp-* / slot / pack classes.
+   Cards sit on the Expert body bg (#f3e2da). Accent = teal #13899b for the
+   teacher side (matching the prototype), orange #ff8f01 for learner-facing bits.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Page wrapper (fills the teacher-content area) ── */
+.sk-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+}
+
+.sk-page::-webkit-scrollbar { width: 5px; }
+.sk-page::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 10px; }
+
+/* ── Page header ── */
+.sk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sk-head__title {
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: #1a2c33;
+  letter-spacing: -0.3px;
+}
+.sk-head__sub {
+  font-size: 12.5px;
+  color: #6b7c83;
+  margin-top: 2px;
+}
+
+/* ── Card ── */
+.rd-card {
+  background: #f4f7f8;
+  border-radius: 18px;
+  border: none;
+  box-shadow: 0 6px 14px rgba(0,0,0,.10);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.rd-card:last-child { margin-bottom: 0; }
+.rd-card h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+/* ── Stat grid + cards ── */
+.rd-statgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.rd-stat {
+  background: #f4f7f8;
+  border-radius: 16px;
+  padding: 15px 16px;
+  box-shadow: 0 6px 14px rgba(0,0,0,.07);
+}
+.rd-stat .ic {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  margin-bottom: 10px;
+}
+.rd-stat .v {
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  color: #1a2c33;
+  line-height: 1;
+}
+.rd-stat .v small { font-size: 14px; color: #13899b; }
+.rd-stat .l {
+  font-size: 11.5px;
+  color: #6b7c83;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* ── Course syllabus rows (teacher) ── */
+.rd-syll {
+  border: 1px solid #e3eaec;
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.rd-syll .sh { display: flex; align-items: center; gap: 10px; }
+.rd-syll .num {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  background: rgba(19,137,155,.10);
+  color: #0a808a;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 12px;
+  flex-shrink: 0;
+}
+.rd-syll .st2 { font-size: 13.5px; font-weight: 700; color: #1a2c33; }
+
+/* ── Booking rows ── */
+.rd-book {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 15px;
+  border: 1px solid #e3eaec;
+  border-radius: 13px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.rd-book:last-child { margin-bottom: 0; }
+.rd-book .bt {
+  width: 46px; height: 46px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  font-weight: 800; color: #fff;
+  font-size: 15px;
+  line-height: 1;
+}
+.rd-book .start {
+  margin-left: auto;
+  background: #ff8f01;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+  box-shadow: 0 4px 12px rgba(255,143,1,.32);
+  font-family: inherit;
+}
+.rd-book .start:hover { background: #e88001; }
+.rd-book .soon {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #6b7c83;
+  font-weight: 600;
+  border: 1px solid #e3eaec;
+  border-radius: 9px;
+  padding: 9px 14px;
+}
+.rd-book__icon-btn {
+  background: #fff;
+  border: 1px solid #cdd6e0;
+  color: #0a808a;
+  border-radius: 9px;
+  width: 38px; height: 38px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.rd-book__icon-btn:hover { background: #f0f6f7; }
+.rd-book__ghost {
+  background: #fff;
+  border: 1px solid #e3eaec;
+  color: #6b7c83;
+  border-radius: 9px;
+  padding: 9px 13px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.rd-book__accept {
+  background: #13899b;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 15px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+.rd-book__accept:hover { background: #0f7384; }
+
+.rd-daygroup {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: #9aa9af;
+  margin: 16px 0 9px;
+}
+.rd-daygroup:first-child { margin-top: 4px; }
+
+/* ── Self-paced course cards (learner-style, used on teacher My Courses too) ── */
+.sp-card {
+  background: #fff;
+  border: 1px solid #e3eaec;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sp-thumb {
+  height: 92px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.sp-mod {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  margin-bottom: 7px;
+  background: #fff;
+}
+
+/* ── Availability / booking slots ── */
+.slot {
+  border: 1px solid #e3dccf;
+  border-radius: 8px;
+  padding: 9px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  color: #1a2c33;
+  font-family: inherit;
+  min-height: 34px;
+}
+.slot.off {
+  opacity: .4;
+  cursor: not-allowed;
+  background: #f5f1ea;
+  color: #bbb;
+}
+.slot.on {
+  background: var(--acc, #13899b);
+  color: #fff;
+  border-color: var(--acc, #13899b);
+}
+.slot.booked {
+  background: #f0a23b;
+  color: #fff;
+  border-color: #f0a23b;
+  cursor: not-allowed;
+  display: grid;
+  place-items: center;
+}
+
+/* ── Package picker (learner book; reused styling) ── */
+.pack {
+  border: 1.5px solid #e3dccf;
+  border-radius: 12px;
+  padding: 12px 13px;
+  background: #fff;
+  box-sizing: border-box;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+.pack.on {
+  border-color: var(--acc, #13899b);
+  background: var(--acc-bg, #eef6f7);
+  box-shadow: 0 4px 14px rgba(19,137,155,.16);
+}
+
+/* ── Generic teal CTA used across Skill Dev pages ── */
+.sk-btn {
+  background: #13899b;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: inherit;
+  transition: background .15s;
+}
+.sk-btn:hover { background: #0f7384; }
+.sk-btn--ghost {
+  background: #fff;
+  border: 1px solid #cfe0e3;
+  color: #0a808a;
+}
+.sk-btn--ghost:hover { background: #f0f6f7; }
+.sk-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── Empty state ── */
+.sk-empty {
+  text-align: center;
+  padding: 26px 0;
+  color: #6b7c83;
+  font-size: 13px;
+}
+
+/* ── Modal (Edit course / Edit rates) ── */
+.sk-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(16,40,46,.45);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow: auto;
+}
+.sk-modal {
+  background: #f4f7f8;
+  border-radius: 16px;
+  width: min(680px, 100%);
+  box-shadow: 0 24px 60px rgba(0,0,0,.3);
+  overflow: hidden;
+}
+.sk-modal--sm { width: min(520px, 100%); }
+.sk-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e6edee;
+}
+.sk-modal__head h3 {
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a2c33;
+  margin: 0;
+}
+.sk-modal__head p { font-size: 12px; color: #6b7c83; margin: 2px 0 0; }
+.sk-modal__x {
+  background: #eef3f4;
+  border: none;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7c83;
+  display: grid; place-items: center;
+}
+.sk-modal__x:hover { background: #e2e9ea; }
+.sk-modal__body { padding: 20px; max-height: 62vh; overflow: auto; }
+.sk-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #fff;
+  border-top: 1px solid #e6edee;
+}
+.sk-modal__panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.sk-modal__panel:last-child { margin-bottom: 0; }
+
+/* ── Form fields inside modals ── */
+.sk-field { margin-bottom: 13px; }
+.sk-field:last-child { margin-bottom: 0; }
+.sk-field label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6b7c83;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.sk-input {
+  width: 100%;
+  border: 1px solid #d7e3e5;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  background: #fff;
+  color: #1a2c33;
+}
+.sk-input:focus { border-color: #13899b; box-shadow: 0 0 0 3px rgba(19,137,155,.12); }
+
+.sk-seg {
+  display: flex;
+  gap: 8px;
+}
+.sk-seg button {
+  flex: 1;
+  padding: 9px;
+  border-radius: 9px;
+  border: 1px solid #d7e3e5;
+  background: #fff;
+  color: #6b7c83;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sk-seg button.on {
+  border: 1.5px solid #13899b;
+  background: rgba(19,137,155,.08);
+  color: #0a808a;
+}
+
+/* ── Earnings withdraw card ── */
+.sk-earn-card {
+  background: #0a4d55;
+  color: #fff;
+  border-radius: 18px;
+  padding: 22px;
+}
+.sk-earn-card__label {
+  font-size: 11.5px;
+  color: rgba(255,255,255,.65);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-weight: 600;
+}
+.sk-earn-card__big {
+  font-family: "Montserrat", system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 34px;
+  letter-spacing: -1px;
+  margin-top: 6px;
+}
+.sk-earn-card__sub { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 4px; }
+.sk-earn-card__btn {
+  background: #ff8f01;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 0;
+  width: 100%;
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sk-earn-card__btn:hover { background: #e88001; }
+
+/* ── Transaction row ── */
+.sk-txn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid #eef3f4;
+}
+.sk-txn:first-child { border-top: none; }
+.sk-txn__img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.sk-txn__icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  background: rgba(19,137,155,.10);
+  color: #0a808a;
+}
+.sk-txn__amt { font-family: "Montserrat", system-ui, sans-serif; font-weight: 800; font-size: 14px; margin-left: auto; }
+.sk-txn__amt--in  { color: #2f9d42; }
+.sk-txn__amt--out { color: #6b7c83; }
+.sk-txn__badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+.sk-txn__badge--paid     { background: rgba(47,157,66,.14);  color: #1a6e2e; }
+.sk-txn__badge--pending  { background: rgba(255,143,1,.14);  color: #b85f00; }
+.sk-txn__badge--withdraw { background: #eef3f4;              color: #6b7c83; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .rd-statgrid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .sk-head__title { font-size: 17px; }
+}

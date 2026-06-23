@@ -1,19 +1,73 @@
-/**
- * FILE: TEACHER_UI/src/api/groupSessionService.js
- *
- * Teacher-side client for Group Sessions.
- * Teachers are only invitees of group sessions — they can:
- *   - view invitations (pending)
- *   - accept / decline
- *   - view upcoming / history
- *   - join the live room (same /join/ endpoint)
- *
- * Backend: /api/sessions/group-sessions/...
- */
-
 import api from "./apiClient";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function tryGet(candidates) {
+  let lastErr = null;
+
+  for (const url of candidates) {
+    try {
+      const res = await api.get(url);
+      return res.data;
+    } catch (err) {
+      lastErr = err;
+      const status = err?.response?.status;
+      if (status && ![404, 405].includes(status)) throw err;
+    }
+  }
+
+  throw lastErr || new Error("No matching endpoint found.");
+}
+
 const groupSessionService = {
+  async getMySubjects() {
+    const data = await tryGet([
+      "/sessions/group-sessions/my-subjects/",
+      "/sessions/my-subjects/",
+      "/teacher/subjects/",
+    ]);
+
+    return data || [];
+  },
+
+  async getTeachers(subjectId, query = "") {
+    const q = query ? `?q=${encodeURIComponent(query)}` : "";
+
+    const data = await tryGet([
+      `/sessions/subjects/${subjectId}/teachers/${q}`,
+      `/sessions/group-sessions/subjects/${subjectId}/teachers/${q}`,
+      `/teacher/subjects/${subjectId}/teachers/${q}`,
+    ]);
+
+    return data || [];
+  },
+
+  async createGroupSession(payload) {
+    const cleanPayload = {
+      subject_id: payload.subject_id,
+      invited_teacher_id: payload.invited_teacher_id || null,
+      invited_user_ids: Array.isArray(payload.invited_user_ids)
+        ? payload.invited_user_ids.filter((id) => UUID_RE.test(String(id)))
+        : [],
+      scheduled_date: payload.scheduled_date,
+      scheduled_time: payload.scheduled_time,
+      duration_minutes: Number(payload.duration_minutes || 60),
+      topic: payload.topic || "",
+    };
+
+    const res = await api.post(
+      "/sessions/group-sessions/create/",
+      cleanPayload
+    );
+
+    return transformGroupSession(res.data);
+  },
+
+  async cancelGroupSession(sessionId) {
+    const res = await api.post(`/sessions/group-sessions/${sessionId}/cancel/`);
+    return transformGroupSession(res.data);
+  },
 
   async getMyGroupSessions(tab = "upcoming") {
     const res = await api.get(
@@ -37,8 +91,6 @@ const groupSessionService = {
     return transformGroupSession(res.data);
   },
 
-  // Teacher (or student) who previously accepted flips back to pending.
-  // Allowed any time before the room actually opens.
   async unacceptInvite(sessionId) {
     const res = await api.post(`/sessions/group-sessions/${sessionId}/unaccept/`);
     return transformGroupSession(res.data);
@@ -49,11 +101,7 @@ const groupSessionService = {
     return res.data;
   },
 
-
-  // ─────────────────────────────────────────────
-  // Instant Meeting + host controls (teachers can host instant meetings too)
-  // ─────────────────────────────────────────────
-  async createInstant({ duration_minutes = 180, topic = "" } = {}) {
+  async createInstant({ duration_minutes = 60, topic = "" } = {}) {
     const res = await api.post("/sessions/group-sessions/instant/", {
       duration_minutes,
       topic,
@@ -61,14 +109,11 @@ const groupSessionService = {
     return transformGroupSession(res.data);
   },
 
-  // Resolve a room code (or UUID) to a session id so the teacher can
-  // navigate into the live room. Auth + paywall are enforced by the
-  // backend; this wrapper just normalises the response shape.
   async joinByCode(code) {
     const res = await api.post("/sessions/group-sessions/join-by-code/", {
       code: (code || "").trim(),
     });
-    return res.data; // { session_id, short_code, status, session_type, host_id }
+    return res.data;
   },
 
   async endSession(sessionId) {
@@ -84,25 +129,16 @@ const groupSessionService = {
     return res.data;
   },
 
-  // ─────────────────────────────────────────────
-  // History cleanup (per-user soft delete)
-  // ─────────────────────────────────────────────
-
-  // Hide a single past session from MY history view. Doesn't touch the
-  // session itself — the host and other participants still see it.
   async hideFromHistory(sessionId) {
     const res = await api.post(`/sessions/group-sessions/${sessionId}/hide/`);
     return res.data;
   },
 
-  // Bulk-hide history entries. Call shapes:
-  //   clearHistory({ all: true })            → hide all my history
-  //   clearHistory({ sessionIds: ["uuid"] }) → hide only the listed set
   async clearHistory({ all = false, sessionIds = null } = {}) {
     const body = all ? { all: true } : { session_ids: sessionIds || [] };
     const res = await api.post(
       "/sessions/group-sessions/history/clear/",
-      body,
+      body
     );
     return res.data;
   },
@@ -110,34 +146,47 @@ const groupSessionService = {
 
 function transformGroupSession(sg) {
   if (!sg) return sg;
+
   return {
     ...sg,
     id: sg.id,
     shortCode: sg.short_code || "",
     sessionType: sg.session_type || "scheduled",
     admitMode: sg.admit_mode || "open",
+
     subjectId: sg.subject_id || null,
     subjectName: sg.subject_name,
     courseId: sg.course_id || null,
     courseTitle: sg.course_title,
+
     topic: sg.topic,
     hostName: sg.host_name || "",
     hostId: sg.host_id,
+    hostPhoto:
+      sg.host_photo ||
+      sg.host_profile_photo ||
+      sg.host_avatar ||
+      "",
+
     invitedTeacher: sg.invited_teacher_name || null,
     invitedTeacherId: sg.invited_teacher_id || null,
+
     date: sg.scheduled_date,
     time: sg.scheduled_time,
     durationMinutes: sg.duration_minutes,
     maxInvitees: sg.max_invitees,
+
     status: sg.status,
     cancelReason: sg.cancel_reason || "",
     roomStartedAt: sg.room_started_at,
     endedAt: sg.ended_at,
+
     invites: (sg.invites || []).map((inv) => ({
       id: inv.id,
       userId: inv.user_id,
       name: inv.name,
       studentId: inv.student_id,
+      teacherId: inv.teacher_id || inv.employee_id || "",
       role: inv.invite_role,
       status: inv.status,
       declineCount: inv.decline_count || 0,
@@ -145,33 +194,55 @@ function transformGroupSession(sg) {
       joinedAt: inv.joined_at || null,
       respondedAt: inv.responded_at || null,
     })),
+
     acceptedCount: sg.accepted_count || 0,
     pendingCount: sg.pending_count || 0,
     declinedCount: sg.declined_count || 0,
   };
 }
 
-// Extract the user-friendly message out of an axios error response.
-// Handles DRF field errors, {"error": "..."}, {"detail": "..."}, and
-// simple string responses.
 export function extractApiError(err, fallback = "Something went wrong.") {
   const data = err?.response?.data;
+
   if (!data) return fallback;
-  if (typeof data === "string") return data;
+
+  if (typeof data === "string") {
+    const lower = data.toLowerCase();
+
+    if (
+      lower.includes("<!doctype html") ||
+      lower.includes("<html") ||
+      lower.includes("server error") ||
+      lower.includes("internal server error")
+    ) {
+      return fallback;
+    }
+
+    return data;
+  }
+
   if (data.error) return data.error;
   if (data.detail) return data.detail;
+
   if (typeof data === "object") {
     const parts = [];
-    for (const [k, v] of Object.entries(data)) {
-      const text = Array.isArray(v) ? v.join(" ") : String(v);
-      parts.push(k === "non_field_errors" ? text : `${k}: ${text}`);
+
+    for (const [key, value] of Object.entries(data)) {
+      const text = Array.isArray(value) ? value.join(" ") : String(value);
+      parts.push(key === "non_field_errors" ? text : `${key}: ${text}`);
     }
+
     if (parts.length) return parts.join(" • ");
   }
+
   return fallback;
 }
 
 export const {
+  getMySubjects,
+  getTeachers,
+  createGroupSession,
+  cancelGroupSession,
   getMyGroupSessions,
   getDetail,
   acceptInvite,

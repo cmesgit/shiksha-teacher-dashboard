@@ -1,0 +1,131 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   skillSidebar.css  ·  Expert / Skill Dev sidebar (red-brown #b3402e)
+   Section-grouped nav, ported from the prototype's rd-side teacher + rd-navgroup.
+───────────────────────────────────────────────────────────────────────────── */
+
+.sk-side {
+  width: 240px;
+  flex-shrink: 0;
+  background: #b3402e;
+  color: #fff;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 110;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto;
+}
+
+/* ── Brand row ── */
+.sk-side__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 26px;
+}
+.sk-side__brand { display: flex; align-items: center; gap: 10px; }
+.sk-side__brand img {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  flex-shrink: 0;
+}
+.sk-side__brand h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.sk-side__brand p { margin: 1px 0 0; font-size: 9.5px; opacity: .8; }
+
+.sk-side__close {
+  display: none;
+  width: 32px; height: 32px;
+  border: none;
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.8);
+  border-radius: 8px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+.sk-side__close svg { font-size: 22px; }
+
+/* ── Nav ── */
+.sk-side__nav { flex: 1; }
+
+.sk-navgroup {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  opacity: .5;
+  padding: 14px 12px 5px;
+}
+
+.sk-navspacer {
+  height: 1px;
+  background: rgba(255,255,255,.12);
+  margin: 12px 8px 6px;
+}
+
+.sk-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,.85);
+  opacity: .85;
+  margin-bottom: 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background .15s, opacity .15s;
+}
+.sk-link__i { display: grid; place-items: center; font-size: 15px; flex-shrink: 0; }
+.sk-link:hover { background: rgba(255,255,255,.1); opacity: 1; }
+.sk-link.active {
+  background: rgba(255,255,255,.18);
+  opacity: 1;
+  font-weight: 700;
+}
+
+/* ── Return to homepage ── */
+.sk-side__home {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: .8;
+  color: #fff;
+  text-decoration: none;
+  transition: background .15s, opacity .15s;
+}
+.sk-side__home:hover { background: rgba(255,255,255,.08); opacity: 1; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — mobile slide-in
+───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sk-side {
+    position: fixed;
+    top: 0; left: 0;
+    width: 256px;
+    height: 100dvh;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 28px rgba(0,0,0,.38);
+    padding: 22px 16px 28px;
+    z-index: 110;
+  }
+  .sk-side--open { transform: translateX(0); }
+  .sk-side__close { display: flex; }
+  .sk-link { padding: 12px; font-size: 15px; }
+}

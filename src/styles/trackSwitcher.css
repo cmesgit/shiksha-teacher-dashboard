@@ -1,0 +1,15 @@
+/* trackSwitcher.css — Academy⟷Skill Dev pill. Teacher context: both active pills #425f7f. */
+.trackSwitcher { display:inline-flex; background:#d9cfce; border-radius:100px; padding:3px; gap:2px; flex-shrink:0; }
+.trackSwitcher__seg { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:100px;
+  font-size:12px; font-weight:700; color:#6b5e5d; line-height:1; border:none; background:transparent; cursor:pointer;
+  font-family:inherit; white-space:nowrap; transition:background .15s,color .15s,box-shadow .15s; }
+.trackSwitcher__seg:hover:not(.is-active):not(.is-locked) { background:rgba(0,0,0,.06); color:#3d3533; }
+.trackSwitcher__seg.is-active { background:#015865; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,.18); }
+.trackSwitcher.ctx-skill .trackSwitcher__seg.is-active { background:#ff8f01; color:#fff; box-shadow:0 2px 6px rgba(255,143,1,.35); }
+.trackSwitcher.ctx-teacher .trackSwitcher__seg.is-active { background:#425f7f; color:#fff; box-shadow:0 2px 6px rgba(66,95,127,.30); }
+.trackSwitcher__seg.is-locked { color:#9a8f8e; cursor:default; }
+.trackSwitcher__seg.is-locked:hover { background:transparent; color:#9a8f8e; }
+.trackSwitcher__lock { font-size:13px; opacity:.8; }
+.trackSwitcher__badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px;
+  background:rgba(154,123,24,.18); color:#9a7b18; padding:2px 6px; border-radius:100px; }
+@media (max-width:600px){ .trackSwitcher{margin-right:8px} .trackSwitcher__seg{padding:6px 10px;font-size:11px} .trackSwitcher__badge{display:none} }

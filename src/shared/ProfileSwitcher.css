@@ -1,0 +1,125 @@
+/* ProfileSwitcher — dropdown styled to match the Auth Flow prototype (rd-prof). */
+
+.ps-root { position: relative; display: inline-block; }
+
+/* Round avatar trigger (rd-avatar) */
+.ps-avatar-btn {
+  width: 36px; height: 36px; border-radius: 50%; background: #fff;
+  display: grid; place-items: center; font-weight: 800; font-size: 13px;
+  color: #015865; cursor: pointer; border: 1px solid rgba(0,0,0,.06);
+  line-height: 1; padding: 0;
+}
+.ps-avatar-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.ps-avatar-btn--teacher { color: #425f7f; }
+
+/* Dropdown card (rd-prof) */
+.ps-prof {
+  position: absolute; top: 46px; right: 0; width: 256px; background: #fff;
+  border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.18);
+  z-index: 60; overflow: hidden;
+}
+.ps-prof-head { display: flex; align-items: center; gap: 11px; padding: 15px 16px; }
+.ps-prof-head__av {
+  width: 42px; height: 42px; border-radius: 50%; background: #015865; color: #fff;
+  display: grid; place-items: center; font-weight: 800; flex-shrink: 0; font-size: 16px;
+}
+.ps-prof-head__txt { min-width: 0; }
+.ps-prof-head__nm { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+.ps-prof-head__em {
+  font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.ps-prof-sec {
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: #9aa0a6; padding: 8px 16px 4px; background: #fafafa; border-top: 1px solid #eee;
+}
+
+.ps-prof-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  font-size: 13px; color: #333; cursor: pointer; background: #fafafa;
+  width: 100%; border: none; text-align: left; font-family: inherit;
+}
+.ps-prof-item:hover { background: #f0f0f0; }
+.ps-prof-item:disabled { cursor: default; }
+.ps-prof-item.active { color: #015865; font-weight: 600; }
+.ps-prof-item__txt { min-width: 0; flex: 1; }
+.ps-prof-item__nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps-prof-item__sub { font-size: 10.5px; color: #999; }
+.ps-prof-item__av {
+  width: 26px; height: 26px; border-radius: 50%; background: rgba(19,137,155,.13);
+  color: #13899b; display: grid; place-items: center; font-size: 13px; font-weight: 800; flex-shrink: 0;
+}
+.ps-prof-item__av--teacher { background: rgba(66,95,127,.14); color: #425f7f; }
+.ps-prof-item__lock { color: #9ca3af; font-size: 14px; flex-shrink: 0; }
+.ps-prof-item__tick { margin-left: auto; color: #2f9d42; display: flex; font-size: 15px; }
+
+.ps-prof-menu { padding: 6px 0; }
+.ps-mi {
+  display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+  font-size: 13px; color: #333; cursor: pointer; text-decoration: none;
+  width: 100%; border: none; background: none; text-align: left; font-family: inherit;
+}
+.ps-mi svg { font-size: 16px; }
+.ps-mi:hover { background: #f5f5f5; }
+.ps-mi--logout { color: #c0392b; border-top: 1px solid #eee; }
+
+/* Avatar primitive (image / emoji / initials) */
+.ps-av {
+  border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
+  font-weight: 800; color: #015865; background: #eef4f5; overflow: hidden;
+}
+.ps-av--img { object-fit: cover; }
+.ps-av--emoji { background: #f0f4ff; }
+.ps-av--initials { background: rgba(19,137,155,.13); color: #13899b; }
+
+/* ── Modals (PIN + password) — preserved ── */
+.ps-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.ps-modal {
+  background: #fff; border-radius: 16px; padding: 32px 28px 24px;
+  width: 100%; max-width: 340px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.ps-modal__title { font-size: 18px; font-weight: 700; color: #111; margin: 0; }
+.ps-modal__sub   { font-size: 13px; color: #6b7280; margin: 0; text-align: center; }
+.ps-modal__error {
+  font-size: 12px; color: #dc2626; margin: 0; text-align: center;
+  background: #fef2f2; border-radius: 6px; padding: 6px 10px;
+  width: 100%; box-sizing: border-box;
+}
+.ps-modal__confirm {
+  width: 100%; padding: 11px; background: #015865; color: #fff;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-top: 4px;
+}
+.ps-modal__confirm:disabled { opacity: .55; cursor: not-allowed; }
+.ps-modal__cancel { background: none; border: none; color: #6b7280; font-size: 13px; cursor: pointer; padding: 4px; }
+.ps-modal__cancel:hover { color: #111; }
+
+.ps-pin { display: flex; gap: 10px; justify-content: center; margin: 6px 0; }
+.ps-pin__cell {
+  width: 48px; height: 56px; border: 2px solid #d1d5db; border-radius: 10px;
+  font-size: 20px; text-align: center; outline: none; caret-color: transparent;
+  transition: border-color .15s;
+}
+.ps-pin__cell:focus { border-color: #015865; }
+.ps-pin--error .ps-pin__cell { border-color: #dc2626; animation: ps-shake .3s ease; }
+@keyframes ps-shake {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-3px); }
+  40%,80%  { transform: translateX(3px); }
+}
+
+.ps-pw-wrap { position: relative; width: 100%; }
+.ps-pw-input {
+  width: 100%; border: 1.5px solid #d1d5db; border-radius: 8px;
+  padding: 10px 40px 10px 12px; font-size: 14px; outline: none;
+  box-sizing: border-box; transition: border-color .15s;
+}
+.ps-pw-input:focus { border-color: #015865; }
+.ps-pw-eye {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 15px;
+}

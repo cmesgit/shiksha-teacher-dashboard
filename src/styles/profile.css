@@ -36,31 +36,27 @@
   width: 100%;
   max-width: 880px;
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: 18px;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.04),
-    0 6px 20px rgba(0, 0, 0, 0.06);
+    0 0 0 1px rgba(11, 46, 24, 0.05),
+    0 12px 32px rgba(11, 46, 24, 0.10);
   /* no overflow:hidden — was clipping the avatar */
   position: relative;
 }
 
 /* ============================================================
-   HEADER — blue gradient fading to white
+   HEADER — PPT dark-green hero
 ============================================================ */
 .tp-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
-  padding: 24px 32px 22px;
-  background: linear-gradient(
-    180deg,
-    #cfe0f1 0%,
-    #dde9f4 30%,
-    #ecf3f9 60%,
-    #ffffff 100%
-  );
-  border-radius: 12px 12px 0 0;
+  padding: 26px 32px 24px;
+  background:
+    radial-gradient(120% 150% at 10% 0%, rgba(50, 220, 120, 0.18) 0%, rgba(50, 220, 120, 0) 45%),
+    linear-gradient(135deg, #0B2E18 0%, #15502A 55%, #1E7B3C 100%);
+  border-radius: 18px 18px 0 0;
   position: relative;
 }
 
@@ -86,9 +82,9 @@
   height: 100%;
   border-radius: 50%;
   overflow: hidden;
-  background: #d9d9d9;
+  background: #E8F5EC;
   border: 3px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,7 +99,7 @@
 .tp-avatar-placeholder {
   font-size: 28px;
   font-weight: 700;
-  color: #666;
+  color: #15502A;
 }
 
 .tp-avatar-edit-btn {
@@ -113,7 +109,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #111;
+  background: #2F9D42;
   border: 2px solid #ffffff;
   color: #ffffff;
   display: flex;
@@ -127,7 +123,7 @@
 }
 
 .tp-avatar-edit-btn:hover {
-  background: #2a2a2a;
+  background: #268537;
 }
 
 /* ── Name + credentials + pills ── */
@@ -143,7 +139,7 @@
   font-family: 'Poppins', 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 700;
-  color: #0b1220;
+  color: #ffffff;
   line-height: 1.2;
 }
 
@@ -153,7 +149,7 @@
   align-items: center;
   gap: 2px 12px;
   font-size: 12.5px;
-  color: #1f2937;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .tp-credential {
@@ -164,7 +160,7 @@
 
 .tp-credential::before {
   content: "•";
-  color: #1f2937;
+  color: rgba(255, 255, 255, 0.6);
   margin-right: 7px;
   font-weight: 700;
 }
@@ -190,8 +186,9 @@
 }
 
 .tp-pill--available {
-  background: #1eb854;
+  background: #2F9D42;
   color: #ffffff;
+  box-shadow: 0 2px 8px rgba(47, 157, 66, 0.4);
 }
 
 .tp-pill-dot {
@@ -202,7 +199,8 @@
 }
 
 .tp-pill--lang {
-  background: #2e3a7c;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   color: #ffffff;
 }
 
@@ -229,14 +227,33 @@
 }
 
 .tp-btn--outline {
-  border: 1px solid #cfd6dd;
-  background: #ffffff;
-  color: #1f2937;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .tp-btn--outline:hover:not(:disabled) {
-  background: #f3f5f8;
-  border-color: #9ba6b1;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
+}
+
+.tp-btn--primary {
+  border: 1px solid #2F9D42;
+  background: #2F9D42;
+  color: #ffffff;
+}
+
+.tp-btn--primary:hover:not(:disabled) {
+  background: #268537;
+  border-color: #268537;
+}
+
+.tp-save-error {
+  max-width: 150px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #FFD9D6;
+  text-align: right;
 }
 
 .tp-btn:disabled {
@@ -324,7 +341,20 @@
   margin: 0 0 8px;
   font-size: 14.5px;
   font-weight: 700;
-  color: #0b1220;
+  color: #14241B;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.tp-section-title::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2F9D42;
+  box-shadow: 0 0 0 3px rgba(47, 157, 66, 0.18);
+  flex-shrink: 0;
 }
 
 /* ============================================================
@@ -479,11 +509,11 @@
 
 .tp-pref-dot {
   display: inline-block;
-  width: 4px;
-  height: 4px;
-  min-width: 4px;
+  width: 5px;
+  height: 5px;
+  min-width: 5px;
   border-radius: 50%;
-  background: #0b1220;
+  background: #2F9D42;
 }
 
 .tp-pref-row-edit {
@@ -517,7 +547,7 @@
 }
 
 .tp-toggle--on {
-  background: #1eb854;
+  background: #2F9D42;
 }
 
 .tp-toggle-thumb {

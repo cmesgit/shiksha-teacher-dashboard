@@ -20,6 +20,7 @@ export default function Profile() {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [sessionCount, setSessionCount] = useState(0);
   const [classes, setClasses] = useState([]);
 
@@ -81,6 +82,7 @@ export default function Profile() {
 
   const handleEdit = () => {
     if (profile) populateEditFields(profile);
+    setSaveError("");
     setIsEditing(true);
   };
 
@@ -88,6 +90,7 @@ export default function Profile() {
     if (profile) populateEditFields(profile);
     setAvatarFile(null);
     setAvatarPreview(null);
+    setSaveError("");
     setIsEditing(false);
   };
 
@@ -101,6 +104,7 @@ export default function Profile() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError("");
 
     const updates = {
       bio: editBio,
@@ -122,8 +126,7 @@ export default function Profile() {
         const res = await api.patch("/accounts/teacher/profile/", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        if (res.data?.photo) updates.photo = res.data.photo;
-        else updates.photo = avatarPreview;
+        updates.photo = res.data?.photo || avatarPreview;
 
         if (updates.photo) {
           localStorage.setItem("avatar", updates.photo);
@@ -132,17 +135,20 @@ export default function Profile() {
       } else {
         await api.patch("/accounts/teacher/profile/", updates);
       }
+
+      // Commit to the UI and exit edit mode ONLY after the save succeeds.
+      setProfile(prev => ({ ...prev, ...updates }));
+      populateEditFields({ ...profile, ...updates });
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      setIsEditing(false);
     } catch (err) {
       console.error("Failed to save profile:", err);
-      if (avatarPreview) updates.photo = avatarPreview;
+      // Keep the user in edit mode with their changes intact, and tell them.
+      setSaveError("Couldn't save your changes. Please check your connection and try again.");
+    } finally {
+      setSaving(false);
     }
-
-    setProfile(prev => ({ ...prev, ...updates }));
-    populateEditFields({ ...profile, ...updates });
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setSaving(false);
-    setIsEditing(false);
   };
 
   if (loading) {
@@ -248,9 +254,10 @@ export default function Profile() {
                 <button className="tp-btn tp-btn--outline" onClick={handleCancel} disabled={saving}>
                   Cancel
                 </button>
-                <button className="tp-btn tp-btn--outline" onClick={handleSave} disabled={saving}>
+                <button className="tp-btn tp-btn--primary" onClick={handleSave} disabled={saving}>
                   {saving ? "Saving..." : "Save"}
                 </button>
+                {saveError && <span className="tp-save-error">{saveError}</span>}
               </>
             ) : (
               <>

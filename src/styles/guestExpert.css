@@ -1,0 +1,374 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   guestExpert.css  ·  Expert / Skill Dev teacher dashboard
+   Spec from Auth Flow handoff doc:
+     body bg  #f3e2da  (warm blush — set by layout via .teacher-content--expert)
+     sidebar  #b3402e  (dark red-brown — set by .sidebar--expert)
+     accent   #c0492f  (for buttons and active elements)
+   White cards (#f4f7f8) sit on the warm blush background.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Body wrapper — fills teacher-content area ── */
+.ge-body-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* ── Greeting ── */
+.ge-greeting {
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.ge-greeting h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.4px;
+  margin: 0 0 3px;
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+.ge-greeting p {
+  font-size: 12.5px;
+  color: rgba(60, 30, 20, 0.55);
+  margin: 0;
+}
+
+/* ── Stats grid ── */
+.ge-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.ge-stat-card {
+  background: #f4f7f8;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+}
+
+.ge-stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(192, 73, 47, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 9px;
+  color: #c0492f;
+}
+
+.ge-stat-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1a1a1a;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+.ge-stat-label {
+  font-size: 11.5px;
+  color: rgba(60, 30, 20, 0.5);
+  margin-top: 3px;
+}
+
+/* ── Main 2-col grid ── */
+.ge-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 260px;
+  overflow: hidden;
+}
+
+.ge-col-left,
+.ge-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.ge-col-left::-webkit-scrollbar,
+.ge-col-right::-webkit-scrollbar  { width: 4px; }
+.ge-col-left::-webkit-scrollbar-thumb,
+.ge-col-right::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+}
+
+/* ── White content card ── */
+.ge-card {
+  background: #f4f7f8;
+  border-radius: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10);
+  padding: 16px 18px;
+  flex-shrink: 0;
+}
+
+.ge-card h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  font-family: "Montserrat", system-ui, sans-serif;
+  letter-spacing: -0.2px;
+}
+
+.ge-card-empty {
+  font-size: 12.5px;
+  color: rgba(60, 30, 20, 0.4);
+  padding: 8px 0;
+}
+
+/* ── Session (booking) rows ── */
+.ge-session-card {
+  background: #fff;
+  border-radius: 13px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.ge-session-card:last-child { margin-bottom: 0; }
+
+.ge-session-av {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: rgba(192, 73, 47, 0.12);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0492f;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+.ge-session-info  { flex: 1; min-width: 0; }
+
+.ge-session-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #111827;
+  font-family: "Montserrat", system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ge-session-meta {
+  font-size: 11.5px;
+  color: rgba(60, 30, 20, 0.5);
+  margin-top: 1px;
+}
+
+.ge-session-time {
+  font-size: 12px;
+  color: #c0492f;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+/* Start button — accent #c0492f */
+.ge-session-cta {
+  background: #c0492f;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.ge-session-cta:hover { background: #a33d27; }
+
+.ge-session-later {
+  font-size: 12px;
+  color: rgba(60, 30, 20, 0.45);
+  flex-shrink: 0;
+}
+
+/* ── More link ── */
+.ge-more-link {
+  display: inline-block;
+  font-size: 12.5px;
+  color: #c0492f;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: 6px;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.ge-more-link:hover { color: #8a3020; }
+
+/* ── Right panel: Earnings ── */
+.ge-earnings-card {
+  background: #f4f7f8;
+  border-radius: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10);
+  padding: 16px 18px;
+}
+
+.ge-earnings-card h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 12px;
+  letter-spacing: -0.2px;
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+.ge-earnings-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  line-height: 1;
+}
+
+.ge-earnings-big {
+  font-size: 28px;
+  font-weight: 900;
+  color: #1a1a1a;
+  letter-spacing: -0.6px;
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+.ge-earnings-unit {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(60, 30, 20, 0.55);
+  font-family: "Montserrat", system-ui, sans-serif;
+}
+
+.ge-earnings-sub {
+  font-size: 12px;
+  color: rgba(60, 30, 20, 0.45);
+  margin-top: 3px;
+}
+
+.ge-progress-bar {
+  height: 8px;
+  border-radius: 100px;
+  background: rgba(60, 30, 20, 0.1);
+  overflow: hidden;
+  margin: 10px 0 5px;
+}
+
+.ge-progress-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, #c0492f, #e07055);
+  transition: width 0.5s ease;
+}
+
+.ge-progress-label {
+  font-size: 11px;
+  color: rgba(60, 30, 20, 0.4);
+}
+
+/* ── Activity card ── */
+.ge-activity-card {
+  background: #f4f7f8;
+  border-radius: 18px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.10);
+  padding: 16px 18px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ge-activity-card h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 10px;
+  letter-spacing: -0.2px;
+  font-family: "Montserrat", system-ui, sans-serif;
+  flex-shrink: 0;
+}
+
+.ge-activity-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.ge-act-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+
+.ge-act-row:last-child { margin-bottom: 0; }
+
+.ge-act-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.ge-act-text {
+  font-size: 12px;
+  color: rgba(60, 30, 20, 0.6);
+  line-height: 1.5;
+}
+
+/* ── Loading ── */
+.ge-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 14px;
+  color: rgba(60, 30, 20, 0.5);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 960px) {
+  .ge-grid           { grid-template-columns: 1fr; overflow-y: auto; }
+  .ge-stats-grid     { grid-template-columns: repeat(2, 1fr); }
+  .ge-col-right      { flex-direction: row; flex-wrap: wrap; }
+  .ge-col-right > *  { flex: 1 1 240px; }
+}
+
+@media (max-width: 600px) {
+  .ge-stats-grid     { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .ge-stat-value     { font-size: 20px; }
+  .ge-greeting h1    { font-size: 18px; }
+}
