@@ -1,3 +1,14 @@
+/**
+ * PLACEMENT: src/routes/TeacherRoutes.jsx
+ * ACTION:    Replace the entire file.
+ *
+ * Change from original:
+ *   Added import for SkillInbox and added route:
+ *     <Route path="inbox" element={<SkillInbox />} />
+ *   inside the /teacher/expert SkillDevLayout block.
+ *   This makes it accessible at /teacher/expert/inbox — the path that
+ *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
+ */
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -46,12 +57,13 @@ import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 
-// ── Skill Dev (Expert) pages — live under SkillDevLayout ──
+// Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
 import ExpertCourses from "../pages/skill/ExpertCourses";
 import ExpertBookings from "../pages/skill/ExpertBookings";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
 import ExpertEarnings from "../pages/skill/ExpertEarnings";
+import SkillInbox from "../pages/SkillInbox"; // NEW
 
 import { LOGIN_URL } from "../config/urls";
 
@@ -60,11 +72,6 @@ function RedirectToMainLogin() {
   return null;
 }
 
-/**
- * /teacher/dashboard is the shared entry point. Pure guest experts — and any
- * teacher whose active track is Skill-dev — get the guest-expert dashboard;
- * everyone else (faculty / academy) gets the academic dashboard.
- */
 function DashboardEntry() {
   const { teacherInfo } = useAuth();
   const goesToExpert =
@@ -79,17 +86,12 @@ export default function TeacherRoutes() {
     <Routes>
       <Route path="/" element={<RedirectToMainLogin />} />
 
-      {/* ============================================
-          FULLSCREEN LIVE ROUTES — outside any layout
-          ============================================ */}
+      {/* Fullscreen live routes */}
       <Route path="/teacher/live/:id" element={<ProtectedTeacherRoute><TeacherLiveSession /></ProtectedTeacherRoute>} />
       <Route path="/teacher/private-session/live/:id" element={<ProtectedTeacherRoute><PrivateSessionLive /></ProtectedTeacherRoute>} />
       <Route path="/teacher/group-session/live/:id" element={<ProtectedTeacherRoute><GroupSessionLive /></ProtectedTeacherRoute>} />
 
-      {/* ============================================
-          SKILL DEV / EXPERT — SkillDevLayout
-          (own sidebar nav, red-brown theme)
-          ============================================ */}
+      {/* ── Skill Dev / Expert — SkillDevLayout ── */}
       <Route
         path="/teacher/expert"
         element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
@@ -99,11 +101,10 @@ export default function TeacherRoutes() {
         <Route path="bookings" element={<ExpertBookings />} />
         <Route path="availability" element={<ExpertAvailability />} />
         <Route path="earnings" element={<ExpertEarnings />} />
+        <Route path="inbox" element={<SkillInbox />} /> {/* NEW */}
       </Route>
 
-      {/* ============================================
-          ACADEMY / FACULTY — TeacherLayout
-          ============================================ */}
+      {/* ── Academy / Faculty — TeacherLayout ── */}
       <Route
         path="/teacher"
         element={<ProtectedTeacherRoute><TeacherLayout /></ProtectedTeacherRoute>}
@@ -148,7 +149,7 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/students" element={<StudentsList />} />
         <Route path="classes/:subjectId/students/:studentId" element={<StudentDetail />} />
 
-        {/* Live Sessions list / detail */}
+        {/* Live Sessions */}
         <Route path="live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions/create" element={<TeacherCreateLiveSession />} />

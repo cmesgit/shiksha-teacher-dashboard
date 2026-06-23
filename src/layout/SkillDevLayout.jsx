@@ -1,26 +1,16 @@
 /**
- * src/layout/SkillDevLayout.jsx
- * ──────────────────────────────────────────────────────────────────────────
- * Self-contained layout for the Skill Dev / Expert side of the teacher app.
- * Wraps every /teacher/expert/* route with:
- *   · the Expert sidebar (red-brown #b3402e) with SECTION-GROUPED nav,
- *     ported from the prototype's navExpert
- *   · the shared Header (TrackSwitcher + bell + profile), in Expert colours
- *   · the warm-blush body (#f3e2da)
+ * PLACEMENT: src/layout/SkillDevLayout.jsx
+ * ACTION:    Replace the entire file.
  *
- * The Academy/Faculty side keeps using TeacherLayout + Sidebar unchanged.
- * Because Skill Dev has its own nav here, the two nav sets can never mix.
+ * Change from original:
+ *   The Messages nav item previously pointed to "/teacher/chat" — the
+ *   academy chat page inside TeacherLayout. Expert teachers live entirely
+ *   inside SkillDevLayout, so navigating there dropped them out of the
+ *   Expert layout entirely and into the academy sidebar.
  *
- * Nav model (mirrors the prototype):
- *   My Dashboard
- *   ── Self-paced courses ──
- *   My Courses
- *   ── Live 1-on-1 ──
- *   Bookings
- *   Availability
- *   ── Money ──
- *   Earnings
- *   Messages
+ *   Fixed: Messages now points to "/teacher/expert/inbox", which is
+ *   the SkillInbox page registered inside the SkillDevLayout route tree.
+ *   Expert teachers stay inside their own layout at all times.
  */
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -35,16 +25,17 @@ import "../styles/skillDev.css";
 import "../styles/skillSidebar.css";
 
 const NAV = [
-  { to: "/teacher/expert",               label: "My Dashboard", icon: <Icon.cap size={15} />,    end: true },
+  { to: "/teacher/expert",              label: "My Dashboard", icon: <Icon.cap size={15} />,   end: true },
   { group: "Self-paced courses" },
-  { to: "/teacher/expert/courses",       label: "My Courses",   icon: <Icon.doc size={15} /> },
+  { to: "/teacher/expert/courses",      label: "My Courses",   icon: <Icon.doc size={15} /> },
   { group: "Live 1-on-1" },
-  { to: "/teacher/expert/bookings",      label: "Bookings",     icon: <Icon.cal size={15} /> },
-  { to: "/teacher/expert/availability",  label: "Availability", icon: <Icon.clock size={15} /> },
+  { to: "/teacher/expert/bookings",     label: "Bookings",     icon: <Icon.cal size={15} /> },
+  { to: "/teacher/expert/availability", label: "Availability", icon: <Icon.clock size={15} /> },
   { group: "Money" },
-  { to: "/teacher/expert/earnings",      label: "Earnings",     icon: <Icon.shield size={15} /> },
+  { to: "/teacher/expert/earnings",     label: "Earnings",     icon: <Icon.shield size={15} /> },
   { other: true },
-  { to: "/teacher/chat",                 label: "Messages",     icon: <Icon.msg size={15} /> },
+  // FIXED: was "/teacher/chat" which broke out of SkillDevLayout into TeacherLayout
+  { to: "/teacher/expert/inbox",        label: "Messages",     icon: <Icon.msg size={15} /> },
 ];
 
 export default function SkillDevLayout() {
@@ -59,7 +50,7 @@ export default function SkillDevLayout() {
 
   return (
     <div className="teacher-layout">
-      {/* ── Expert sidebar (red-brown) ── */}
+      {/* Expert sidebar */}
       <aside className={`sk-side${sidebarOpen ? " sk-side--open" : ""}`}>
         <div className="sk-side__top">
           <div className="sk-side__brand">
@@ -100,7 +91,6 @@ export default function SkillDevLayout() {
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
       <div className="teacher-main">
-        {/* Expert colours for header + body */}
         <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
         <main className="teacher-content teacher-content--expert">
           <Outlet />

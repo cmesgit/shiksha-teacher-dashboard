@@ -1,12 +1,18 @@
 /**
- * src/pages/skill/ExpertBookings.jsx
- * Wired to:
- *   GET  /skill/teacher/sessions/                       → all sessions
- *   POST /skill/teacher/sessions/<id>/confirm/          → accept request
- *   POST /skill/teacher/sessions/<id>/decline/          → decline request
- *   POST /skill/teacher/sessions/<id>/complete/         → mark done
- *   POST /skill/sessions/<id>/join/                     → get LiveKit token
- *   PATCH /skill/teacher/profile/                       → save new rate
+ * PLACEMENT: src/pages/skill/ExpertBookings.jsx
+ * ACTION:    Replace the entire file.
+ *
+ * Change from original:
+ *   Both Message buttons previously navigated to "/teacher/skill-inbox" —
+ *   a route that was never registered, causing a silent 404.
+ *
+ *   Fixed: both now call openChat(sess) which navigates to "/teacher/chat"
+ *   with state { learnerId: s.learner.id }. Chat.jsx at that path already
+ *   reads state.learnerId and calls ChatAPI.startDirect("LEARNER", id),
+ *   opening the WS DM immediately.
+ *
+ *   s.learner.id = LearnerProfile UUID (from _session_card() in livekit_views.py)
+ *   which is exactly what StartDirectView KIND_LEARNER expects.
  */
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -31,14 +37,13 @@ function isLive(s) {
   const now   = Date.now();
   const start = new Date(s.scheduled_for).getTime();
   const end   = start + (s.duration_mins || 60) * 60 * 1000;
-  return now >= start - 5 * 60 * 1000 && now <= end; // 5 min early entry
+  return now >= start - 5 * 60 * 1000 && now <= end;
 }
 
 function groupByDay(sessions) {
   const today    = new Date();
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
   const fmt = (d) => d.toDateString();
-
   const map = {};
   sessions.forEach(s => {
     if (!s.scheduled_for) { (map["Unscheduled"] = map["Unscheduled"] || []).push(s); return; }
@@ -51,7 +56,7 @@ function groupByDay(sessions) {
   return Object.entries(map).map(([day, items]) => ({ day, items }));
 }
 
-/* ── Edit-rates modal ── */
+/* ── Edit-rates modal (unchanged) ── */
 function EditRates({ currentRate, onClose, onSave }) {
   const [hourly, setHourly] = useState(currentRate || 480);
   const [saving, setSaving] = useState(false);
@@ -62,9 +67,7 @@ function EditRates({ currentRate, onClose, onSave }) {
       await api.patch("/skill/teacher/profile/", { hourly_rate: hourly });
       onSave(hourly);
       onClose();
-    } catch {
-      setSaving(false);
-    }
+    } catch { setSaving(false); }
   };
 
   const rows = [
@@ -118,13 +121,14 @@ function EditRates({ currentRate, onClose, onSave }) {
   );
 }
 
+/* ── Main component ── */
 export default function ExpertBookings() {
   const navigate = useNavigate();
   const [sessions,   setSessions]   = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [hourlyRate, setHourlyRate] = useState(480);
   const [editRates,  setEditRates]  = useState(false);
-  const [acting,     setActing]     = useState({}); // id → "confirming"|"declining"|"starting"
+  const [acting,     setActing]     = useState({});
 
   const load = useCallback(() => {
     setLoading(true);
@@ -150,7 +154,7 @@ export default function ExpertBookings() {
     try {
       await api.post(`/skill/teacher/sessions/${sess.id}/confirm/`);
       setSessions(ss => ss.map(s => s.id === sess.id ? { ...s, status: "confirmed" } : s));
-    } catch {/* leave state */} finally {
+    } catch { } finally {
       setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
     }
   };
@@ -160,7 +164,7 @@ export default function ExpertBookings() {
     try {
       await api.post(`/skill/teacher/sessions/${sess.id}/decline/`);
       setSessions(ss => ss.filter(s => s.id !== sess.id));
-    } catch {/* leave state */} finally {
+    } catch { } finally {
       setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
     }
   };
@@ -169,11 +173,9 @@ export default function ExpertBookings() {
     setActing(a => ({ ...a, [sess.id]: "starting" }));
     try {
       const r = await api.post(`/skill/sessions/${sess.id}/join/`);
-      // In production: connect to LiveKit with r.data.token + r.data.ws_url
       console.info("[ExpertBookings] LiveKit join →", r.data.room, r.data.token);
-      // Navigate to your existing live classroom UI
       navigate(`/teacher/private-sessions`);
-    } catch {/* fall through to sessions page */
+    } catch {
       navigate("/teacher/private-sessions");
     } finally {
       setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
@@ -184,7 +186,19 @@ export default function ExpertBookings() {
     try {
       await api.post(`/skill/teacher/sessions/${sess.id}/complete/`);
       setSessions(ss => ss.map(s => s.id === sess.id ? { ...s, status: "completed" } : s));
-    } catch {}
+    } catch { }
+  };
+
+  // Navigate to /teacher/expert/inbox with this learner pre-selected.
+  // SkillInbox reads state.learnerId and opens that DM directly via ChatPanel.
+  // s.learner.id = LearnerProfile UUID — what StartDirectView KIND_LEARNER expects.
+  const openChat = (sess) => {
+    navigate("/teacher/expert/inbox", {
+      state: {
+        learnerId: sess.learner?.id,
+        learnerName: sess.learner?.name,
+      },
+    });
   };
 
   return (
@@ -234,7 +248,7 @@ export default function ExpertBookings() {
         ) : pending.length === 0 ? (
           <div className="sk-empty">No pending requests right now.</div>
         ) : pending.map((s) => {
-          const act = acting[s.id];
+          const act  = acting[s.id];
           const name = s.learner?.name || "Student";
           return (
             <div key={s.id} className="rd-book">
@@ -248,7 +262,13 @@ export default function ExpertBookings() {
                   {fmtWhen(s.scheduled_for)} · {s.duration_mins || 60} min
                 </div>
               </div>
-              <button className="rd-book__icon-btn" title="Message" onClick={() => navigate("/teacher/skill-inbox")}>
+              {/* FIXED: was navigate("/teacher/skill-inbox") — unregistered route */}
+              <button
+                className="rd-book__icon-btn"
+                title="Message"
+                onClick={() => openChat(s)}
+                disabled={!s.learner?.id}
+              >
                 <Icon.msg size={15} />
               </button>
               <button className="rd-book__ghost" onClick={() => decline(s)} disabled={!!act}>
@@ -302,7 +322,13 @@ export default function ExpertBookings() {
                   ) : (
                     <span className="soon">Scheduled</span>
                   )}
-                  <button className="rd-book__icon-btn" title="Message" onClick={() => navigate("/teacher/skill-inbox")}>
+                  {/* FIXED: was navigate("/teacher/skill-inbox") — unregistered route */}
+                  <button
+                    className="rd-book__icon-btn"
+                    title="Message"
+                    onClick={() => openChat(s)}
+                    disabled={!s.learner?.id}
+                  >
                     <Icon.msg size={15} />
                   </button>
                   {live && (
