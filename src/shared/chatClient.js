@@ -1,6 +1,19 @@
-/* shared/chatClient.js — REST + websocket helpers for the dashboard chat.
- * The websocket reuses the cookie session (no token in URL); the backend's
- * JWTAuthMiddleware reads the `access` cookie. Reconnects with backoff.
+/* shared/chatClient.js — REPLACEMENT
+ *
+ * Fixes the "message disappears" bug. Root cause: the socket was idle-killed
+ * (no keepalive), the client reconnected every few seconds, and a send issued
+ * while the socket was mid-reconnect (readyState !== 1) was silently dropped —
+ * so the message was never transmitted, never saved, and the next reconnect's
+ * history overwrote the optimistic bubble.
+ *
+ * Changes:
+ *   1. KEEPALIVE: send a ping every 25s so proxies/Nginx don't idle-close it.
+ *   2. SEND QUEUE: if the socket isn't OPEN, queue the message and flush on
+ *      reconnect instead of dropping it.
+ *   3. Heartbeat-driven reconnect detection stays the same (exponential backoff).
+ *
+ * Backend note: the consumer ignores unknown message types, so a {"type":"ping"}
+ * frame is harmless. (Optionally handle it explicitly in ChatConsumer.receive.)
  */
 import api from "./apiClient";
 
@@ -15,34 +28,78 @@ export const ChatAPI = {
   markRead: (id) => api.post(`/chat/conversations/${id}/read/`).then((r) => r.data),
 };
 
+const PING_MS = 25000;
+
 export function openChatSocket(conversationId, handlers = {}) {
   const apiUrl = import.meta.env.VITE_API_URL || "https://api.shikshacom.com/api";
   const wsBase = apiUrl.replace(/^http/, "ws").replace(/\/api\/?$/, "");
-  let ws, closedByUs = false, attempt = 0;
+
+  let ws;
+  let closedByUs = false;
+  let attempt = 0;
+  let pingTimer = null;
+  const outbox = []; // messages queued while not OPEN
+
+  const startPing = () => {
+    stopPing();
+    pingTimer = setInterval(() => {
+      if (ws && ws.readyState === 1) {
+        try { ws.send(JSON.stringify({ type: "ping" })); } catch {}
+      }
+    }, PING_MS);
+  };
+  const stopPing = () => { if (pingTimer) { clearInterval(pingTimer); pingTimer = null; } };
+
+  const flushOutbox = () => {
+    while (outbox.length && ws && ws.readyState === 1) {
+      ws.send(JSON.stringify(outbox.shift()));
+    }
+  };
 
   const connect = () => {
     ws = new WebSocket(`${wsBase}/ws/chat/${conversationId}/`);
-    ws.onopen = () => { attempt = 0; handlers.onOpen?.(); };
+
+    ws.onopen = () => {
+      attempt = 0;
+      startPing();
+      flushOutbox();          // resend anything queued during the gap
+      handlers.onOpen?.();
+    };
+
     ws.onmessage = (e) => {
       let payload; try { payload = JSON.parse(e.data); } catch { return; }
       if (payload.type === "history") handlers.onHistory?.(payload.data);
       else if (payload.type === "message") handlers.onMessage?.(payload.data);
       else if (payload.type === "typing") handlers.onTyping?.(payload.data);
+      // "pong" (if the server ever sends one) is ignored.
     };
+
     ws.onclose = () => {
+      stopPing();
       if (closedByUs) return;
       attempt += 1;
       const delay = Math.min(1000 * 2 ** attempt, 15000);
       setTimeout(connect, delay);
     };
+
+    ws.onerror = () => { try { ws.close(); } catch {} };
   };
+
   connect();
 
+  const sendFrame = (frame) => {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify(frame));
+    } else {
+      // queue instead of silently dropping — flushed on next onopen
+      outbox.push(frame);
+    }
+  };
+
   return {
-    send: (body, client_id) => ws?.readyState === 1 &&
-      ws.send(JSON.stringify({ type: "message", body, client_id })),
-    typing: () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "typing" })),
-    read: () => ws?.readyState === 1 && ws.send(JSON.stringify({ type: "read" })),
-    close: () => { closedByUs = true; ws?.close(); },
+    send: (body, client_id) => sendFrame({ type: "message", body, client_id }),
+    typing: () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "typing" })); },
+    read: () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "read" })); },
+    close: () => { closedByUs = true; stopPing(); ws?.close(); },
   };
 }
