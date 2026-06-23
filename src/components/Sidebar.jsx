@@ -1,10 +1,8 @@
 /**
- * teacher_dashboard/src/components/Sidebar.jsx  (REDESIGNED)
- *
- * Colours per Auth Flow handoff doc:
- *   Faculty mode  → bg #425f7f  (slate blue  — isExpertPage=false)
- *   Expert mode   → bg #b3402e  (dark red-brown — isExpertPage=true)
- * The .sidebar--expert CSS class handles the switch.
+ * src/components/Sidebar.jsx  ·  ACADEMY / FACULTY sidebar
+ * Skill Dev has its OWN nav in SkillDevLayout, so this sidebar only ever
+ * renders the academy nav. A pure GUEST never reaches this (they route to
+ * /teacher/expert under SkillDevLayout). Kept guest-safe just in case.
  */
 import { useEffect, useState } from "react";
 import { FiUsers, FiHome, FiChevronDown } from "react-icons/fi";
@@ -19,12 +17,10 @@ import logo from "../assets/Shiksha.svg";
 import "../styles/sidebar.css";
 import { HOME_URL } from "../config/urls";
 
-export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
+export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { teacherInfo } = useAuth();
-  const isGuest = teacherInfo?.type === "GUEST";
-  const isBoth  = teacherInfo?.type === "BOTH";
   const [classes, setClasses] = useState([]);
   const [classesOpen, setClassesOpen] = useState(
     location.pathname.startsWith("/teacher/classes")
@@ -37,12 +33,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
 
   useEffect(() => {
     const pickFirstText = (...values) => {
-      const found = values.find(
-        (value) => typeof value === "string" && value.trim().length > 0
-      );
+      const found = values.find((v) => typeof v === "string" && v.trim().length > 0);
       return found || "";
     };
-
     async function fetchClasses() {
       try {
         const res = await api.get("/courses/teacher/my-classes/");
@@ -50,7 +43,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
           subject_id:   cls.subject_id || cls.id,
           subject_name: pickFirstText(cls.subject_name, cls.name),
           course_title: pickFirstText(cls.course_title, cls.class_name, cls.course),
-          board: pickFirstText(cls.board, cls.board_name, cls.board_title, cls.board?.name),
+          board:  pickFirstText(cls.board, cls.board_name, cls.board_title, cls.board?.name),
           stream: pickFirstText(cls.stream, cls.stream_name, cls.stream_title, cls.stream?.name),
         }));
         setClasses(normalized);
@@ -58,7 +51,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
         console.error("Failed to load teacher classes", err);
       }
     }
-
     fetchClasses();
   }, []);
 
@@ -67,141 +59,71 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isExpertPage }) {
     return meta ? ` (${meta})` : "";
   };
 
-  const isExpertRoute = location.pathname.startsWith("/teacher/expert");
-
-  // TeacherLayout already resolves the expert flag (guest OR both-on-expert-route)
-  // and passes it as isExpertPage. Trust it; fall back to local logic only if the
-  // prop is missing, so the two navs are always mutually exclusive.
-  const showExpertNav =
-    isExpertPage ?? (isGuest || (isBoth && isExpertRoute));
-
-  const sidebarSubtitle = showExpertNav ? "Expert Teacher" : "Faculty Portal";
-
-  // Sidebar bg: faculty = #425f7f (default), expert = #b3402e (--expert modifier)
-  const sidebarClass = `sidebar${showExpertNav ? " sidebar--expert" : ""}${sidebarOpen ? " sidebar-open" : ""}`;
-
   return (
-    <aside className={sidebarClass}>
+    <aside className={`sidebar${sidebarOpen ? " sidebar-open" : ""}`}>
       <div className="sidebar-top">
         <div className="sidebar-logo">
           <img src={logo} alt="ShikshaCom" />
           <div>
             <h3>ShikshaCom</h3>
-            <p>{sidebarSubtitle}</p>
+            <p>Faculty Portal</p>
           </div>
         </div>
-
-        <button
-          className="sidebar-close"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close sidebar"
-        >
+        <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
           <IoClose />
         </button>
       </div>
 
       <nav>
-        {/* ──────────────────────────────────────────────────────────────
-            ONE rule decides the whole nav: are we in Skill Dev / Expert mode?
-              · pure GUEST                      → always expert
-              · BOTH teacher on /teacher/expert → expert
-              · everyone else (faculty)         → academy
-            The two navs are mutually exclusive so academy links (Live
-            Sessions, Private Sessions, …) never leak onto the expert page.
-        ────────────────────────────────────────────────────────────────── */}
-        {showExpertNav ? (
-          /* ── EXPERT / SKILL DEV NAV ── */
-          <>
-            <div className={`menu-item ${isActive("/teacher/expert") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/expert"); setSidebarOpen(false); }}>
-              <MdDashboard /><span>Dashboard</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/courses") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/courses"); setSidebarOpen(false); }}>
-              <FaChalkboardTeacher /><span>My Courses</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/private-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/private-sessions"); setSidebarOpen(false); }}>
-              <RiLockLine /><span>Bookings</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}>
-              <RiLiveLine /><span>Live Sessions</span>
-            </div>
-            <div className={`menu-item ${isActive("/teacher/chat") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/chat"); setSidebarOpen(false); }}>
-              <FiUsers /><span>Messages</span>
-            </div>
-          </>
-        ) : (
-          /* ── ACADEMY / FACULTY NAV ── */
-          <>
-            <div
-              className={`menu-item ${isActive("/teacher/dashboard") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/dashboard"); setSidebarOpen(false); }}
-            >
-              <MdDashboard /><span>Dashboard</span>
-            </div>
+        <div className={`menu-item ${isActive("/teacher/dashboard") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/dashboard"); setSidebarOpen(false); }}>
+          <MdDashboard /><span>Dashboard</span>
+        </div>
 
-            <div
-              className={`menu-item ${isActive("/teacher/students") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/students"); setSidebarOpen(false); }}
-            >
-              <FiUsers /><span>Student List</span>
-            </div>
+        <div className={`menu-item ${isActive("/teacher/students") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/students"); setSidebarOpen(false); }}>
+          <FiUsers /><span>Student List</span>
+        </div>
 
-            <div
-              className={`menu-item menu-dropdown ${isActive("/teacher/classes") ? "active" : ""}`}
-              onClick={() => setClassesOpen((open) => !open)}
-            >
-              <FaChalkboardTeacher />
-              <span>Classes</span>
-              <FiChevronDown className={`menu-chevron ${classesOpen ? "menu-chevron--open" : ""}`} />
-            </div>
+        <div className={`menu-item menu-dropdown ${isActive("/teacher/classes") ? "active" : ""}`}
+          onClick={() => setClassesOpen((o) => !o)}>
+          <FaChalkboardTeacher />
+          <span>Classes</span>
+          <FiChevronDown className={`menu-chevron ${classesOpen ? "menu-chevron--open" : ""}`} />
+        </div>
 
-            {classesOpen && (
-              <div className="submenu">
-                {classes.length === 0 && <p className="submenu-empty">No classes</p>}
-                {classes.map((cls) => (
-                  <p
-                    key={cls.subject_id}
-                    className={location.pathname === `/teacher/classes/${cls.subject_id}` ? "submenu-active" : ""}
-                    onClick={() => { navigate(`/teacher/classes/${cls.subject_id}`); setSidebarOpen(false); }}
-                  >
-                    {cls.subject_name}{getClassMeta(cls)}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <div
-              className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}
-            >
-              <RiLiveLine /><span>Live Sessions</span>
-            </div>
-
-            <div
-              className={`menu-item ${isActive("/teacher/private-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/private-sessions"); setSidebarOpen(false); }}
-            >
-              <RiLockLine /><span>Private Sessions</span>
-            </div>
-
-            <div
-              className={`menu-item ${isActive("/teacher/group-sessions") ? "active" : ""}`}
-              onClick={() => { navigate("/teacher/group-sessions"); setSidebarOpen(false); }}
-            >
-              <RiGroupLine /><span>Group Sessions</span>
-            </div>
-          </>
+        {classesOpen && (
+          <div className="submenu">
+            {classes.length === 0 && <p className="submenu-empty">No classes</p>}
+            {classes.map((cls) => (
+              <p key={cls.subject_id}
+                className={location.pathname === `/teacher/classes/${cls.subject_id}` ? "submenu-active" : ""}
+                onClick={() => { navigate(`/teacher/classes/${cls.subject_id}`); setSidebarOpen(false); }}>
+                {cls.subject_name}{getClassMeta(cls)}
+              </p>
+            ))}
+          </div>
         )}
+
+        <div className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}>
+          <RiLiveLine /><span>Live Sessions</span>
+        </div>
+
+        <div className={`menu-item ${isActive("/teacher/private-sessions") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/private-sessions"); setSidebarOpen(false); }}>
+          <RiLockLine /><span>Private Sessions</span>
+        </div>
+
+        <div className={`menu-item ${isActive("/teacher/group-sessions") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/group-sessions"); setSidebarOpen(false); }}>
+          <RiGroupLine /><span>Group Sessions</span>
+        </div>
       </nav>
 
       <div className="sidebar__bottom">
         <a href={HOME_URL} className="sidebar__homeBtn">
-          <FiHome />
-          Return to Homepage
+          <FiHome /> Return to Homepage
         </a>
       </div>
     </aside>

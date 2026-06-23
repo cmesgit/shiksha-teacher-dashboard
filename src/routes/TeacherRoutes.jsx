@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import PrivateSessionLive from "../pages/PrivateSessionLive";
 import TeacherLayout from "../layout/TeacherLayout";
+import SkillDevLayout from "../layout/SkillDevLayout";
 import TeacherDashboard from "../pages/TeacherDashboard";
-import GuestExpertDashboard from "../pages/GuestExpertDashboard";
 import ClassesList from "../pages/ClassesList";
 import Classes from "../pages/Classes";
 import TeacherLiveSession from "../pages/TeacherLiveSession";
@@ -45,29 +45,32 @@ import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
+
+// ── Skill Dev (Expert) pages — live under SkillDevLayout ──
+import ExpertDashboard from "../pages/skill/ExpertDashboard";
+import ExpertCourses from "../pages/skill/ExpertCourses";
+import ExpertBookings from "../pages/skill/ExpertBookings";
+import ExpertAvailability from "../pages/skill/ExpertAvailability";
+import ExpertEarnings from "../pages/skill/ExpertEarnings";
+
 import { LOGIN_URL } from "../config/urls";
 
 function RedirectToMainLogin() {
-  useEffect(() => {
-    window.location.href = LOGIN_URL;
-  }, []);
+  useEffect(() => { window.location.href = LOGIN_URL; }, []);
   return null;
 }
 
 /**
  * /teacher/dashboard is the shared entry point. Pure guest experts — and any
  * teacher whose active track is Skill-dev — get the guest-expert dashboard;
- * everyone else (faculty / academy) gets the academic dashboard. Either way,
- * the header switch lets approved teachers move between the two.
+ * everyone else (faculty / academy) gets the academic dashboard.
  */
 function DashboardEntry() {
   const { teacherInfo } = useAuth();
   const goesToExpert =
     teacherInfo?.type === "GUEST" ||
     teacherInfo?.active_track === "skill";
-  if (goesToExpert) {
-    return <Navigate to="/teacher/expert" replace />;
-  }
+  if (goesToExpert) return <Navigate to="/teacher/expert" replace />;
   return <TeacherDashboard />;
 }
 
@@ -77,56 +80,37 @@ export default function TeacherRoutes() {
       <Route path="/" element={<RedirectToMainLogin />} />
 
       {/* ============================================
-          FULLSCREEN LIVE ROUTES — outside TeacherLayout
-          (no sidebar, no header, no top tabs)
+          FULLSCREEN LIVE ROUTES — outside any layout
           ============================================ */}
-
-      {/* Live Class Session — fullscreen */}
-      <Route
-        path="/teacher/live/:id"
-        element={
-          <ProtectedTeacherRoute>
-            <TeacherLiveSession />
-          </ProtectedTeacherRoute>
-        }
-      />
-
-      {/* Private Session Live — fullscreen */}
-      <Route
-        path="/teacher/private-session/live/:id"
-        element={
-          <ProtectedTeacherRoute>
-            <PrivateSessionLive />
-          </ProtectedTeacherRoute>
-        }
-      />
-
-      {/* Group Session Live — fullscreen */}
-      <Route
-        path="/teacher/group-session/live/:id"
-        element={
-          <ProtectedTeacherRoute>
-            <GroupSessionLive />
-          </ProtectedTeacherRoute>
-        }
-      />
+      <Route path="/teacher/live/:id" element={<ProtectedTeacherRoute><TeacherLiveSession /></ProtectedTeacherRoute>} />
+      <Route path="/teacher/private-session/live/:id" element={<ProtectedTeacherRoute><PrivateSessionLive /></ProtectedTeacherRoute>} />
+      <Route path="/teacher/group-session/live/:id" element={<ProtectedTeacherRoute><GroupSessionLive /></ProtectedTeacherRoute>} />
 
       {/* ============================================
-          NORMAL ROUTES — inside TeacherLayout
+          SKILL DEV / EXPERT — SkillDevLayout
+          (own sidebar nav, red-brown theme)
           ============================================ */}
+      <Route
+        path="/teacher/expert"
+        element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
+      >
+        <Route index element={<ExpertDashboard />} />
+        <Route path="courses" element={<ExpertCourses />} />
+        <Route path="bookings" element={<ExpertBookings />} />
+        <Route path="availability" element={<ExpertAvailability />} />
+        <Route path="earnings" element={<ExpertEarnings />} />
+      </Route>
 
+      {/* ============================================
+          ACADEMY / FACULTY — TeacherLayout
+          ============================================ */}
       <Route
         path="/teacher"
-        element={
-          <ProtectedTeacherRoute>
-            <TeacherLayout />
-          </ProtectedTeacherRoute>
-        }
+        element={<ProtectedTeacherRoute><TeacherLayout /></ProtectedTeacherRoute>}
       >
         <Route path="profile" element={<Profile />} />
         <Route path="private-details" element={<PrivateDetails />} />
         <Route path="dashboard" element={<DashboardEntry />} />
-        <Route path="expert" element={<GuestExpertDashboard />} />
         <Route path="students" element={<AllStudents />} />
         <Route path="students/:studentId" element={<AllStudentDetail />} />
         <Route path="classes" element={<ClassesList />} />
@@ -164,7 +148,7 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/students" element={<StudentsList />} />
         <Route path="classes/:subjectId/students/:studentId" element={<StudentDetail />} />
 
-        {/* Live Sessions list / detail (NOT the live room itself) */}
+        {/* Live Sessions list / detail */}
         <Route path="live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions/create" element={<TeacherCreateLiveSession />} />

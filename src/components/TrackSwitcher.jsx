@@ -4,14 +4,15 @@
 //
 // Behaviour:
 //  • Pure GUEST   → always on Skill Dev; toggle shows but Academy is locked
-//    (links to the homepage to buy an academy subscription)
 //  • TYPE_BOTH    → can switch freely; navigates between the two routes
 //  • Pure faculty → always on Academy; Skill Dev is locked
-//    (links to the homepage expert application)
 //
 // Active route decides the highlighted pill:
 //   /teacher/expert* → Skill Dev active
 //   anything else    → Academy active
+//
+// NOTE: teacher context uses ctx-teacher so BOTH active pills render slate
+// (#425f7f), matching the Auth Flow handoff doc's teacher palette.
 // ──────────────────────────────────────────────────────────────────────────
 
 import { useNavigate, useLocation } from "react-router-dom";
@@ -26,39 +27,34 @@ const TRACKS = [
 ];
 
 export default function TrackSwitcher() {
-  const navigate   = useNavigate();
+  const navigate     = useNavigate();
   const { pathname } = useLocation();
   const { teacherInfo } = useAuth();
 
-  const isGuest  = teacherInfo?.type === "GUEST";
-  const isBoth   = teacherInfo?.type === "BOTH";
+  const isGuest   = teacherInfo?.type === "GUEST";
+  const isBoth    = teacherInfo?.type === "BOTH";
   const isFaculty = !isGuest && !isBoth;
 
-  // Which pill is active based on the current URL
   const current = pathname.startsWith("/teacher/expert") ? "skill" : "academy";
 
   const canAccess = (key) => {
-    if (isGuest)    return key === "skill";
-    if (isFaculty)  return key === "academy";
+    if (isGuest)   return key === "skill";
+    if (isFaculty) return key === "academy";
     return true; // BOTH can access both
   };
 
   const handleClick = (track) => {
     if (!canAccess(track.key)) {
-      // Locked — send them to the homepage to upgrade/apply
       if (track.key === "academy") window.location.href = `${HOME_URL}?ref=upgrade-academy`;
       else                         window.location.href = `${HOME_URL}/expert-apply`;
       return;
     }
-    if (track.key === current) return; // already here
+    if (track.key === current) return;
     navigate(track.route);
   };
 
-  // Accent class mirrors the student switcher: ctx-skill on Skill Dev active
-  const ctx = current === "skill" ? "ctx-skill" : "";
-
   return (
-    <div className={`trackSwitcher ${ctx}`} role="tablist" aria-label="Learning track">
+    <div className="trackSwitcher ctx-teacher" role="tablist" aria-label="Learning track">
       {TRACKS.map(({ key, label, Icon, route }) => {
         const accessible = canAccess(key);
         const active     = key === current;
@@ -70,10 +66,10 @@ export default function TrackSwitcher() {
             aria-selected={active}
             className={[
               "trackSwitcher__seg",
-              active       ? "is-active" : "",
-              !accessible  ? "is-locked" : "",
+              active      ? "is-active" : "",
+              !accessible ? "is-locked" : "",
             ].join(" ").trim()}
-            title={accessible ? label : `Not available on your current plan`}
+            title={accessible ? label : "Not available on your current plan"}
             onClick={() => handleClick({ key, route })}
           >
             {!accessible ? <RiLockLine className="trackSwitcher__lock" /> : <Icon size={13} />}
