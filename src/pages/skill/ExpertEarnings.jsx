@@ -1,18 +1,32 @@
 /**
  * src/pages/skill/ExpertEarnings.jsx
- * ──────────────────────────────────────────────────────────────────────────
- * "Earnings" — available-to-withdraw card + pending + lifetime, plus a
- * grouped transaction history. Ported from the prototype's txn tab.
- *
- * Route: /teacher/expert/earnings
- * API TODO: EARNINGS → GET /api/skill/teacher/earnings/
- *           withdraw → POST /api/skill/teacher/payouts/
+ * Wired to GET /skill/teacher/earnings/
+ * Falls back to zero-state UI gracefully.
  */
+import { useState, useEffect } from "react";
 import { Icon } from "../../components/SkillIcons";
-import { EARNINGS, STUDENTS } from "../../data/skillMockData";
+import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
 
+const EMPTY = {
+  available: 0, pending: 0, lifetime: 0,
+  month_earned: 0, month_sessions: 0, month_goal: 25000,
+  rows: [],
+};
+
 export default function ExpertEarnings() {
+  const [data,    setData]    = useState(EMPTY);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get("/skill/teacher/earnings/")
+      .then(r => setData({ ...EMPTY, ...r.data }))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const { available, pending, lifetime, month_sessions, rows } = data;
+
   return (
     <div className="sk-page">
       <div className="sk-head">
@@ -26,16 +40,17 @@ export default function ExpertEarnings() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 14 }} className="sk-earn-summary">
         <div className="sk-earn-card">
           <div className="sk-earn-card__label">Available to withdraw</div>
-          <div className="sk-earn-card__big">₹{EARNINGS.available.toLocaleString("en-IN")}</div>
-          <div className="sk-earn-card__sub">Next payout · Mon 9 Jun</div>
-          {/* API TODO: POST /api/skill/teacher/payouts/ */}
-          <button className="sk-earn-card__btn">Withdraw to bank</button>
+          <div className="sk-earn-card__big">
+            {loading ? "—" : `₹${available.toLocaleString("en-IN")}`}
+          </div>
+          <div className="sk-earn-card__sub">Payouts wired when gateway is live</div>
+          <button className="sk-earn-card__btn" disabled>Withdraw to bank</button>
         </div>
 
         <div className="rd-card teacher" style={{ marginBottom: 0 }}>
           <div style={{ fontSize: 11.5, color: "#6b7c83", fontWeight: 600 }}>Pending clearance</div>
           <div style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 800, fontSize: 26, color: "#d97706", marginTop: 4 }}>
-            ₹{EARNINGS.pending.toLocaleString("en-IN")}
+            {loading ? "—" : `₹${pending.toLocaleString("en-IN")}`}
           </div>
           <div style={{ fontSize: 11, color: "#6b7c83", marginTop: 6 }}>Clears in 2–3 days</div>
         </div>
@@ -43,27 +58,31 @@ export default function ExpertEarnings() {
         <div className="rd-card teacher" style={{ marginBottom: 0 }}>
           <div style={{ fontSize: 11.5, color: "#6b7c83", fontWeight: 600 }}>Lifetime earnings</div>
           <div style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 800, fontSize: 26, color: "#1a2c33", marginTop: 4 }}>
-            ₹{EARNINGS.lifetime.toLocaleString("en-IN")}
+            {loading ? "—" : `₹${lifetime.toLocaleString("en-IN")}`}
           </div>
-          <div style={{ fontSize: 11, color: "#6b7c83", marginTop: 6 }}>Across {STUDENTS.completed} sessions</div>
+          <div style={{ fontSize: 11, color: "#6b7c83", marginTop: 6 }}>
+            Across {month_sessions} sessions this month
+          </div>
         </div>
       </div>
 
       {/* Transactions */}
       <div className="rd-card teacher">
         <h4>Transactions</h4>
-        {EARNINGS.rows.map((g) => (
+        {loading ? (
+          <div className="sk-empty">Loading…</div>
+        ) : rows.length === 0 ? (
+          <div className="sk-empty">No transactions yet. Completed sessions will appear here.</div>
+        ) : rows.map((g) => (
           <div key={g.day}>
             <div className="rd-daygroup">{g.day}</div>
             {g.items.map((it, i) => {
               const isOut = it.amt < 0;
               return (
                 <div key={it.who + i} className="sk-txn">
-                  {it.img ? (
-                    <img src={it.img} alt="" className="sk-txn__img" />
-                  ) : (
-                    <span className="sk-txn__icon"><Icon.shield size={16} /></span>
-                  )}
+                  <span className="sk-txn__icon">
+                    <Icon.shield size={16} />
+                  </span>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2c33" }}>{it.who}</div>
                     <div style={{ fontSize: 11.5, color: "#6b7c83" }}>{it.what}</div>
