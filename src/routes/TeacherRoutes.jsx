@@ -62,7 +62,9 @@ import ExpertDashboard from "../pages/skill/ExpertDashboard";
 import ExpertCourses from "../pages/skill/ExpertCourses";
 import ExpertBookings from "../pages/skill/ExpertBookings";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
-import ExpertEarnings from "../pages/skill/ExpertEarnings";
+// Earnings removed — guest experts settle payment directly with learners.
+import ExpertPromote from "../pages/skill/ExpertPromote";       // NEW (subscription)
+import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // NEW (profile + location + UPI)
 import SkillInbox from "../pages/SkillInbox"; // NEW
 
 import { LOGIN_URL } from "../config/urls";
@@ -100,7 +102,8 @@ export default function TeacherRoutes() {
         <Route path="courses" element={<ExpertCourses />} />
         <Route path="bookings" element={<ExpertBookings />} />
         <Route path="availability" element={<ExpertAvailability />} />
-        <Route path="earnings" element={<ExpertEarnings />} />
+        <Route path="promote" element={<ExpertPromote />} />     {/* NEW */}
+        <Route path="profile" element={<ExpertProfileEdit />} /> {/* NEW */}
         <Route path="inbox" element={<SkillInbox />} /> {/* NEW */}
       </Route>
 

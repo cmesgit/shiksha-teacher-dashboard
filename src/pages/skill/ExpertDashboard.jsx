@@ -1,16 +1,18 @@
 /**
  * src/pages/skill/ExpertDashboard.jsx
  * Wired to GET /skill/teacher/dashboard/
- * Falls back to empty-state UI if the endpoint isn't ready yet.
+ *
+ * Change from original:
+ *   The "This month" EARNINGS card is removed — guest experts settle payment
+ *   directly with learners (off-platform), so there is no earnings bar. In its
+ *   place we show an ADVERTISING status card (reach + subscription state, with a
+ *   link to Promote) and profile-completion nudges (add payment UPI / location).
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
-
-const initOf = (s = "") =>
-  (s || "?").trim().split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
 function fmtTime(iso) {
   if (!iso) return "";
@@ -20,10 +22,12 @@ function fmtTime(iso) {
 }
 
 const EMPTY = {
-  stats:    { taught: 0, active: 0, pending: 0, course_students: 0 },
-  next_up:  [],
-  earnings: { month_earned: 0, month_sessions: 0, month_goal: 25000 },
-  activity: [],
+  stats:        { taught: 0, active: 0, pending: 0, course_students: 0 },
+  next_up:      [],
+  advertising:  { is_advertised: false, is_featured: false, reach_count: 0,
+                  billing_free: true, sub_status: "none", sub_active: false, period_end: null },
+  profile_todo: { needs_payment: false, needs_location: false },
+  activity:     [],
 };
 
 export default function ExpertDashboard() {
@@ -33,13 +37,11 @@ export default function ExpertDashboard() {
   const [profile, setProfile] = useState({ name: "", subtitle: "" });
 
   useEffect(() => {
-    // Fetch dashboard data
     api.get("/skill/teacher/dashboard/")
-      .then(r => setData(r.data))
+      .then(r => setData({ ...EMPTY, ...r.data }))
       .catch(() => {/* keep empty state */})
       .finally(() => setLoading(false));
 
-    // Fetch own profile for the greeting
     api.get("/accounts/me/").then(r => {
       const me = r.data;
       const name = me?.active_profile?.display_name
@@ -49,17 +51,12 @@ export default function ExpertDashboard() {
       const tp = me?.teacher || {};
       setProfile({
         name,
-        subtitle: tp.type === "GUEST"
-          ? (tp.headline || "Guest expert")
-          : "Expert teacher",
+        subtitle: tp.type === "GUEST" ? (tp.headline || "Guest expert") : "Expert teacher",
       });
     }).catch(() => {});
   }, []);
 
-  const { stats, next_up, earnings, activity } = data;
-  const goalPct = earnings.month_goal
-    ? Math.min(100, Math.round((earnings.month_earned / earnings.month_goal) * 100))
-    : 0;
+  const { stats, next_up, advertising, profile_todo, activity } = data;
 
   const statCards = [
     { c: "#0a808a", icon: <Icon.users size={16} />,  v: stats.taught,          l: "Students taught"   },
@@ -67,6 +64,9 @@ export default function ExpertDashboard() {
     { c: "#ff8f01", icon: <Icon.cal size={16} />,    v: stats.pending,         l: "Pending requests"  },
     { c: "#7c6fd0", icon: <Icon.check size={16} />,  v: stats.course_students, l: "Course students"   },
   ];
+
+  const adv     = advertised(advertising);
+  const todos   = buildTodos(profile_todo);
 
   return (
     <div className="sk-page">
@@ -81,6 +81,21 @@ export default function ExpertDashboard() {
           <Icon.plus size={14} /> New course
         </button>
       </div>
+
+      {/* Profile-completion nudges */}
+      {!loading && todos.length > 0 && (
+        <div className="rd-card teacher" style={{ borderLeft: "3px solid #ff8f01" }}>
+          <h4 style={{ margin: "0 0 8px" }}>Finish setting up</h4>
+          {todos.map((t) => (
+            <div key={t.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "6px 0" }}>
+              <div style={{ fontSize: 13, color: "#6b7c83" }}>{t.text}</div>
+              <button className="sk-btn sk-btn--ghost" onClick={() => navigate(t.to)} style={{ flexShrink: 0 }}>
+                {t.cta}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="rd-statgrid">
@@ -137,25 +152,34 @@ export default function ExpertDashboard() {
           ))}
         </div>
 
-        {/* Side: earnings + activity */}
+        {/* Side: advertising status + activity */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="rd-card teacher" style={{ marginBottom: 0 }}>
-            <h4>This month</h4>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h4 style={{ margin: 0 }}>Advertising</h4>
+              <span style={{
+                fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 100,
+                background: adv.bg, color: adv.fg,
+              }}>{adv.label}</span>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 12 }}>
               <span style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 900, fontSize: 30, color: "#1a2c33", letterSpacing: "-.7px" }}>
-                ₹{((earnings.month_earned || 0) / 1000).toFixed(1)}
+                {loading ? "—" : (advertising.reach_count ?? 0).toLocaleString("en-IN")}
               </span>
-              <span style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 15, color: "#6b7c83" }}>k</span>
+              <span style={{ fontSize: 12, color: "#6b7c83", fontWeight: 700 }}>reach</span>
             </div>
-            <div style={{ fontSize: 12, color: "#6b7c83", marginTop: 2 }}>
-              Earned · {earnings.month_sessions} sessions
+            <div style={{ fontSize: 12, color: "#6b7c83", marginTop: 2, lineHeight: 1.5 }}>
+              {adv.blurb}
             </div>
-            <div style={{ height: 8, borderRadius: 100, background: "rgba(14,45,20,.1)", overflow: "hidden", margin: "10px 0 5px" }}>
-              <div style={{ width: `${goalPct}%`, height: "100%", borderRadius: 100, background: "linear-gradient(90deg,#13899b,#1dcaab)" }} />
-            </div>
-            <div style={{ fontSize: 11, color: "#9aa9af" }}>
-              {goalPct}% to your ₹{((earnings.month_goal || 0) / 1000).toFixed(0)}k goal
-            </div>
+
+            <button
+              className="sk-btn sk-btn--primary"
+              onClick={() => navigate("/teacher/expert/promote")}
+              style={{ width: "100%", marginTop: 12, justifyContent: "center" }}
+            >
+              {advertising.sub_active ? "Manage subscription" : "Promote my profile"}
+            </button>
           </div>
 
           <div className="rd-card teacher" style={{ marginBottom: 0 }}>
@@ -173,4 +197,47 @@ export default function ExpertDashboard() {
       </div>
     </div>
   );
+}
+
+/* Derive the advertising badge + copy from the dashboard payload. */
+function advertised(a = {}) {
+  if (a.is_advertised && a.billing_free) {
+    return {
+      label: "Live · free", bg: "#2f9d4222", fg: "#2f9d42",
+      blurb: "You're advertised free during the launch period.",
+    };
+  }
+  if (a.is_advertised) {
+    return {
+      label: "Live", bg: "#2f9d4222", fg: "#2f9d42",
+      blurb: "Your profile is promoted across ShikshaCom.",
+    };
+  }
+  if (a.sub_status === "submitted") {
+    return {
+      label: "Pending", bg: "#ff8f0122", fg: "#b46a00",
+      blurb: "Payment submitted — we're verifying your subscription.",
+    };
+  }
+  return {
+    label: "Not promoted", bg: "#9aa9af22", fg: "#6b7c83",
+    blurb: "Subscribe to be advertised consistently and grow your reach.",
+  };
+}
+
+function buildTodos(p = {}) {
+  const out = [];
+  if (p.needs_payment) {
+    out.push({
+      key: "pay", to: "/teacher/expert/profile", cta: "Add UPI",
+      text: "Add your UPI so learners can pay you directly for sessions.",
+    });
+  }
+  if (p.needs_location) {
+    out.push({
+      key: "loc", to: "/teacher/expert/profile", cta: "Add location",
+      text: "Add your class location so nearby learners can find you for offline lessons.",
+    });
+  }
+  return out;
 }
