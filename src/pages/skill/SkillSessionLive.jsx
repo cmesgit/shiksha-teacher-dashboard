@@ -1,29 +1,29 @@
-// PLACEMENT: student_dashboard/src/pages/SkillSessionLive.jsx   (NEW FILE)
-// DEPLOY:    /app/student_dashboard/src/pages/SkillSessionLive.jsx
+// PLACEMENT: teacher_ui/src/pages/skill/SkillSessionLive.jsx   (NEW FILE)
+// DEPLOY:    /app/teacher_ui/src/pages/skill/SkillSessionLive.jsx
 //
-// Why this file exists
-// ────────────────────
-// Skill-dev 1-on-1 sessions are a SEPARATE system from Academy private
-// sessions. They live in the Django `skills` app and use different routes:
-//     GET  /skill/sessions/<id>/        → session detail (has is_live, status)
-//     POST /skill/sessions/<id>/join/   → { token, ws_url, room, identity, is_expert }
+// Teacher-side LiveKit room for skill-dev 1-on-1 sessions. This is the skill
+// equivalent of pages/PrivateSessionLive.jsx (which is Academy-only and queries
+// the academy sessions_app). It joins the skill room and mounts LiveKit.
 //
-// Previously the skill "Join" buttons navigated to /private-session/live/<id>,
-// which is the ACADEMY live page. That page re-queries the academy sessions_app
-// (GET /api/sessions/<id>/) and 404s on a skill-session UUID — so a skill
-// session could never actually be joined. This page is the skill equivalent of
-// PrivateSessionLive: it joins the skill room and mounts LiveKit directly.
+//     POST /skill/sessions/<id>/join/  → { token, ws_url, room, identity, is_expert }
 //
-// NOTE: the skill backend returns `ws_url` (NOT `livekit_url` like the academy
-// join does). serverUrl below uses ws_url, falling back to livekit_url just in
-// case an older backend is deployed.
+// Previously ExpertBookings."Start class" called join, logged the token to the
+// console, then navigated to /teacher/private-sessions — so the expert never
+// actually entered a room. ExpertBookings now navigates here instead.
+//
+// NOTE: the skill backend returns `ws_url` (not `livekit_url` like the academy
+// join). serverUrl uses ws_url with a livekit_url fallback for safety.
+//
+// Leaving the room returns to Bookings WITHOUT auto-completing the session —
+// the expert marks it done explicitly via the "Mark done" button (which calls
+// POST /skill/teacher/sessions/<id>/complete/ and releases the weekly slot).
 
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import api from "../api/apiClient";
-import PrivateClassroomUI from "../components/live/PrivateClassroomUI";
-import "../styles/privateSessions.css";
+import api from "../../shared/apiClient";
+import TeacherPrivateClassroomUI from "../../components/live/TeacherPrivateClassroomUI";
+import "../../styles/privateSessions.css";
 
 const fullscreenWrap = {
   width: "100vw",
@@ -70,23 +70,6 @@ export default function SkillSessionLive() {
 
     const load = async () => {
       try {
-        // Detail first — lets us show a clear "not started yet" message instead
-        // of a raw join error when the slot time hasn't arrived.
-        const detail = (await api.get(`/skill/sessions/${id}/`)).data;
-        if (cancelled) return;
-
-        const joinable = ["confirmed", "requested"].includes(detail.status);
-        if (!joinable) {
-          setError(
-            detail.status === "completed"
-              ? "This session has already ended."
-              : detail.status === "cancelled"
-              ? "This session was cancelled."
-              : "This session can't be joined right now."
-          );
-          return;
-        }
-
         const joinData = (await api.post(`/skill/sessions/${id}/join/`)).data;
         if (cancelled) return;
         setLivekitData(joinData);
@@ -95,7 +78,7 @@ export default function SkillSessionLive() {
         setError(
           err?.response?.data?.detail ||
             err?.response?.data?.error ||
-            "Unable to join session. It may not have started yet."
+            "Unable to start the session room."
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -108,13 +91,13 @@ export default function SkillSessionLive() {
     };
   }, [id]);
 
-  const goBack = () => navigate("/skill-dev/sessions");
+  const goBack = () => navigate("/teacher/expert/bookings");
 
   if (loading) {
     return (
       <div style={centerMsg}>
         <p style={{ fontSize: 16, color: "#102a2a", margin: 0 }}>
-          Joining your session…
+          Starting your session room…
         </p>
       </div>
     );
@@ -123,16 +106,16 @@ export default function SkillSessionLive() {
   if (error || !livekitData) {
     return (
       <div style={centerMsg}>
-        <h2 style={{ margin: 0, color: "#102a2a" }}>Can't join just yet</h2>
+        <h2 style={{ margin: 0, color: "#102a2a" }}>Couldn't start the room</h2>
         <p style={{ color: "#475569", margin: 0, maxWidth: 440 }}>
           {error || "The session room isn't available right now."}
         </p>
         <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
           <button
             onClick={goBack}
-            style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#015865", color: "#fff", fontWeight: 600, cursor: "pointer" }}
+            style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#3b5c7c", color: "#fff", fontWeight: 600, cursor: "pointer" }}
           >
-            Back to sessions
+            Back to Bookings
           </button>
           <button
             onClick={() => window.location.reload()}
@@ -156,7 +139,7 @@ export default function SkillSessionLive() {
         style={liveKitWrap}
         onDisconnected={goBack}
       >
-        <PrivateClassroomUI role="STUDENT" sessionId={id} onLeave={goBack} />
+        <TeacherPrivateClassroomUI role="PRESENTER" sessionId={id} onLeave={goBack} />
         <RoomAudioRenderer />
       </LiveKitRoom>
     </div>
