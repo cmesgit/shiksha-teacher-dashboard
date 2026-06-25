@@ -26,8 +26,7 @@ import "../styles/skillSidebar.css";
 
 const NAV = [
   { to: "/teacher/expert",              label: "My Dashboard", icon: <Icon.cap size={15} />,   end: true },
-  { group: "Self-paced courses" },
-  { to: "/teacher/expert/courses",      label: "My Courses",   icon: <Icon.doc size={15} /> },
+ 
   { group: "Live 1-on-1" },
   { to: "/teacher/expert/bookings",     label: "Bookings",     icon: <Icon.cal size={15} /> },
   { to: "/teacher/expert/availability", label: "Availability", icon: <Icon.clock size={15} /> },
