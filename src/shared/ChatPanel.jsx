@@ -14,6 +14,7 @@
  *   <ChatPanel />                          // full inbox
  *   <ChatPanel directTo={{ kind:"TEACHER", id }} />  // open/start a 1:1
  *   <ChatPanel courseRoom={{ id, title }} />         // open a course room
+ *   <ChatPanel directTo={{...}} initialDraft="Hi…" /> // pre-fill the composer
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { ChatAPI, openChatSocket } from "./chatClient";
@@ -21,7 +22,7 @@ import "./ChatPanel.css";
 
 const uid = () => Math.random().toString(36).slice(2);
 
-export default function ChatPanel({ directTo, courseRoom }) {
+export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -30,6 +31,16 @@ export default function ChatPanel({ directTo, courseRoom }) {
   const sockRef = useRef(null);
   const endRef = useRef(null);
   const typingTimer = useRef(null);
+  const seededDraft = useRef(false);
+
+  // Seed the composer once from initialDraft (e.g. a message typed on the
+  // public landing page and carried here via the redirect query string).
+  useEffect(() => {
+    if (initialDraft && !seededDraft.current) {
+      seededDraft.current = true;
+      setDraft(initialDraft);
+    }
+  }, [initialDraft]);
 
   const loadConversations = useCallback(async () => {
     try { setConversations(await ChatAPI.conversations()); } catch { /* */ }
