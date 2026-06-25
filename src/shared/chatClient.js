@@ -1,3 +1,8 @@
+// PLACEMENT: put this file in BOTH apps (identical):
+//   student_dashboard/src/shared/chatClient.js   (replace whole file)
+//   teacher_ui/src/shared/chatClient.js          (replace whole file)
+// FIX: WS host now follows config/urls.js (WS_HOST) instead of a hardcoded
+//      prod fallback, so the dev server connects to dev, not prod.
 /* shared/chatClient.js — REPLACEMENT
  *
  * Fixes the "message disappears" bug. Root cause: the socket was idle-killed
@@ -16,6 +21,7 @@
  * frame is harmless. (Optionally handle it explicitly in ChatConsumer.receive.)
  */
 import api from "./apiClient";
+import { API_URL, WS_HOST } from "../config/urls";
 
 export const ChatAPI = {
   conversations: () => api.get("/chat/conversations/").then((r) => r.data),
@@ -31,8 +37,13 @@ export const ChatAPI = {
 const PING_MS = 25000;
 
 export function openChatSocket(conversationId, handlers = {}) {
-  const apiUrl = import.meta.env.VITE_API_URL || "https://api.shikshacom.com/api";
-  const wsBase = apiUrl.replace(/^http/, "ws").replace(/\/api\/?$/, "");
+  // Use the SAME environment resolution as the rest of the app (config/urls.js):
+  // WS_HOST is the correct host per environment (prod/dev/VITE override), and the
+  // scheme follows API_URL (https -> wss). The old code re-derived this from
+  // VITE_API_URL with a hardcoded prod fallback, so on the dev server (which has
+  // no VITE_API_URL and relies on hostname detection) chat connected to PROD.
+  const scheme = API_URL.startsWith("https") ? "wss" : "ws";
+  const wsBase = `${scheme}://${WS_HOST}`;
 
   let ws;
   let closedByUs = false;

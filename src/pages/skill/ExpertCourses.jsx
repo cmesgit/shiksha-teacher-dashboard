@@ -9,10 +9,12 @@
  *
  * Course status flow: draft → submitted → approved | rejected
  */
+// PLACEMENT: teacher_ui/src/pages/skill/ExpertCourses.jsx  (replace whole file)
+// Category options now come from GET /skill/categories/ instead of the
+// hardcoded COURSE_CATEGORIES mock list.
 import { useState, useEffect, useCallback } from "react";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
-import { COURSE_CATEGORIES } from "../../data/skillMockData";
 import "../../styles/skillDev.css";
 
 /* ── helpers ── */
@@ -30,9 +32,10 @@ function statusLabel(st) {
 }
 
 /* ── Create/Edit modal ── */
-function EditCourse({ course, onClose, onSaved, isNew }) {
+function EditCourse({ course, onClose, onSaved, isNew, categories = [] }) {
+  const catOptions = categories.length ? categories : ["General"];
   const [title,   setTitle]   = useState(course?.title   || "");
-  const [cat,     setCat]     = useState(course?.skill_tags?.[0] || COURSE_CATEGORIES[0]);
+  const [cat,     setCat]     = useState(course?.skill_tags?.[0] || catOptions[0]);
   const [price,   setPrice]   = useState(course?.price_rupees != null ? course.price_rupees : Math.round((course?.price || 0) / 100));
   const [level,   setLevel]   = useState(course?.level   || "beginner");
   const [mods,    setMods]    = useState(
@@ -105,7 +108,7 @@ function EditCourse({ course, onClose, onSaved, isNew }) {
               <div className="sk-field" style={{ marginBottom: 0 }}>
                 <label>Category</label>
                 <select className="sk-input" value={cat} onChange={e => setCat(e.target.value)}>
-                  {COURSE_CATEGORIES.map(o => <option key={o}>{o}</option>)}
+                  {catOptions.map(o => <option key={o}>{o}</option>)}
                 </select>
               </div>
               <div className="sk-field" style={{ marginBottom: 0 }}>
@@ -161,6 +164,7 @@ function EditCourse({ course, onClose, onSaved, isNew }) {
 
 export default function ExpertCourses() {
   const [courses,  setCourses]  = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [open,     setOpen]     = useState(null);
   const [editIdx,  setEditIdx]  = useState(null);
@@ -176,6 +180,18 @@ export default function ExpertCourses() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Category options for the create/edit dropdown (real, from the backend).
+  useEffect(() => {
+    api.get("/skill/categories/")
+      .then(r => {
+        const labels = (Array.isArray(r.data) ? r.data : [])
+          .map(c => c.label)
+          .filter(Boolean);
+        if (labels.length) setCategories(labels);
+      })
+      .catch(() => {});
+  }, []);
 
   const submitForReview = async (course) => {
     setSubmitting(s => ({ ...s, [course.id]: true }));
@@ -326,6 +342,7 @@ export default function ExpertCourses() {
       {editIdx !== null && courses[editIdx] && (
         <EditCourse
           course={courses[editIdx]}
+          categories={categories}
           onClose={() => setEditIdx(null)}
           onSaved={load}
         />
@@ -334,6 +351,7 @@ export default function ExpertCourses() {
         <EditCourse
           isNew
           course={null}
+          categories={categories}
           onClose={() => setCreating(false)}
           onSaved={load}
         />

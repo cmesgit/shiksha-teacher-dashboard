@@ -1,41 +1,34 @@
-/**
- * src/pages/skill/ExpertAvailability.jsx
- * Wired to:
- *   GET   /skill/teacher/availability/   → { open: [...], booked: [...] }
- *   PATCH /skill/teacher/availability/   body: { open: [...] }
- *
- * Falls back to localStorage (the old availabilityStore) if the endpoint
- * isn't reachable, so the UI is fully functional before the backend migration runs.
- */
+// PLACEMENT: teacher_ui/src/pages/skill/ExpertAvailability.jsx  (replace whole file)
+//
+// Wired purely to the backend (no localStorage, no EXPERT_ID mock persona):
+//   GET   /skill/teacher/availability/   → { open: [...], booked: [...] }
+//   PATCH /skill/teacher/availability/   body: { open: [...] }
+// The learner-side Book-a-Tutor grid reads the same record, so saving here is
+// what makes a slot bookable there. Accepted bookings come back in `booked`
+// and are locked.
 import { useState, useEffect } from "react";
 import { Icon } from "../../components/SkillIcons";
-import AV, { DAYS, SLOTS } from "../../api/availabilityStore";
-import { EXPERT_ID } from "../../data/skillMockData";
+import { DAYS, SLOTS } from "../../api/availabilityStore";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
 
 export default function ExpertAvailability() {
-  const [avail,   setAvail]   = useState(() => AV.get(EXPERT_ID));
+  const [avail,   setAvail]   = useState({ open: [], booked: [] });
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState("");
 
-  // Load from backend on mount, fall back to localStorage
+  // Load the expert's saved availability from the backend.
   useEffect(() => {
     api.get("/skill/teacher/availability/")
-      .then(r => {
-        const data = { open: r.data.open || [], booked: r.data.booked || [] };
-        setAvail(data);
-      })
-      .catch(() => {
-        // backend not ready yet — use localStorage
-        setAvail(AV.get(EXPERT_ID));
-      })
+      .then(r => setAvail({ open: r.data.open || [], booked: r.data.booked || [] }))
+      .catch(() => setError("Couldn't load your availability. Please refresh."))
       .finally(() => setLoading(false));
   }, []);
 
   const toggle = (k) => {
-    if (avail.booked.includes(k)) return; // locked
+    if (avail.booked.includes(k)) return; // locked — an accepted booking
     setAvail(prev => ({
       ...prev,
       open: prev.open.includes(k)
@@ -47,18 +40,15 @@ export default function ExpertAvailability() {
 
   const save = async () => {
     setSaving(true);
+    setError("");
     try {
-      await api.patch("/skill/teacher/availability/", { open: avail.open });
-      // Also write to localStorage so the learner-side grid stays in sync
-      AV.book && AV.toggleOpen; // side-effect free, just ensure module loaded
-      localStorage.setItem(AV.KEY(EXPERT_ID), JSON.stringify(avail));
+      const r = await api.patch("/skill/teacher/availability/", { open: avail.open });
+      // Trust the server's echo (it preserves booked slots).
+      setAvail({ open: r.data.open || avail.open, booked: r.data.booked || avail.booked });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch {
-      // If endpoint doesn't exist yet, save locally
-      localStorage.setItem(AV.KEY(EXPERT_ID), JSON.stringify(avail));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setError("Couldn't save. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -91,6 +81,12 @@ export default function ExpertAvailability() {
           Tap slots to set the hours learners can book you for 1-on-1 sessions. This shows on your public
           profile. Accepted bookings are locked and can't be changed.
         </p>
+
+        {error && (
+          <div style={{ background: "rgba(192,73,47,.1)", color: "#c0492f", padding: "9px 13px", borderRadius: 9, fontSize: 12.5, marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#6b7c83", marginBottom: 14, flexWrap: "wrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>

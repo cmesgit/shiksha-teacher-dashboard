@@ -1,3 +1,8 @@
+// PLACEMENT: put this file in BOTH apps (identical):
+//   student_dashboard/src/shared/ChatPanel.jsx   (replace whole file)
+//   teacher_ui/src/shared/ChatPanel.jsx          (replace whole file)
+// FIX: auto-open effect now keys off primitive target values, so it no longer
+//      re-runs (and resets the thread) on every parent re-render.
 /* shared/ChatPanel.jsx
  * ─────────────────────────────────────────────────────────────────────────
  * Dashboard chat UI for both student & teacher apps. Two-pane: conversation
@@ -31,6 +36,11 @@ export default function ChatPanel({ directTo, courseRoom }) {
   }, []);
 
   // Initial load + optional auto-open of a direct/course conversation.
+  // NOTE: depend on the primitive target values, not the directTo/courseRoom
+  // objects — callers pass inline object literals (e.g. directTo={{kind,id}})
+  // which are a new reference every render. Depending on the objects re-ran this
+  // effect on every parent re-render, re-calling startDirect and resetting the
+  // active thread (which tore down and rebuilt the socket).
   useEffect(() => {
     (async () => {
       await loadConversations();
@@ -39,7 +49,8 @@ export default function ChatPanel({ directTo, courseRoom }) {
         else if (courseRoom) setActive(await ChatAPI.courseRoom(courseRoom.id, courseRoom.title));
       } catch { /* */ }
     })();
-  }, [loadConversations, directTo, courseRoom]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadConversations, directTo?.kind, directTo?.id, courseRoom?.id, courseRoom?.title]);
 
   // Wire websocket whenever the active conversation changes.
   useEffect(() => {
