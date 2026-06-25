@@ -169,17 +169,12 @@ export default function ExpertBookings() {
     }
   };
 
-  const startClass = async (sess) => {
-    setActing(a => ({ ...a, [sess.id]: "starting" }));
-    try {
-      const r = await api.post(`/skill/sessions/${sess.id}/join/`);
-      console.info("[ExpertBookings] LiveKit join →", r.data.room, r.data.token);
-      navigate(`/teacher/private-sessions`);
-    } catch {
-      navigate("/teacher/private-sessions");
-    } finally {
-      setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
-    }
+  const startClass = (sess) => {
+    // Enter the skill LiveKit room. The room page (SkillSessionLive) performs
+    // POST /skill/sessions/<id>/join/ and mounts LiveKit. Previously this
+    // joined here, logged the token to the console, then navigated to the
+    // Academy /teacher/private-sessions list — so the room was never entered.
+    navigate(`/teacher/skill-session/live/${sess.id}`);
   };
 
   const complete = async (sess) => {

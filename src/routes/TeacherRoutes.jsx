@@ -66,6 +66,7 @@ import ExpertAvailability from "../pages/skill/ExpertAvailability";
 import ExpertPromote from "../pages/skill/ExpertPromote";       // NEW (subscription)
 import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // NEW (profile + location + UPI)
 import SkillInbox from "../pages/SkillInbox"; // NEW
+import SkillSessionLive from "../pages/skill/SkillSessionLive"; // NEW (skill LiveKit room)
 
 import { LOGIN_URL } from "../config/urls";
 
@@ -92,6 +93,8 @@ export default function TeacherRoutes() {
       <Route path="/teacher/live/:id" element={<ProtectedTeacherRoute><TeacherLiveSession /></ProtectedTeacherRoute>} />
       <Route path="/teacher/private-session/live/:id" element={<ProtectedTeacherRoute><PrivateSessionLive /></ProtectedTeacherRoute>} />
       <Route path="/teacher/group-session/live/:id" element={<ProtectedTeacherRoute><GroupSessionLive /></ProtectedTeacherRoute>} />
+      {/* Skill-dev 1-on-1 LiveKit room (separate from Academy private sessions) */}
+      <Route path="/teacher/skill-session/live/:id" element={<ProtectedTeacherRoute><SkillSessionLive /></ProtectedTeacherRoute>} />
 
       {/* ── Skill Dev / Expert — SkillDevLayout ── */}
       <Route
