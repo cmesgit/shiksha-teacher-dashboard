@@ -21,7 +21,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
-import api from "../api/apiClient";
+import api from "../../shared/apiClient";
 import PrivateClassroomUI from "../components/live/PrivateClassroomUI";
 import "../styles/privateSessions.css";
 
