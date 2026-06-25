@@ -22,8 +22,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import api from "../../shared/apiClient";
+<<<<<<< HEAD
 import TeacherPrivateClassroomUI from "../../components/live/TeacherPrivateClassroomUI";
 import "../../styles/privateSessions.css";
+=======
+import PrivateClassroomUI from "../components/live/PrivateClassroomUI";
+import "../styles/privateSessions.css";
+>>>>>>> 020dd3e4bb245c9c0c46f5a3d60310445104aa5a
 
 const fullscreenWrap = {
   width: "100vw",
