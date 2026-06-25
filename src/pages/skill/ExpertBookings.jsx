@@ -310,13 +310,19 @@ export default function ExpertBookings() {
                       {time} · {s.duration_mins || 60} min
                     </div>
                   </div>
-                  {live ? (
-                    <button className="start" onClick={() => startClass(s)} disabled={!!act}>
-                      {act === "starting" ? "…" : <><Icon.vid size={14} /> Start class</>}
-                    </button>
-                  ) : (
-                    <span className="soon">Scheduled</span>
-                  )}
+                  {/* A confirmed session can be started by the expert at ANY
+                      time — they're not locked to a 5-min window. `live` only
+                      drives a "Live now" hint + styling. */}
+                  <button
+                    className="start"
+                    onClick={() => startClass(s)}
+                    disabled={!!act}
+                    style={live ? undefined : { background: "#13899b" }}
+                  >
+                    {act === "starting"
+                      ? "…"
+                      : <><Icon.vid size={14} /> {live ? "Start class · Live" : "Start class"}</>}
+                  </button>
                   {/* FIXED: was navigate("/teacher/skill-inbox") — unregistered route */}
                   <button
                     className="rd-book__icon-btn"
@@ -326,11 +332,9 @@ export default function ExpertBookings() {
                   >
                     <Icon.msg size={15} />
                   </button>
-                  {live && (
-                    <button className="rd-book__ghost" style={{ fontSize: 11 }} onClick={() => complete(s)}>
-                      Mark done
-                    </button>
-                  )}
+                  <button className="rd-book__ghost" style={{ fontSize: 11 }} onClick={() => complete(s)}>
+                    Mark done
+                  </button>
                 </div>
               );
             })}
