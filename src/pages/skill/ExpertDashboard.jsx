@@ -62,7 +62,8 @@ export default function ExpertDashboard() {
     { c: "#0a808a", icon: <Icon.users size={16} />,  v: stats.taught,          l: "Students taught"   },
     { c: "#2f9d42", icon: <Icon.spark size={16} />,  v: stats.active,          l: "Active sessions"   },
     { c: "#ff8f01", icon: <Icon.cal size={16} />,    v: stats.pending,         l: "Pending requests"  },
-    { c: "#7c6fd0", icon: <Icon.check size={16} />,  v: stats.course_students, l: "Course students"   },
+    // HIDDEN until skill-courses are implemented:
+    // { c: "#7c6fd0", icon: <Icon.check size={16} />,  v: stats.course_students, l: "Course students"   },
   ];
 
   const adv     = advertised(advertising);
@@ -77,9 +78,10 @@ export default function ExpertDashboard() {
           </div>
           <div className="sk-head__sub">{profile.subtitle}</div>
         </div>
+        {/* HIDDEN until skill-courses are implemented:
         <button className="sk-btn sk-btn--ghost" onClick={() => navigate("/teacher/expert/courses")}>
           <Icon.plus size={14} /> New course
-        </button>
+        </button> */}
       </div>
 
       {/* Profile-completion nudges */}
@@ -141,12 +143,12 @@ export default function ExpertDashboard() {
                   {fmtTime(b.scheduled_for)} · {b.duration_mins} min
                 </div>
               </div>
-              {b.live ? (
+              {b.status === "requested" ? (
+                <span className="soon" style={{ color: "#b46a00", background: "#ff8f0122" }}>Pending</span>
+              ) : (
                 <button className="start" onClick={() => navigate("/teacher/expert/bookings")}>
                   <Icon.vid size={14} /> Start class
                 </button>
-              ) : (
-                <span className="soon">Scheduled</span>
               )}
             </div>
           ))}
