@@ -246,7 +246,8 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
           loading={modalLoading} error={modalError} />
       )}
 
-      <SettingsModal open={settingsOpen} tab={settingsTab} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal open={settingsOpen} tab={settingsTab} onClose={() => setSettingsOpen(false)}
+        teacherSignupUrl={teacherSignupUrl} teachUrl={teachUrl} />
     </>
   );
 }
