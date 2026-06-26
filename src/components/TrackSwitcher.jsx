@@ -45,7 +45,10 @@ export default function TrackSwitcher() {
 
   const handleClick = (track) => {
     if (!canAccess(track.key)) {
-      if (track.key === "academy") window.location.href = `${HOME_URL}?ref=upgrade-academy`;
+      // A guest hasn't added the Faculty track yet — send them to the Faculty
+      // intro page (on the marketing domain), which explains the track and
+      // routes into the add-a-track application.
+      if (track.key === "academy") window.location.href = `${HOME_URL}/become-faculty`;
       else                         window.location.href = `${HOME_URL}/expert-apply`;
       return;
     }

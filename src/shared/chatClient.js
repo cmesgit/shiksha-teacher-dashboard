@@ -1,21 +1,28 @@
-/* shared/chatClient.js — REPLACEMENT
+// PLACEMENT: put this file in BOTH apps (identical):
+//   student_dashboard/src/shared/chatClient.js   (replace whole file)
+//   teacher_ui/src/shared/chatClient.js          (replace whole file)
+//
+// WHAT CHANGED vs the previous version:
+//   • ChatAPI gains directory()/blocks()/block()/unblock() for the new
+//     "start a chat" people directory and the block/unblock controls.
+//   • openChatSocket now surfaces server "error" frames (moderation rejection
+//     or a block) via handlers.onError, so the UI can drop the rejected
+//     optimistic bubble and show a reason.
+// Everything else (keepalive ping, send queue, reconnect backoff, WS host
+// following config/urls.js) is unchanged.
+/* shared/chatClient.js
  *
- * Fixes the "message disappears" bug. Root cause: the socket was idle-killed
- * (no keepalive), the client reconnected every few seconds, and a send issued
- * while the socket was mid-reconnect (readyState !== 1) was silently dropped —
- * so the message was never transmitted, never saved, and the next reconnect's
- * history overwrote the optimistic bubble.
+ * The socket was previously idle-killed (no keepalive) and a send issued while
+ * mid-reconnect was silently dropped. Fixes retained here:
+ *   1. KEEPALIVE: ping every 25s so proxies/Nginx don't idle-close it.
+ *   2. SEND QUEUE: if the socket isn't OPEN, queue and flush on reconnect.
+ *   3. Heartbeat-driven reconnect with exponential backoff.
  *
- * Changes:
- *   1. KEEPALIVE: send a ping every 25s so proxies/Nginx don't idle-close it.
- *   2. SEND QUEUE: if the socket isn't OPEN, queue the message and flush on
- *      reconnect instead of dropping it.
- *   3. Heartbeat-driven reconnect detection stays the same (exponential backoff).
- *
- * Backend note: the consumer ignores unknown message types, so a {"type":"ping"}
- * frame is harmless. (Optionally handle it explicitly in ChatConsumer.receive.)
+ * Backend note: the consumer ignores unknown message types, so {"type":"ping"}
+ * is harmless.
  */
 import api from "./apiClient";
+import { API_URL, WS_HOST } from "../config/urls";
 
 export const ChatAPI = {
   conversations: () => api.get("/chat/conversations/").then((r) => r.data),
@@ -26,13 +33,26 @@ export const ChatAPI = {
   messages: (id, params = {}) =>
     api.get(`/chat/conversations/${id}/messages/`, { params }).then((r) => r.data),
   markRead: (id) => api.post(`/chat/conversations/${id}/read/`).then((r) => r.data),
+
+  // --- NEW: start-a-new-chat directory (listed experts + approved faculty) ---
+  directory: (q) =>
+    api.get("/chat/directory/", { params: q ? { q } : {} }).then((r) => r.data),
+
+  // --- NEW: blocking ---
+  blocks: () => api.get("/chat/blocks/").then((r) => r.data),
+  block: (target_kind, target_id) =>
+    api.post("/chat/blocks/", { target_kind, target_id }).then((r) => r.data),
+  unblock: (target_kind, target_id) =>
+    api.post("/chat/blocks/remove/", { target_kind, target_id }).then((r) => r.data),
 };
 
 const PING_MS = 25000;
 
 export function openChatSocket(conversationId, handlers = {}) {
-  const apiUrl = import.meta.env.VITE_API_URL || "https://api.shikshacom.com/api";
-  const wsBase = apiUrl.replace(/^http/, "ws").replace(/\/api\/?$/, "");
+  // Same environment resolution as the rest of the app (config/urls.js):
+  // WS_HOST is the correct host per environment; the scheme follows API_URL.
+  const scheme = API_URL.startsWith("https") ? "wss" : "ws";
+  const wsBase = `${scheme}://${WS_HOST}`;
 
   let ws;
   let closedByUs = false;
@@ -71,6 +91,7 @@ export function openChatSocket(conversationId, handlers = {}) {
       if (payload.type === "history") handlers.onHistory?.(payload.data);
       else if (payload.type === "message") handlers.onMessage?.(payload.data);
       else if (payload.type === "typing") handlers.onTyping?.(payload.data);
+      else if (payload.type === "error") handlers.onError?.(payload.data);
       // "pong" (if the server ever sends one) is ignored.
     };
 

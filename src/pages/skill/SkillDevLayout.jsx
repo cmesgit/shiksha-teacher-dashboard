@@ -26,14 +26,17 @@ import "../styles/skillSidebar.css";
 
 const NAV = [
   { to: "/teacher/expert",              label: "My Dashboard", icon: <Icon.cap size={15} />,   end: true },
- 
+
   { group: "Live 1-on-1" },
   { to: "/teacher/expert/bookings",     label: "Bookings",     icon: <Icon.cal size={15} /> },
   { to: "/teacher/expert/availability", label: "Availability", icon: <Icon.clock size={15} /> },
-  // HIDDEN until implemented: Earnings is settled off-platform for now, so the
-  // "Money" group + Earnings link are hidden (kept here for when it's built).
-  // { group: "Money" },
-  // { to: "/teacher/expert/earnings",     label: "Earnings",     icon: <Icon.shield size={15} /> },
+
+  { group: "Grow" },
+  // Earnings removed — guest experts settle payment directly with learners, so
+  // there is no earnings bar. "Promote" manages the advertising subscription.
+  { to: "/teacher/expert/promote",      label: "Promote",      icon: <Icon.spark size={15} /> },
+  { to: "/teacher/expert/profile",      label: "My Profile",   icon: <Icon.cap size={15} /> },
+
   { other: true },
   // FIXED: was "/teacher/chat" which broke out of SkillDevLayout into TeacherLayout
   { to: "/teacher/expert/inbox",        label: "Messages",     icon: <Icon.msg size={15} /> },

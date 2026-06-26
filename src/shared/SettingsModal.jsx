@@ -48,15 +48,9 @@ const savePrefs = (email, p) => {
   try { localStorage.setItem(prefsKey(email), JSON.stringify(p)); } catch {}
 };
 
-/* ── Add-track URL (same formula as urls.js helpers) ── */
-const addTrackUrl = (track) => {
-  const home = typeof window !== "undefined"
-    ? (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-        ? "http://localhost:5174"
-        : window.location.origin.replace(/^https?:\/\/(?:app\.|teacher\.)?/, "https://"))
-    : "";
-  return `${home}/signup?role=teacher&add_track=${encodeURIComponent(track)}`;
-};
+/* Cross-domain destinations (faculty form, expert editor, add-track) are
+   derived from the teacherSignupUrl / teachUrl props the host app passes in —
+   see the main component — so they're correct on every domain. */
 
 /* ── Toggle ── */
 function Toggle({ on, onChange }) {
@@ -80,37 +74,54 @@ function TrackBadge({ status }) {
 }
 
 /* ── Teacher identity section ── */
-function TeacherSection({ teacherInfo }) {
+function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfileUrl }) {
   if (!teacherInfo) return null;
   const tracks = teacherInfo.tracks || {};
 
   const TRACK_DEFS = [
-    { key: "academy", label: "Faculty",          sub: "Academic teaching (Academy)", icon: "🎓" },
-    { key: "skill",   label: "Expert (Skill Dev)", sub: "Skill-development sessions",  icon: "⚡" },
+    { key: "academy", label: "Faculty",          sub: "Academic teaching (Academy)", icon: "🎓",
+      manageUrl: facultyFormUrl,   manageLabel: "Application form" },
+    { key: "skill",   label: "Expert (Skill Dev)", sub: "Skill-development sessions",  icon: "⚡",
+      manageUrl: expertProfileUrl, manageLabel: "Edit profile" },
   ];
 
   return (
     <>
       <div className="sm-sec sm-sec--teacher">Teacher identity</div>
       <div className="sm-teacher-note">
-        Your teaching tracks. Skill Dev lists automatically; Academy requires admin approval.
+        Your teaching tracks. Skill Dev lists once your expert profile is complete;
+        Academy requires admin approval. Use the links to fill in or edit each
+        track's details — the advertised expert profile and the faculty
+        application both live behind these.
       </div>
       <div className="sm-track-list">
-        {TRACK_DEFS.map(({ key, label, sub, icon }) => {
+        {TRACK_DEFS.map(({ key, label, sub, icon, manageUrl, manageLabel }) => {
           const st = tracks[key] || "locked";
+          // Asymmetric Faculty/Guest rule: you may add Faculty (academy) any
+          // time it's not held, but you may add Skill ONLY if you've never
+          // held Faculty. So a faculty account never gets a Skill "Apply".
+          const academyHeld  = ["pending", "approved"].includes(tracks.academy);
+          const canApply     = st === "locked" && (key === "academy" || !academyHeld);
+          const skillBlocked = key === "skill" && st === "locked" && academyHeld;
+          const held         = st === "pending" || st === "approved";
           return (
             <div key={key} className={`sm-track-card sm-track-card--${st}`}>
               <span className="sm-track-icon">{icon}</span>
               <div className="sm-track-info">
                 <div className="sm-track-name">{label}</div>
-                <div className="sm-track-sub">{sub}</div>
+                <div className="sm-track-sub">
+                  {skillBlocked ? "Not available on faculty accounts" : sub}
+                </div>
               </div>
               <div className="sm-track-right">
                 <TrackBadge status={st} />
-                {st === "locked" && (
-                  <a className="sm-mini sm-track-apply" href={addTrackUrl(key)}>
+                {canApply && (
+                  <a className="sm-mini sm-track-apply" href={mkAddTrack(key)}>
                     Apply
                   </a>
+                )}
+                {held && manageUrl && (
+                  <a className="sm-mini" href={manageUrl}>{manageLabel}</a>
                 )}
               </div>
             </div>
@@ -122,15 +133,35 @@ function TeacherSection({ teacherInfo }) {
 }
 
 /* ══════════════════════════════════ main ══════════════════════════════════ */
-export default function SettingsModal({ open, tab: initialTab = "profile", onClose }) {
+export default function SettingsModal({
+  open, tab: initialTab = "profile", onClose,
+  teacherSignupUrl = "/signup?role=teacher", teachUrl = "",
+}) {
   const { user, profiles, activeProfile, teacherInfo, api, bootstrap, logout } = useAuth();
+
+  /* Cross-domain destinations, derived from the host app's props so they're
+     right on every domain. homeBase is "" on the marketing app (same origin). */
+  const homeBase = (teacherSignupUrl || "").split("/signup")[0];
+  const mkAddTrack = (track) =>
+    `${homeBase}/signup?role=teacher&add_track=${encodeURIComponent(track)}`;
+  const facultyFormUrl   = `${homeBase}/form-fillup`;
+  const expertProfileUrl = teachUrl
+    ? `${teachUrl.replace(/\/teacher\/dashboard\/?$/, "")}/teacher/expert/profile`
+    : "";
 
   const [tab, setTab]             = useState(initialTab);
   const [rows, setRows]           = useState([]);
   const [editId, setEditId]       = useState(null);
-  const [form, setForm]           = useState({ display_name: "", bio: "" });
+  const [form, setForm]           = useState({
+    display_name: "", bio: "",
+    first_name: "", last_name: "", phone: "", gender: "", date_of_birth: "",
+    state: "", district: "", city_town: "", pin_code: "",
+  });
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [realPhotoFile, setRealPhotoFile]       = useState(null); // personal photo (profile_photo)
+  const [realPhotoPreview, setRealPhotoPreview] = useState(null);
+  const realFileRef = useRef(null);
   const [prefs, setPrefs]         = useState({ email: true, sms: false, directory: true, announce: true });
   const [saving, setSaving]       = useState(false);
   const [err, setErr]             = useState("");
@@ -154,6 +185,7 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
     setTab(initialTab); setErr(""); setOkMsg(""); setPwMsg("");
     setAdding(false); setPinEditing(false);
     setPhotoFile(null); setPhotoPreview(null);
+    setRealPhotoFile(null); setRealPhotoPreview(null);
     setPw({ old: "", next: "", confirm: "" });
     const stored = loadPrefs(email);
     setPrefs({
@@ -183,10 +215,20 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
   const selectRow = (row) => {
     setEditId(row.id); setPinEditing(false); setPinValue("");
     setPhotoFile(null); setPhotoPreview(null);
+    setRealPhotoFile(null); setRealPhotoPreview(null);
     const stored = loadPrefs(email);
     setForm({
       display_name: row.display_name || "",
       bio: stored.bios?.[row.id] || "",
+      first_name:   row.first_name || "",
+      last_name:    row.last_name || "",
+      phone:        row.phone || "",
+      gender:       row.gender || "",
+      date_of_birth: row.date_of_birth || "",
+      state:        row.state || "",
+      district:     row.district || "",
+      city_town:    row.city_town || "",
+      pin_code:     row.pin_code || "",
     });
   };
 
@@ -196,6 +238,11 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
   const onPhoto = (e) => {
     const f = e.target.files?.[0]; if (!f) return;
     setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f));
+  };
+
+  const onRealPhoto = (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    setRealPhotoFile(f); setRealPhotoPreview(URL.createObjectURL(f));
   };
 
   const setPref = (k, v) => {
@@ -210,7 +257,18 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
     try {
       const fd = new FormData();
       fd.append("display_name", (form.display_name || "").trim());
-      if (photoFile) fd.append("avatar_image", photoFile);
+      // Personal data (all optional — empty values clear the field server-side).
+      fd.append("first_name",    form.first_name || "");
+      fd.append("last_name",     form.last_name || "");
+      fd.append("phone",         form.phone || "");
+      fd.append("gender",        form.gender || "");
+      fd.append("date_of_birth", form.date_of_birth || "");
+      fd.append("state",         form.state || "");
+      fd.append("district",      form.district || "");
+      fd.append("city_town",     form.city_town || "");
+      fd.append("pin_code",      form.pin_code || "");
+      if (photoFile)     fd.append("avatar_image", photoFile);
+      if (realPhotoFile) fd.append("profile_photo", realPhotoFile);
       await api.patch(`/accounts/profiles/${editId}/`, fd);
       const stored = loadPrefs(email);
       savePrefs(email, { ...stored, ...prefs,
@@ -377,6 +435,70 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
                 placeholder="A short line about you"
                 onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))} />
 
+              {/* ── personal details (optional; feeds the faculty application) ── */}
+              <div className="sm-sec">Personal details</div>
+              <div className="sm-tg-sub" style={{ marginBottom: 10 }}>
+                Optional — fill in what you like. These details are reused by the
+                faculty application form so you don't have to type them twice.
+              </div>
+
+              <div className="sm-photorow">
+                {realPhotoPreview
+                  ? <img className="sm-av sm-av--lg" src={realPhotoPreview} alt="" />
+                  : (currentRow?.profile_photo)
+                    ? <img className="sm-av sm-av--lg" src={currentRow.profile_photo} alt="" />
+                    : <span className="sm-av sm-av--lg">{initials(currentRow?.display_name)}</span>}
+                <button className="sm-photobtn" onClick={() => realFileRef.current?.click()}>
+                  {currentRow?.profile_photo || realPhotoPreview ? "Change photo" : "Add photo"}
+                </button>
+                <input ref={realFileRef} type="file" accept="image/*" hidden onChange={onRealPhoto} />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label className="sm-label">First name</label>
+                  <input className="sm-input" value={form.first_name}
+                    onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Last name</label>
+                  <input className="sm-input" value={form.last_name}
+                    onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Phone</label>
+                  <input className="sm-input" value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Date of birth</label>
+                  <input className="sm-input" type="date" value={form.date_of_birth}
+                    onChange={(e) => setForm((f) => ({ ...f, date_of_birth: e.target.value }))} />
+                </div>
+              </div>
+
+              <label className="sm-label">Gender</label>
+              <select className="sm-select" value={form.gender}
+                onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}>
+                <option value="">Prefer not to specify</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+
+              <label className="sm-label">Address</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <input className="sm-input" placeholder="State" value={form.state}
+                  onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} />
+                <input className="sm-input" placeholder="District" value={form.district}
+                  onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} />
+                <input className="sm-input" placeholder="City / town" value={form.city_town}
+                  onChange={(e) => setForm((f) => ({ ...f, city_town: e.target.value }))} />
+                <input className="sm-input" placeholder="Pincode" value={form.pin_code}
+                  onChange={(e) => setForm((f) => ({ ...f, pin_code: e.target.value }))} />
+              </div>
+
               {/* ── PIN ── */}
               <div className="sm-sec">Security · this profile</div>
               <div className="sm-pinrow">
@@ -443,7 +565,10 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
               )}
 
               {/* ── teacher identity section ── */}
-              <TeacherSection teacherInfo={teacherInfo} />
+              <TeacherSection teacherInfo={teacherInfo}
+                mkAddTrack={mkAddTrack}
+                facultyFormUrl={facultyFormUrl}
+                expertProfileUrl={expertProfileUrl} />
             </>
           )}
 
@@ -453,6 +578,10 @@ export default function SettingsModal({ open, tab: initialTab = "profile", onClo
               <div className="sm-sec">Account</div>
               <label className="sm-label">Email</label>
               <input className="sm-input" value={email} readOnly />
+              <div className="sm-tg-sub" style={{ marginTop: 4 }}>
+                This is the email you log in with. Changing your password below
+                updates your sign-in credentials.
+              </div>
               <label className="sm-label">Username</label>
               <input className="sm-input" value={user?.username || ""} readOnly />
 
