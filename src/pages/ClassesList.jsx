@@ -1,3 +1,12 @@
+// PLACEMENT: teacher_ui/src/pages/ClassesList.jsx  (replace whole file)
+// DEPLOY:    /app/teacher_ui/src/pages/ClassesList.jsx
+//
+// WHAT CHANGED: captures course_id / course_title from /courses/teacher/my-classes/
+// (already returned by the API) and adds a "Class chat" button to each class
+// card. It opens the SAME per-course group room students reach from their course
+// page (the room is keyed by course id), via Chat.jsx which accepts
+// { courseId, courseTitle }. Tapping the card still opens the subject as before.
+
 import { useNavigate } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import { useEffect, useState } from "react";
@@ -28,6 +37,7 @@ export default function ClassesList() {
         const normalized = res.data.map((s) => ({
           subjectId: s.subject_id || s.id,
           subjectName: pickFirstText(s.subject_name, s.name),
+          courseId: s.course_id || "",
           courseTitle: pickFirstText(s.course_title, s.class_name, s.course),
           board: pickFirstText(
             s.board,
@@ -62,6 +72,14 @@ export default function ClassesList() {
     [subject.courseTitle, subject.board, subject.stream]
       .filter(Boolean)
       .join(" • ");
+
+  const openClassChat = (e, subject) => {
+    e.stopPropagation(); // don't open the subject dashboard
+    if (!subject.courseId) return;
+    navigate("/teacher/chat", {
+      state: { courseId: subject.courseId, courseTitle: subject.courseTitle },
+    });
+  };
 
   return (
     <div className="cl-wrapper">
@@ -107,6 +125,18 @@ export default function ClassesList() {
                 <span className="cl-card-label">
                   {getClassMeta(subject)}
                 </span>
+
+                {subject.courseId && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => openClassChat(e, subject)}
+                    onKeyDown={(e) => { if (e.key === "Enter") openClassChat(e, subject); }}
+                    style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#1b9c85,#1dcaab)", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    💬 Class chat
+                  </span>
+                )}
 
               </div>
 

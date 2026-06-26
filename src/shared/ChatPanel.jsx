@@ -259,8 +259,10 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
 
   const visible = conversations.filter((c) => {
     if (tab === "all") return true;
-    if (c.kind !== "DIRECT") return false; // course rooms only under "All"
-    return (c.counterpart?.roles || []).includes(tab);
+    if (c.kind === "DIRECT") return (c.counterpart?.roles || []).includes(tab);
+    // Course/class rooms appear under their track's tab (Academy / Skill Dev).
+    if (c.kind === "COURSE") return c.track === tab;
+    return false;
   });
 
   return (
@@ -289,7 +291,11 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
           </div>
         )}
         {visible.map((c) => {
-          const label = c.kind === "DIRECT" ? rolesLabel(c.counterpart?.roles) : "Group room";
+          const label = c.kind === "DIRECT"
+            ? rolesLabel(c.counterpart?.roles)
+            : (c.track === "academy" ? "Class group · Academy"
+               : c.track === "skilldev" ? "Course group · Skill Dev"
+               : "Group room");
           return (
             <button
               key={c.id}
