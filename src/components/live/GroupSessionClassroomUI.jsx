@@ -1,4 +1,24 @@
-
+/**
+ * GroupSessionClassroomUI.jsx  (TEACHER app)
+ *
+ * Group-session live room — Google-Meet-style multi-participant layout.
+ *
+ * WHAT CHANGED vs the old version
+ * --------------------------------
+ * 1. Every participant now gets their own video tile (grid mode) instead of
+ *    a single "main" video. Uses useTracks({ withPlaceholder:true }) so
+ *    camera-OFF participants still appear as an avatar tile.
+ * 2. Screen-share promotes to a large focus pane + a horizontal film-strip
+ *    of every camera (spotlight mode).
+ * 3. Removed the old `if (!mainTrack) return <waiting/>` block. That hid the
+ *    control bar whenever your camera was off, so you could never turn it on.
+ *    The room (and controls) now always render.
+ * 4. Active-speaker highlight, per-tile mic state, raise-hand and host badges.
+ *
+ * Everything else (chat, raise-hand data messages, panels, control bar,
+ * fullscreen) is unchanged. Private Sessions and normal Live Sessions are
+ * not affected — this component and its CSS use the tgs-* prefix only.
+ */
 
 import { useTracks, VideoTrack, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
@@ -64,6 +84,62 @@ function readParticipantMeta(participant) {
   }
 }
 
+/* Small mic glyph reused inside each tile */
+function MicIcon({ on }) {
+  return on ? (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    </svg>
+  ) : (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="1" y1="1" x2="23" y2="23" />
+      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+    </svg>
+  );
+}
+
+/**
+ * One participant tile. Renders live video when the camera track is
+ * published + unmuted, otherwise an avatar placeholder.
+ */
+function ParticipantTile({ trackRef, variant, isLocal, isHost, micOn, speaking, handRaised, displayName }) {
+  const pub = trackRef?.publication;
+  const showVideo = !!pub && !pub.isMuted;
+  const initial = String(displayName || "?").trim().charAt(0).toUpperCase() || "?";
+
+  const cls = [
+    "tgs-tile",
+    variant === "strip" ? "tgs-tile--strip" : "",
+    isLocal ? "tgs-tile--self" : "",
+    speaking ? "tgs-tile--speaking" : "",
+  ].filter(Boolean).join(" ");
+
+  return (
+    <div className={cls}>
+      {showVideo ? (
+        <VideoTrack trackRef={trackRef} />
+      ) : (
+        <div className="tgs-tile-placeholder">
+          <div className="tgs-tile-avatar">{initial}</div>
+        </div>
+      )}
+
+      <div className="tgs-tile-badges">
+        {handRaised ? <span className="tgs-tile-hand">✋</span> : <span />}
+        {isHost && <span className="tgs-tile-tag">Host</span>}
+      </div>
+
+      <div className="tgs-tile-footer">
+        <span className={`tgs-tile-mic ${micOn ? "is-on" : "is-off"}`}>
+          <MicIcon on={micOn} />
+        </span>
+        <span className="tgs-tile-name">{isLocal ? `${displayName} (You)` : displayName}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function GroupSessionClassroomUI({
   role,
   session,
@@ -124,7 +200,7 @@ export default function GroupSessionClassroomUI({
     };
   }, []);
 
-  /* Re-render on LiveKit track changes */
+  /* Re-render on LiveKit track / participant / speaker changes */
   useEffect(() => {
     if (!room) return;
 
@@ -132,6 +208,7 @@ export default function GroupSessionClassroomUI({
       "trackMuted", "trackUnmuted", "trackPublished", "trackUnpublished",
       "trackSubscribed", "trackUnsubscribed", "participantConnected",
       "participantDisconnected", "localTrackPublished", "localTrackUnpublished",
+      "activeSpeakersChanged",
     ];
 
     events.forEach((evt) => room.on(evt, bump));
@@ -279,48 +356,84 @@ export default function GroupSessionClassroomUI({
     }
   };
 
-  /* Tracks */
-  const tracks = useTracks([
-    { source: Track.Source.Camera, withPlaceholder: false },
-    { source: Track.Source.ScreenShare, withPlaceholder: false },
-  ]);
+  /* ---------------------------------------------------------------
+     Tracks — one camera track PER participant (placeholder when off)
+     plus any screen-share. This is what makes it behave like Meet.
+     --------------------------------------------------------------- */
+  const trackRefs = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { onlySubscribed: false }
+  );
 
-  const screenTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
-  const cameraTrack = tracks.find((t) => t.source === Track.Source.Camera);
-  const mainTrack = screenTrack || cameraTrack;
-  const pipTrack = screenTrack ? cameraTrack : null;
+  const localId = room?.localParticipant?.identity || null;
+  const localName = room?.localParticipant?.name || localId || "You";
 
-  if (!mainTrack) {
+  const describeParticipant = (p) => {
+    const meta = readParticipantMeta(p);
+    const idPrefix = String(p?.identity || "").split("_")[0];
+    const participantIsHost =
+      sameId(idPrefix, hostId) ||
+      sameId(meta?.user_id || meta?.userId || meta?.id, hostId) ||
+      (!!hostName && String(p?.name || "").trim() === String(hostName).trim());
+    const rawRole = String(meta?.role || meta?.user_role || "").toLowerCase();
+    const roleLabel = participantIsHost
+      ? "Host"
+      : rawRole.includes("teacher")
+        ? "Teacher"
+        : rawRole.includes("student")
+          ? "Student"
+          : "Participant";
+    return { isHost: participantIsHost, rawRole, roleLabel };
+  };
+
+  const screenShareTrack = trackRefs.find(
+    (t) => t.source === Track.Source.ScreenShare && t.publication
+  );
+
+  const cameraTiles = trackRefs.filter((t) => t.source === Track.Source.Camera);
+
+  /* Host first, then teachers, then students, then yourself last */
+  const orderedTiles = [...cameraTiles].sort((a, b) => {
+    const rank = (t) => {
+      const p = t.participant;
+      if (p.identity === localId) return isHost ? 0 : 3;
+      const { isHost: h, rawRole } = describeParticipant(p);
+      if (h) return 0;
+      if (rawRole.includes("teacher")) return 1;
+      return 2;
+    };
+    return rank(a) - rank(b);
+  });
+
+  const isAlone = orderedTiles.length <= 1;
+  const gridCols = Math.max(1, Math.ceil(Math.sqrt(orderedTiles.length || 1)));
+
+  const renderTile = (tr, variant) => {
+    const p = tr.participant;
+    const isLocalP = p.identity === localId;
+    const { isHost: pHost } = describeParticipant(p);
     return (
-      <div className="tgs-waiting-screen">
-        <div className="tgs-waiting-card">
-          <div className="tgs-waiting-pulse" />
-          <h2>Enable your camera to start the session</h2>
-        </div>
-      </div>
+      <ParticipantTile
+        key={p.identity}
+        trackRef={tr}
+        variant={variant}
+        isLocal={isLocalP}
+        isHost={isLocalP ? isHost : pHost}
+        micOn={!!p.isMicrophoneEnabled}
+        speaking={!!p.isSpeaking}
+        handRaised={!!raisedHands[p.identity]}
+        displayName={p.name || p.identity}
+      />
     );
-  }
+  };
 
-  const localId = room.localParticipant?.identity;
-  const localName = room.localParticipant?.name || localId || "You";
-
-  const remoteParticipants = room.remoteParticipants
+  /* People panel list (unchanged behaviour) */
+  const remoteParticipants = room?.remoteParticipants
     ? Array.from(room.remoteParticipants.values()).map((p) => {
-        const meta = readParticipantMeta(p);
-        const participantIsHost =
-          sameId(p.identity, hostId) ||
-          sameId(meta?.user_id || meta?.userId || meta?.id, hostId) ||
-          (!!hostName && String(p.name || "").trim() === String(hostName).trim());
-
-        const rawRole = String(meta?.role || meta?.user_role || "").toLowerCase();
-        const roleLabel = participantIsHost
-          ? "Host"
-          : rawRole.includes("teacher")
-            ? "Teacher"
-            : rawRole.includes("student")
-              ? "Student"
-              : "Participant";
-
+        const { isHost: participantIsHost, roleLabel } = describeParticipant(p);
         return {
           identity: p.identity,
           name: p.name || p.identity,
@@ -339,8 +452,8 @@ export default function GroupSessionClassroomUI({
       identity: localId,
       name: localName,
       role: isHost ? "Host" : "Teacher",
-      micOn: room.localParticipant?.isMicrophoneEnabled,
-      camOn: room.localParticipant?.isCameraEnabled,
+      micOn: room?.localParticipant?.isMicrophoneEnabled,
+      camOn: room?.localParticipant?.isCameraEnabled,
       handRaised: false,
       isHost,
       isMe: true,
@@ -349,6 +462,17 @@ export default function GroupSessionClassroomUI({
   ];
 
   const joinRequests = [];
+
+  const fullscreenBtn = (
+    <button
+      className="tgs-video-fs-btn"
+      onClick={toggleFullscreen}
+      aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+      title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+    >
+      {isFullscreen ? <MdFullscreenExit size={22} /> : <MdFullscreen size={22} />}
+    </button>
+  );
 
   return (
     <div
@@ -370,24 +494,38 @@ export default function GroupSessionClassroomUI({
       )}
 
       <div className="tgs-main">
-        <div className="tgs-stage">
-          <VideoTrack trackRef={mainTrack} />
-
-          {pipTrack && (
-            <div className="tgs-pip-camera">
-              <VideoTrack trackRef={pipTrack} />
+        {screenShareTrack ? (
+          /* ---------- SPOTLIGHT (screen share) ---------- */
+          <div className="tgs-stage tgs-stage--spotlight">
+            <div className="tgs-spotlight-main">
+              <VideoTrack trackRef={screenShareTrack} />
+              <span className="tgs-spotlight-label">
+                {(screenShareTrack.participant?.name || "Presenter")} · Presenting
+              </span>
             </div>
-          )}
 
-          <button
-            className="tgs-video-fs-btn"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            <div className="tgs-filmstrip">
+              {orderedTiles.map((tr) => renderTile(tr, "strip"))}
+            </div>
+
+            {fullscreenBtn}
+          </div>
+        ) : (
+          /* ---------- GRID (everyone's camera) ---------- */
+          <div
+            className="tgs-stage tgs-stage--grid"
+            data-count={orderedTiles.length}
+            style={{ "--tgs-cols": gridCols }}
           >
-            {isFullscreen ? <MdFullscreenExit size={22} /> : <MdFullscreen size={22} />}
-          </button>
-        </div>
+            {orderedTiles.map((tr) => renderTile(tr, "grid"))}
+
+            {isAlone && (
+              <div className="tgs-waiting-pill">Waiting for others to join…</div>
+            )}
+
+            {fullscreenBtn}
+          </div>
+        )}
 
         <TeacherGroupSessionControlBar
           onLeave={onLeave}
