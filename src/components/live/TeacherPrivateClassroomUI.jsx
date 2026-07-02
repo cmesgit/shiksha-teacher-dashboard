@@ -169,24 +169,32 @@ export default function TeacherPrivateSessionUI({
     setOpenMenuId(null);
   };
 
-  /* ───── TRACKS ───── */
+  /* ───── TRACKS (1-on-1: student = main, teacher = self-view) ───── */
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: false },
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
 
-  const screenTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
-  const cameraTrack = tracks.find((t) => t.source === Track.Source.Camera);
-  const mainTrack = screenTrack || cameraTrack;
-  const pipTrack = screenTrack ? cameraTrack : null;
+  const localId = room.localParticipant?.identity;
+  const isLocal = (t) => t?.participant?.identity === localId;
 
-  /* ───── WAITING ───── */
-  if (!mainTrack) {
+  const screenTrack  = tracks.find((t) => t.source === Track.Source.ScreenShare);
+  const remoteCamera = tracks.find((t) => t.source === Track.Source.Camera && !isLocal(t));
+  const localCamera  = tracks.find((t) => t.source === Track.Source.Camera && isLocal(t));
+
+  const mainTrack = screenTrack || remoteCamera;   // show the student
+  const selfTrack = localCamera;                   // teacher self-view
+
+  const hasRemote = !!(room.remoteParticipants && room.remoteParticipants.size > 0);
+
+  /* ───── WAITING (until the student joins) ───── */
+  if (!hasRemote) {
     return (
       <div className="waiting-screen">
         <div className="waiting-card">
           <div className="waiting-pulse" />
-          <h2>Enable your camera to start the session</h2>
+          <h2>Waiting for your student to join…</h2>
+          <p>The call will connect as soon as they arrive.</p>
         </div>
       </div>
     );
@@ -206,7 +214,6 @@ export default function TeacherPrivateSessionUI({
       }))
     : [];
 
-  const localId = room.localParticipant?.identity;
   const localName = room.localParticipant?.name || localId || "Teacher";
 
   const peopleList = [
@@ -255,11 +262,17 @@ export default function TeacherPrivateSessionUI({
 
         {/* VIDEO */}
         <div className="main-stage">
-          <VideoTrack trackRef={mainTrack} />
+          {mainTrack ? (
+            <VideoTrack trackRef={mainTrack} />
+          ) : (
+            <div className="camera-off-tile" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", color: "#cbd5e1", fontSize: 16 }}>
+              Your student's camera is off
+            </div>
+          )}
 
-          {pipTrack && (
+          {selfTrack && (
             <div className="pip-camera">
-              <VideoTrack trackRef={pipTrack} />
+              <VideoTrack trackRef={selfTrack} />
             </div>
           )}
 
