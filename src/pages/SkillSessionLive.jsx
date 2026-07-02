@@ -156,7 +156,7 @@ export default function SkillSessionLive() {
         style={liveKitWrap}
         onDisconnected={goBack}
       >
-        <PrivateClassroomUI role="STUDENT" sessionId={id} onLeave={goBack} />
+        <PrivateClassroomUI role="STUDENT" sessionId={id} onLeave={goBack} unrestricted />
         <RoomAudioRenderer />
       </LiveKitRoom>
     </div>

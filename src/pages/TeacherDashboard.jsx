@@ -11,6 +11,7 @@ import LiveSessionCard  from "../components/LiveSessionCard";
 import CalendarWidget   from "../components/CalendarWidget";
 import AssignmentItem   from "../components/AssignmentItem";
 import ActivityItem     from "../components/ActivityItem";
+import AcademyRejectionBanner from "../components/AcademyRejectionBanner";
 
 import api from "../api/apiClient";
 import useNotificationSocket from "../hooks/useNotificationSocket";
@@ -279,6 +280,8 @@ export default function TeacherDashboard() {
   // ── DESKTOP ───────────────────────────────────────────────
   return (
     <div className="dashboard">
+
+      <AcademyRejectionBanner />
 
       {/* The Faculty/Expert switch now lives in the shared header
          (TrackSwitcher) — removed here to avoid a duplicate. */}
