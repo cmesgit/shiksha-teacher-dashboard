@@ -25,18 +25,18 @@ import "../styles/skillDev.css";
 import "../styles/skillSidebar.css";
 
 const NAV = [
-  { to: "/teacher/expert",              label: "My Dashboard", icon: <Icon.cap size={15} />,   end: true },
- 
+  { to: "/teacher/expert",              label: "Dashboard",  icon: <Icon.cap size={15} />,   end: true },
+
   { group: "Live 1-on-1" },
-  { to: "/teacher/expert/bookings",     label: "Bookings",     icon: <Icon.cal size={15} /> },
-  { to: "/teacher/expert/availability", label: "Availability", icon: <Icon.clock size={15} /> },
-  // HIDDEN until implemented: Earnings is settled off-platform for now, so the
-  // "Money" group + Earnings link are hidden (kept here for when it's built).
-  // { group: "Money" },
-  // { to: "/teacher/expert/earnings",     label: "Earnings",     icon: <Icon.shield size={15} /> },
+  // "My Course" = the expert's single 1-on-1 teaching profile + weekly
+  // availability (merged). It replaces the old "create a course" screen and
+  // absorbs the standalone Availability page.
+  { to: "/teacher/expert/course",       label: "My Course",  icon: <Icon.doc size={15} /> },
+  { to: "/teacher/expert/bookings",     label: "Bookings",   icon: <Icon.cal size={15} /> },
+  // Earnings removed — guest experts settle payment directly with learners, so
+  // there is no earnings bar on ShikshaCom.
   { other: true },
-  // FIXED: was "/teacher/chat" which broke out of SkillDevLayout into TeacherLayout
-  { to: "/teacher/expert/inbox",        label: "Messages",     icon: <Icon.msg size={15} /> },
+  { to: "/teacher/expert/inbox",        label: "Messages",   icon: <Icon.msg size={15} /> },
 ];
 
 export default function SkillDevLayout() {

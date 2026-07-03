@@ -78,10 +78,6 @@ export default function ExpertDashboard() {
           </div>
           <div className="sk-head__sub">{profile.subtitle}</div>
         </div>
-        {/* HIDDEN until skill-courses are implemented:
-        <button className="sk-btn sk-btn--ghost" onClick={() => navigate("/teacher/expert/courses")}>
-          <Icon.plus size={14} /> New course
-        </button> */}
       </div>
 
       {/* Profile-completion nudges */}
