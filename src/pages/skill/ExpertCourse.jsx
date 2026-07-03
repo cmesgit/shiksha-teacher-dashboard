@@ -46,7 +46,9 @@ export default function ExpertCourse() {
     ]).then(([p, d, a]) => {
       if (p.status === "fulfilled") setProfile(p.value.data);
       if (d.status === "fulfilled") {
-        setStats(d.value.data.stats || {});
+        const st = d.value.data.stats || {};
+        setStats(st);
+        if (st.avg_rating != null) setRating(Number(st.avg_rating));
       }
       if (a.status === "fulfilled") {
         setAvail({ open: a.value.data.open || [], booked: a.value.data.booked || [] });
@@ -54,9 +56,9 @@ export default function ExpertCourse() {
     }).finally(() => setLoading(false));
   }, []);
 
-  // Rating lives on the profile-completeness payload; fall back gracefully.
+  // Fallback: profile payload also carries the cached rating.
   useEffect(() => {
-    if (profile && profile.rating != null) setRating(profile.rating);
+    if (profile?.rating != null) setRating(r => (r != null ? r : Number(profile.rating)));
   }, [profile]);
 
   const toggle = (k) => {
@@ -93,6 +95,7 @@ export default function ExpertCourse() {
   }
 
   const subject   = profile?.headline || profile?.subject_description || "Your 1-on-1 course";
+  const subjects  = profile?.subjects || [];          // every subject taught (multi-subject)
   const skills    = profile?.skill_tags || [];
   const languages = profile?.languages || [];
   const about     = profile?.bio || "";
@@ -125,11 +128,18 @@ export default function ExpertCourse() {
               <span style={{ opacity: .5 }}>·</span>
               <span>{mode}</span>
             </div>
+            {subjects.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 10 }}>
+                {subjects.map((sub) => (
+                  <span key={sub} style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 100, background: "#e7f3f4", color: "#0a808a" }}>{sub}</span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Quick stats */}
           <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
-            <Metric icon={<Icon.star size={15} />} value={rating != null ? rating : "—"} label="Rating" />
+            <Metric icon={<Icon.star size={15} />} value={rating != null ? Number(rating).toFixed(1) : "—"} label="Avg rating" />
             <Metric icon={<Icon.users size={15} />} value={stats.taught ?? 0} label="Students taught" />
             <Metric icon={<Icon.cal size={15} />} value={stats.active ?? 0} label="Active sessions" />
             <Metric
@@ -191,8 +201,8 @@ export default function ExpertCourse() {
           </div>
         </div>
         <p style={{ fontSize: 12, color: "#6b7c83", margin: "0 0 12px", lineHeight: 1.5 }}>
-          Click a slot to toggle it on/off. This is what students see when booking you.
-          Accepted bookings are locked and can&apos;t be changed.
+          Click a slot to toggle it on/off — this weekly pattern <b>repeats every week</b>,
+          and students book the next upcoming date for a slot. Accepted bookings are locked.
         </p>
 
         {error && (
