@@ -1,0 +1,142 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   shared/tokens.css — ShikshaCom design tokens (single source of truth)
+   ═══════════════════════════════════════════════════════════════════════
+   Extracted from the approved mockups:
+     Learner_Academy_Dashboard.html · Learner_Skill_Dev_Dashboard.html ·
+     Expert_Teacher_Skill_Dev_Dashboard.html · Teacher_Review.html
+
+   Import ONCE per app (index.css / main.jsx) in all four frontends:
+     @import "./shared/tokens.css";
+   …then replace hex literals with var(--…) as screens are touched. New
+   components must not introduce raw hex values.
+
+   TRACK IDENTITY DECISION (resolves the doc-vs-mockup conflict):
+   the sidebar chrome stays constant slate across tracks — what changes per
+   track is the ACCENT. Academy = teal/blue accents, Skill Dev = orange.
+   Apply by putting data-track="academy" | "skill" on the app root; the
+   overrides at the bottom of this file do the rest.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Chrome (constant across tracks) ────────────────────────────────── */
+  --nav-bg:        #425f7f;   /* sidebar */
+  --nav-ink:       #ffffff;
+  --nav-sep:       rgba(255, 255, 255, .12);
+  --nav-item-on:   rgba(255, 255, 255, .14);   /* active nav pill */
+  --header-bg:     #ffffff;
+  --page-bg:       #eef1f2;
+  --card-bg:       #ffffff;
+  --card-border:   #e5eaed;
+  --card-radius:   12px;
+  --card-shadow:   0 1px 3px rgba(26, 44, 51, .06);
+
+  /* ── Ink (text) ─────────────────────────────────────────────────────── */
+  --ink:           #1a2c33;   /* headings, primary text */
+  --ink-2:         #374151;   /* body */
+  --ink-3:         #6b7c83;   /* secondary / labels */
+  --ink-4:         #9ca3af;   /* placeholders, disabled */
+
+  /* ── Track accents ──────────────────────────────────────────────────── */
+  --academy:       #425f7f;
+  --academy-soft:  #e6edee;
+  --skill:         #ff8f01;   /* fills, badges, active slots — NOT small text */
+  --skill-ink:     #d97706;   /* orange for text/links (WCAG-passing on white) */
+  --skill-soft:    #fff8f0;
+  --skill-border:  #f3d9bd;
+
+  /* ── Semantic status ────────────────────────────────────────────────── */
+  --live:          #13899b;   /* live / in-session teal */
+  --success:       #2f9d42;
+  --success-soft:  #ecf8ee;
+  --success-border:#bfe6c8;
+  --warning:       #f59e0b;
+  --warning-ink:   #b45309;
+  --warning-soft:  #fef9ec;
+  --danger:        #dc2626;
+  --danger-soft:   #fef2f2;
+  --danger-border: #fca5a5;
+  --info:          #1d4ed8;
+
+  /* Booking / session lifecycle chips (one vocabulary on both dashboards) */
+  --st-requested:      var(--skill-ink);
+  --st-requested-bg:   var(--skill-soft);
+  --st-confirmed:      var(--live);
+  --st-confirmed-bg:   #e6f4f6;
+  --st-completed:      var(--success);
+  --st-completed-bg:   var(--success-soft);
+  --st-cancelled:      var(--danger);
+  --st-cancelled-bg:   var(--danger-soft);
+
+  /* ── Type ───────────────────────────────────────────────────────────── */
+  --font-display:  "Montserrat", system-ui, sans-serif;  /* stat numbers, page titles */
+  --font-body:     "Poppins", "Segoe UI", system-ui, sans-serif;
+  --fs-title:      18px;
+  --fs-body:       13px;
+  --fs-label:      11.5px;
+  --fs-micro:      10.5px;
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+  --sidebar-w:     240px;
+  --header-h:      60px;
+  --gap:           14px;
+  --pad-card:      16px;
+  --radius-pill:   999px;
+  --radius-btn:    10px;
+
+  /* ── Focus (keyboard) ───────────────────────────────────────────────── */
+  --focus-ring:    0 0 0 3px rgba(66, 95, 127, .35);
+}
+
+/* ── Per-track accent switch ──────────────────────────────────────────── */
+/* Put data-track on the layout root (TeacherLayout / student App shell).  */
+[data-track="academy"] {
+  --acc:        var(--academy);
+  --acc-ink:    var(--academy);
+  --acc-soft:   var(--academy-soft);
+  --acc-border: #cfdbe6;
+}
+[data-track="skill"] {
+  --acc:        var(--skill);
+  --acc-ink:    var(--skill-ink);
+  --acc-soft:   var(--skill-soft);
+  --acc-border: var(--skill-border);
+}
+
+/* ── Base primitives components can adopt immediately ─────────────────── */
+.tk-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: var(--pad-card);
+}
+
+.tk-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 700 var(--fs-micro)/1 var(--font-body);
+  letter-spacing: .3px; text-transform: uppercase;
+  padding: 4px 9px; border-radius: var(--radius-pill);
+}
+.tk-chip--requested { color: var(--st-requested); background: var(--st-requested-bg); }
+.tk-chip--confirmed { color: var(--st-confirmed); background: var(--st-confirmed-bg); }
+.tk-chip--completed { color: var(--st-completed); background: var(--st-completed-bg); }
+.tk-chip--cancelled { color: var(--st-cancelled); background: var(--st-cancelled-bg); }
+.tk-chip--live      { color: #fff; background: var(--live); }
+.tk-chip--free      { color: var(--success); background: var(--success-soft); }
+
+.tk-btn {
+  font: 700 var(--fs-body)/1 var(--font-body);
+  border: none; border-radius: var(--radius-btn);
+  padding: 11px 16px; cursor: pointer;
+  background: var(--acc, var(--academy)); color: #fff;
+}
+.tk-btn:disabled { background: var(--ink-4); cursor: not-allowed; }
+.tk-btn--ghost {
+  background: #fff; color: var(--acc-ink, var(--ink));
+  border: 1px solid var(--acc-border, var(--card-border));
+}
+.tk-btn:focus-visible, .tk-chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
