@@ -3,12 +3,11 @@
  * ACTION:    Replace the entire file.
  *
  * Change from original:
- *   - Added import for SkillInbox and route <Route path="inbox" .../> under
- *     /teacher/expert (unchanged from before).
- *   - Added Batch Progress: imports BatchProgress + BatchProgressDetail and two
- *     routes under /teacher:
- *         batch-progress            -> list of the teacher's batches
- *         batch-progress/:batchId   -> per-batch chapter checklist (tick + notes)
+ *   Added import for SkillInbox and added route:
+ *     <Route path="inbox" element={<SkillInbox />} />
+ *   inside the /teacher/expert SkillDevLayout block.
+ *   This makes it accessible at /teacher/expert/inbox — the path that
+ *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
  */
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -57,8 +56,6 @@ import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
-import BatchProgress from "../pages/BatchProgress";
-import BatchProgressDetail from "../pages/BatchProgressDetail";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
@@ -71,6 +68,16 @@ import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // profile + l
 import SkillInbox from "../pages/SkillInbox";
 import SkillSessionLive from "../pages/skill/SkillSessionLive"; // skill LiveKit room
 
+// Counselling (career counsellor console) — third track, gated on the
+// COUNSELOR role. CounselorLayout is its own onboarding gate: teachers
+// without an approved counsellor profile see the apply form / status
+// screen instead of these child routes' content.
+import CounselorLayout from "../layout/CounselorLayout";
+import CounselorSchedule from "../pages/counsellor/CounselorSchedule";
+import CounselorSession from "../pages/counsellor/CounselorSession";
+import CounselorAvailability from "../pages/counsellor/CounselorAvailability";
+import CounselorProfile from "../pages/counsellor/CounselorProfile";
+
 import { LOGIN_URL } from "../config/urls";
 
 function RedirectToMainLogin() {
@@ -80,33 +87,11 @@ function RedirectToMainLogin() {
 
 function DashboardEntry() {
   const { teacherInfo } = useAuth();
-
-  // Per-track statuses (locked | pending | approved | rejected). Older
-  // /me/ payloads without a tracks map fall back to the legacy `type`
-  // field so nothing that used to work suddenly renders locked.
-  const tracks = teacherInfo?.tracks || {};
-  const academyOK = tracks.academy
-    ? tracks.academy === "approved"
-    : teacherInfo?.type !== "GUEST";
-  const skillOK = tracks.skill
-    ? tracks.skill === "approved"
-    : teacherInfo?.type === "GUEST" || teacherInfo?.type === "BOTH";
-
-  const wantsSkill = teacherInfo?.active_track === "skill";
-
-  // FIX: the old check was `type === "GUEST" || active_track === "skill"`.
-  // On a one-email account this misrouted two ways:
-  //   • a BOTH-teacher's active_track claim evaporated on token refresh
-  //     (see accounts/views.py RefreshView fix) and bounced them back to
-  //     Academy mid-session;
-  //   • a teacher whose academy application was pending/rejected still had
-  //     type=FACULTY, so they fell through to <TeacherDashboard/> and hit
-  //     an empty shell instead of an explanation.
-  // Rule, most specific first:
-  if (wantsSkill && skillOK) return <Navigate to="/teacher/expert" replace />;
-  if (academyOK)             return <TeacherDashboard />;
-  if (skillOK)                return <Navigate to="/teacher/expert" replace />;
-  return <TeacherDashboard />; // renders its own pending/rejected/locked gate
+  const goesToExpert =
+    teacherInfo?.type === "GUEST" ||
+    teacherInfo?.active_track === "skill";
+  if (goesToExpert) return <Navigate to="/teacher/expert" replace />;
+  return <TeacherDashboard />;
 }
 
 export default function TeacherRoutes() {
@@ -136,6 +121,17 @@ export default function TeacherRoutes() {
         <Route path="inbox" element={<SkillInbox />} />
       </Route>
 
+      {/* ── Counselling — CounselorLayout (own onboarding gate) ── */}
+      <Route
+        path="/teacher/counsellor"
+        element={<ProtectedTeacherRoute><CounselorLayout /></ProtectedTeacherRoute>}
+      >
+        <Route index element={<CounselorSchedule />} />
+        <Route path="appointments/:id" element={<CounselorSession />} />
+        <Route path="availability" element={<CounselorAvailability />} />
+        <Route path="profile" element={<CounselorProfile />} />
+      </Route>
+
       {/* ── Academy / Faculty — TeacherLayout ── */}
       <Route
         path="/teacher"
@@ -151,10 +147,6 @@ export default function TeacherRoutes() {
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="chat" element={<Chat />} />
         <Route path="settings/teacher-password" element={<TeacherPasswordSettings />} />
-
-        {/* Batch Progress (per-batch chapter coverage) */}
-        <Route path="batch-progress" element={<BatchProgress />} />
-        <Route path="batch-progress/:batchId" element={<BatchProgressDetail />} />
 
         {/* Assignments */}
         <Route path="classes/:subjectId/assignments" element={<Assignments />} />

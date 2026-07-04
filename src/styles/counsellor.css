@@ -1,0 +1,80 @@
+/* PLACEMENT: src/styles/counsellor.css   (NEW FILE — teacher dashboard app)
+ * Counselor console — teacher slate palette (#425f7f), .co- scoped. */
+
+.co-page { padding: 4px 2px }
+.co-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px }
+.co-title { font-size: 20px; font-weight: 800; color: #1e293b; margin: 0 }
+.co-sub { font-size: 12.5px; color: #64748b; margin: 3px 0 0 }
+
+.co-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap }
+.co-tab { padding: 8px 17px; font-size: 12.5px; font-weight: 600; color: #64748b; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 100px; cursor: pointer; display: inline-flex; gap: 7px; align-items: center }
+.co-tab--on { color: #fff; background: #425f7f; border-color: #425f7f }
+.co-count { font-size: 10.5px; font-weight: 800; background: #eef2f7; color: #425f7f; border-radius: 100px; padding: 1px 7px }
+.co-tab--on .co-count { background: rgba(255,255,255,.25); color: #fff }
+
+.co-list { display: flex; flex-direction: column; gap: 12px }
+.co-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 18px }
+.co-row { display: flex; align-items: center; gap: 13px; flex-wrap: wrap }
+.co-avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #425f7f, #64809f); color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center }
+.co-main { flex: 1; min-width: 180px }
+.co-name { font-size: 14.5px; font-weight: 700; color: #0f172a }
+.co-meta { font-size: 12px; color: #64748b; margin-top: 2px }
+.co-chip { font-size: 10.5px; font-weight: 700; padding: 4px 11px; border-radius: 100px; white-space: nowrap }
+.co-chip--green { color: #047857; background: #d1fae5 }
+.co-chip--amber { color: #b45309; background: #fef3c7 }
+.co-chip--red   { color: #b91c1c; background: #fee2e2 }
+.co-chip--grey  { color: #475569; background: #f1f5f9 }
+.co-chip--slate { color: #425f7f; background: #eef2f7 }
+
+.co-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 17px; font-size: 12.5px; font-weight: 700; color: #fff; background: #425f7f; border: none; border-radius: 9px; cursor: pointer; text-decoration: none }
+.co-btn:hover { background: #34506e }
+.co-btn--outline { color: #425f7f; background: #fff; border: 1.5px solid #b9c7d8 }
+.co-btn--outline:hover { background: #f6f8fb }
+.co-btn--danger { color: #b91c1c; background: #fff; border: 1.5px solid #fecaca }
+.co-btn--green { background: #047857 }
+.co-btn--green:hover { background: #036347 }
+.co-btn:disabled { opacity: .55; cursor: not-allowed }
+.co-btn--sm { padding: 7px 13px; font-size: 11.5px }
+
+.co-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 16px; align-items: start }
+@media (max-width: 980px) { .co-grid { grid-template-columns: 1fr } }
+.co-sec-title { font-size: 14px; font-weight: 800; color: #1e293b; margin: 0 0 12px }
+.co-label { display: block; font-size: 11.5px; font-weight: 700; color: #0f172a; margin-bottom: 6px }
+.co-sublabel { font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 4px }
+.co-input, .co-textarea, .co-select { width: 100%; box-sizing: border-box; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 13px; font-size: 13px; color: #0f172a; background: #f8fafc; outline: none; font-family: inherit }
+.co-input:focus, .co-textarea:focus, .co-select:focus { border-color: #425f7f; background: #fff }
+.co-textarea { min-height: 82px; resize: vertical }
+.co-field { margin-bottom: 13px }
+.co-chips { display: flex; flex-wrap: wrap; gap: 8px }
+.co-choice { padding: 7px 14px; font-size: 11.5px; font-weight: 600; color: #475569; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 100px; cursor: pointer }
+.co-choice--on { color: #fff; background: #425f7f; border-color: #425f7f }
+
+.co-note-item { border-left: 3px solid #b9c7d8; background: #f8fafc; border-radius: 0 9px 9px 0; padding: 9px 12px; margin-bottom: 8px }
+.co-note-item p { font-size: 12.5px; color: #334155; margin: 0; line-height: 1.6; white-space: pre-wrap }
+.co-note-item span { font-size: 10.5px; color: #94a3b8 }
+
+.co-kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; font-size: 12.5px }
+.co-kv b { color: #64748b; font-weight: 600 }
+.co-kv span { color: #0f172a; font-weight: 600 }
+
+.co-answer { margin-bottom: 11px }
+.co-answer b { display: block; font-size: 11.5px; color: #475569; margin-bottom: 2px }
+.co-answer p { font-size: 12.5px; color: #0f172a; margin: 0; line-height: 1.6; white-space: pre-wrap }
+.co-answer .co-chip { margin: 2px 4px 0 0 }
+
+.co-empty { text-align: center; padding: 40px 22px; background: #fff; border: 1.5px dashed #e2e8f0; border-radius: 14px; color: #64748b; font-size: 13px; line-height: 1.65 }
+.co-empty-title { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 6px }
+.co-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px }
+.co-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px }
+.co-skel { background: linear-gradient(90deg, #f1f5f9, #e2e8f0, #f1f5f9); background-size: 200% 100%; animation: coShimmer 1.2s infinite; border-radius: 14px }
+@keyframes coShimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+
+.co-avail-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 8px; background: #fff }
+.co-avail-row b { min-width: 96px; font-size: 12.5px; color: #425f7f }
+.co-avail-row span { font-size: 12.5px; color: #334155; flex: 1 }
+.co-avail-add { display: flex; gap: 9px; flex-wrap: wrap; align-items: flex-end }
+.co-avail-add .co-field { margin: 0; flex: 1; min-width: 120px }
+
+.co-gate { max-width: 620px; margin: 34px auto }
+.co-gate .co-card { padding: 26px }
+.co-badge-status { font-size: 11px; font-weight: 800; padding: 5px 13px; border-radius: 100px; text-transform: uppercase; letter-spacing: .04em }
