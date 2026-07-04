@@ -77,11 +77,33 @@ function RedirectToMainLogin() {
 
 function DashboardEntry() {
   const { teacherInfo } = useAuth();
-  const goesToExpert =
-    teacherInfo?.type === "GUEST" ||
-    teacherInfo?.active_track === "skill";
-  if (goesToExpert) return <Navigate to="/teacher/expert" replace />;
-  return <TeacherDashboard />;
+
+  // Per-track statuses (locked | pending | approved | rejected). Older
+  // /me/ payloads without a tracks map fall back to the legacy `type`
+  // field so nothing that used to work suddenly renders locked.
+  const tracks = teacherInfo?.tracks || {};
+  const academyOK = tracks.academy
+    ? tracks.academy === "approved"
+    : teacherInfo?.type !== "GUEST";
+  const skillOK = tracks.skill
+    ? tracks.skill === "approved"
+    : teacherInfo?.type === "GUEST" || teacherInfo?.type === "BOTH";
+
+  const wantsSkill = teacherInfo?.active_track === "skill";
+
+  // FIX: the old check was `type === "GUEST" || active_track === "skill"`.
+  // On a one-email account this misrouted two ways:
+  //   • a BOTH-teacher's active_track claim evaporated on token refresh
+  //     (see accounts/views.py RefreshView fix) and bounced them back to
+  //     Academy mid-session;
+  //   • a teacher whose academy application was pending/rejected still had
+  //     type=FACULTY, so they fell through to <TeacherDashboard/> and hit
+  //     an empty shell instead of an explanation.
+  // Rule, most specific first:
+  if (wantsSkill && skillOK) return <Navigate to="/teacher/expert" replace />;
+  if (academyOK)             return <TeacherDashboard />;
+  if (skillOK)                return <Navigate to="/teacher/expert" replace />;
+  return <TeacherDashboard />; // renders its own pending/rejected/locked gate
 }
 
 export default function TeacherRoutes() {
