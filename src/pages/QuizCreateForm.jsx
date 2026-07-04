@@ -52,7 +52,7 @@ const INSTRUCTIONS = [
       "Preview the full quiz before publishing to catch errors.",
       "Once published, questions cannot be edited or deleted.",
       "Total marks are calculated automatically from individual question marks.",
-      "Students can attempt the quiz multiple times.
+      "Students can attempt the quiz multiple times.",
     ],
   },
 ];
@@ -512,9 +512,7 @@ export default function QuizCreateForm({ subjects = [] }) {
                 />
               </div>
 
-              <div className="qcf-row">/>
-                </div>
-
+              <div className="qcf-row">
                 <div className="qcf-field">
                   <label>Time Limit (minutes) <span className="qcf-req">*</span></label>
                   <input

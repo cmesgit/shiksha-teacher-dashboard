@@ -12,8 +12,11 @@
 //    NotificationBell and the Dashboard each held a separate copy, so
 //    unread counts diverged and "mark all read" in the bell never
 //    cleared the dashboard list. All consumers now share one
-//    module-level store via useSyncExternalStore. Public API is
-//    unchanged, so NotificationBell works without edits.
+//    module-level store. Public API is unchanged, so NotificationBell
+//    works without edits.
+//    (Implemented with a plain useState force-update subscription —
+//    NOT useSyncExternalStore — so it works on any React 16.8+ setup
+//    without depending on a React-18-only API.)
 // 2. CANONICAL TYPES. Items are normalized once, on entry:
 //        item.type ← raw_type (new serializer field) when present,
 //                    else mapped from the legacy lowercase vocabulary
@@ -38,7 +41,7 @@
 //               markAllRead, markOneRead, clearNotifications,
 //               onEvent }   ← onEvent is the only addition.
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../api/apiClient";
 
 const WS_HOST = import.meta.env.VITE_WS_HOST || "api.shikshacom.com";
@@ -229,16 +232,6 @@ function stop() {
   }
 }
 
-// ── store plumbing for useSyncExternalStore ─────────────────────────
-function subscribe(listener) {
-  store.listeners.add(listener);
-  return () => store.listeners.delete(listener);
-}
-
-function getSnapshot() {
-  return store.state;
-}
-
 // ── actions (shared by every consumer) ──────────────────────────────
 async function markAllRead() {
   setState({
@@ -265,12 +258,19 @@ function clearNotifications() {
 
 // ── the hook ────────────────────────────────────────────────────────
 export default function useNotificationSocket() {
-  const state = useSyncExternalStore(subscribe, getSnapshot);
+  // Force-update tick: every setState() in the module store calls every
+  // subscribed listener, and each listener just bumps its own component's
+  // state to trigger a re-render. Plain useState — works on any React
+  // 16.8+ setup, no dependency on a React-18-only API.
+  const [, setTick] = useState(0);
 
   useEffect(() => {
+    const listener = () => setTick((t) => t + 1);
+    store.listeners.add(listener);
     store.consumers += 1;
     start();
     return () => {
+      store.listeners.delete(listener);
       store.consumers -= 1;
       // Last consumer gone (real unmount, not StrictMode's fake one —
       // the refcount makes the double-invoke harmless): tear down after
@@ -285,6 +285,8 @@ export default function useNotificationSocket() {
     store.eventListeners.add(cb);
     return () => store.eventListeners.delete(cb);
   }, []);
+
+  const state = store.state;
 
   return {
     notifications: state.notifications,

@@ -3,11 +3,12 @@
  * ACTION:    Replace the entire file.
  *
  * Change from original:
- *   Added import for SkillInbox and added route:
- *     <Route path="inbox" element={<SkillInbox />} />
- *   inside the /teacher/expert SkillDevLayout block.
- *   This makes it accessible at /teacher/expert/inbox — the path that
- *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
+ *   - Added import for SkillInbox and route <Route path="inbox" .../> under
+ *     /teacher/expert (unchanged from before).
+ *   - Added Batch Progress: imports BatchProgress + BatchProgressDetail and two
+ *     routes under /teacher:
+ *         batch-progress            -> list of the teacher's batches
+ *         batch-progress/:batchId   -> per-batch chapter checklist (tick + notes)
  */
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -56,6 +57,8 @@ import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
+import BatchProgress from "../pages/BatchProgress";
+import BatchProgressDetail from "../pages/BatchProgressDetail";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
@@ -148,6 +151,10 @@ export default function TeacherRoutes() {
         <Route path="change-password" element={<ChangePassword />} />
         <Route path="chat" element={<Chat />} />
         <Route path="settings/teacher-password" element={<TeacherPasswordSettings />} />
+
+        {/* Batch Progress (per-batch chapter coverage) */}
+        <Route path="batch-progress" element={<BatchProgress />} />
+        <Route path="batch-progress/:batchId" element={<BatchProgressDetail />} />
 
         {/* Assignments */}
         <Route path="classes/:subjectId/assignments" element={<Assignments />} />

@@ -3,9 +3,12 @@
  * Skill Dev has its OWN nav in SkillDevLayout, so this sidebar only ever
  * renders the academy nav. A pure GUEST never reaches this (they route to
  * /teacher/expert under SkillDevLayout). Kept guest-safe just in case.
+ *
+ * Change from original: added a "Batch Progress" menu item linking to
+ * /teacher/batch-progress.
  */
 import { useEffect, useState } from "react";
-import { FiUsers, FiHome, FiChevronDown } from "react-icons/fi";
+import { FiUsers, FiHome, FiChevronDown, FiCheckSquare } from "react-icons/fi";
 import { MdDashboard } from "react-icons/md";
 import { FaChalkboardTeacher } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
@@ -104,6 +107,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
             ))}
           </div>
         )}
+
+        <div className={`menu-item ${isActive("/teacher/batch-progress") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/batch-progress"); setSidebarOpen(false); }}>
+          <FiCheckSquare /><span>Batch Progress</span>
+        </div>
 
         <div className={`menu-item ${isActive("/teacher/live-sessions") ? "active" : ""}`}
           onClick={() => { navigate("/teacher/live-sessions"); setSidebarOpen(false); }}>
