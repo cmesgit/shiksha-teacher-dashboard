@@ -10,13 +10,22 @@ export default function ParticipantsPanel({ raisedHands = {}, onLowerHand }) {
   const [open, setOpen] = useState(true);
   const [mutedMap, setMutedMap] = useState({});
 
-  // Initialize new participants as muted (don't reset existing)
+  // Initialize new participants from their REAL mic track state (not a blind
+  // "muted" default). A participant is treated as muted when they have no
+  // published mic track, or their mic publication is muted. This keeps the
+  // per-row mute button pointing the right way so the first click actually
+  // mutes a speaking student instead of sending the opposite command.
   useEffect(() => {
     setMutedMap((prev) => {
       const map = { ...prev };
       for (const p of participants) {
         if (!(p.identity in map)) {
-          map[p.identity] = true; // default muted
+          const micPub =
+            p.getTrackPublication?.("microphone") ||
+            [...(p.trackPublications?.values?.() || [])].find(
+              (pub) => pub.source === "microphone"
+            );
+          map[p.identity] = micPub ? !!micPub.isMuted : true;
         }
       }
       return map;

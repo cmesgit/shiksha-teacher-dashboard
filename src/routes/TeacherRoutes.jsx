@@ -56,6 +56,8 @@ import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
+import BatchProgress from "../pages/BatchProgress";
+import BatchProgressDetail from "../pages/BatchProgressDetail";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
@@ -193,6 +195,10 @@ export default function TeacherRoutes() {
 
         {/* Group Sessions */}
         <Route path="group-sessions" element={<GroupSessions />} />
+
+        {/* Batch Progress (linked from Sidebar; param name must be :batchId) */}
+        <Route path="batch-progress" element={<BatchProgress />} />
+        <Route path="batch-progress/:batchId" element={<BatchProgressDetail />} />
       </Route>
     </Routes>
   );

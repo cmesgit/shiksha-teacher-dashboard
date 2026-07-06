@@ -219,6 +219,8 @@ const DURATIONS = [
   { label: "30 minutes", value: 30 },
   { label: "60 minutes", value: 60 },
   { label: "90 minutes", value: 90 },
+  { label: "2 hours", value: 120 },
+  { label: "3 hours", value: 180 },
 ];
 
 const MAX_PARTICIPANTS = 10;
@@ -942,6 +944,7 @@ function JoinSessionDialog({ open, busy, error, onClose, onEnter }) {
 }
 
 function HostSessionDialog({ open, busy, error, onClose, onInstant, onScheduled }) {
+  const [instantDuration, setInstantDuration] = useState(60);
   if (!open) return null;
 
   return (
@@ -961,10 +964,35 @@ function HostSessionDialog({ open, busy, error, onClose, onInstant, onScheduled 
         {error && <div className="sg__errorBox">{error}</div>}
 
         <div className="sg__hostChoiceList">
-          <button type="button" className="sg__hostChoice" disabled={busy} onClick={onInstant}>
+          <div className="sg__hostChoice" style={{ cursor: "default" }}>
             <strong>Instant Session</strong>
             <span>Go LIVE directly and share the session ID with teachers.</span>
-          </button>
+
+            <label className="sg__hint" style={{ display: "block", marginTop: 10, marginBottom: 4 }}>
+              Duration
+            </label>
+            <select
+              value={instantDuration}
+              disabled={busy}
+              onChange={(e) => setInstantDuration(Number(e.target.value))}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, marginBottom: 10 }}
+            >
+              {DURATIONS.map((d) => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              className="sg__primaryBtn"
+              disabled={busy}
+              onClick={() => onInstant(instantDuration)}
+              style={{ width: "100%" }}
+            >
+              {busy ? "Starting…" : "Start instant session"}
+            </button>
+          </div>
 
           <button type="button" className="sg__hostChoice" disabled={busy} onClick={onScheduled}>
             <strong>Scheduled Session</strong>
@@ -1140,14 +1168,12 @@ useEffect(() => {
     }
   };
 
-  const startInstantMeeting = async () => {
+  const startInstantMeeting = async (durationMinutes = 60) => {
     setHostBusy(true);
     setHostError("");
     try {
-      // Use 60 minutes instead of the old service default of 180.
-      // Many backends only allow 30/60/90 or 30/45/60 minute choices.
       const sg = await groupSessionService.createInstant({
-        duration_minutes: 60,
+        duration_minutes: Number(durationMinutes) || 60,
         topic: "",
       });
       setShowHostDialog(false);
