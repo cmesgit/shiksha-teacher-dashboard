@@ -165,6 +165,9 @@ export default function TeacherGroupSessionControlBar({
 
   const toggleMic = async () => {
     if (!localParticipant) return;
+    // A tap is a valid user gesture — use it to also unblock mobile audio
+    // playback in case the RoomAudioRenderer was autoplay-suppressed.
+    room?.startAudio?.().catch(() => {});
     if (isStudent && !canUnmute && !micOn) return;
 
     const next = !micOn;

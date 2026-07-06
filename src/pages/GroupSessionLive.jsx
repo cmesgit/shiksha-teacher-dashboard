@@ -1,14 +1,7 @@
-/**
- * TEACHER_UI/src/pages/GroupSessionLive.jsx
- *
- * Teacher Group Session live page.
- * Bottom-left Room info chip removed because Session ID copy now lives inside
- * the group-session-only Other menu.
- */
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
+import MobileAudioGate from "../components/live/MobileAudioGate";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
 import GroupSessionClassroomUI from "../components/live/GroupSessionClassroomUI";
 import { useAuth } from "../contexts/AuthContext";
@@ -52,8 +45,8 @@ export default function GroupSessionLive() {
   const [resolvedId, setResolvedId] = useState(
     UUID_RE.test(String(id || "")) ? String(id) : null
   );
-  const [sessionData, setSessionData] = useState(null);
   const [livekitData, setLivekitData] = useState(null);
+  const [sessionDetail, setSessionDetail] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [remainingMs, setRemainingMs] = useState(null);
@@ -62,8 +55,8 @@ export default function GroupSessionLive() {
 
   const isHost = !!(
     user?.id &&
-    sessionData?.hostId &&
-    String(user.id) === String(sessionData.hostId)
+    sessionDetail?.hostId &&
+    String(user.id) === String(sessionDetail.hostId)
   );
 
   const handleEndSession = async () => {
@@ -77,13 +70,12 @@ export default function GroupSessionLive() {
     } catch (e) {
       console.error("endSession failed", e);
     } finally {
-      navigate("/teacher/group-sessions");
+      navigate("/group-sessions");
     }
   };
 
   useEffect(() => {
     let cancelled = false;
-
     if (!id) return undefined;
 
     if (UUID_RE.test(String(id))) {
@@ -109,21 +101,18 @@ export default function GroupSessionLive() {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [id]);
 
   useEffect(() => {
     let cancelled = false;
-
     if (!resolvedId) return undefined;
 
     const load = async () => {
       try {
         const detail = await groupSessionService.getDetail(resolvedId);
         if (cancelled) return;
-        setSessionData(detail);
+        setSessionDetail(detail);
 
         const joinData = await groupSessionService.joinRoom(resolvedId);
         if (cancelled) return;
@@ -138,10 +127,7 @@ export default function GroupSessionLive() {
     };
 
     load();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [resolvedId]);
 
   useEffect(() => {
@@ -160,8 +146,8 @@ export default function GroupSessionLive() {
 
   useEffect(() => {
     if (remainingMs != null && remainingMs <= 0 && livekitData) {
-      const t = setTimeout(() => navigate("/teacher/group-sessions"), 600);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => navigate("/group-sessions"), 600);
+      return () => clearTimeout(timer);
     }
   }, [remainingMs, livekitData, navigate]);
 
@@ -180,7 +166,7 @@ export default function GroupSessionLive() {
         <p style={{ color: "#475569", margin: 0 }}>{error}</p>
         <div style={{ display: "flex", gap: 12 }}>
           <button
-            onClick={() => navigate("/teacher/group-sessions")}
+            onClick={() => navigate("/group-sessions")}
             style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#015865", color: "#fff", fontWeight: 600, cursor: "pointer" }}
           >
             Back to Group Sessions
@@ -200,9 +186,11 @@ export default function GroupSessionLive() {
     return (
       <div style={centerMsg}>
         <h2 style={{ margin: 0, color: "#0f172a" }}>Group session not open yet</h2>
-        <p style={{ color: "#475569", margin: 0 }}>Waiting for the host. Please try again.</p>
+        <p style={{ color: "#475569", margin: 0 }}>
+          The room hasn't started. Please wait for someone to accept and try again.
+        </p>
         <button
-          onClick={() => navigate("/teacher/group-sessions")}
+          onClick={() => navigate("/group-sessions")}
           style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#015865", color: "#fff", fontWeight: 600, cursor: "pointer" }}
         >
           Back to Group Sessions
@@ -220,31 +208,39 @@ export default function GroupSessionLive() {
         video={true}
         audio={true}
         style={liveKitWrap}
-        onDisconnected={() => navigate("/teacher/group-sessions")}
+        onDisconnected={() => navigate("/group-sessions")}
       >
         <GroupSessionClassroomUI
-          role="PRESENTER"
+          role={
+            sessionDetail?.sessionType === "instant" || isHost
+              ? "PRESENTER"
+              : "STUDENT"
+          }
           session={{
-            ...sessionData,
+            ...sessionDetail,
             id: resolvedId || id,
-            subject: sessionData?.subjectName,
-            topic: sessionData?.topic,
-            shortCode: sessionData?.shortCode,
-            sessionType: sessionData?.sessionType,
-            admitMode: sessionData?.admitMode,
+            subject: sessionDetail?.subjectName,
+            topic: sessionDetail?.topic,
+            shortCode: sessionDetail?.shortCode,
+            sessionType: sessionDetail?.sessionType,
+            admitMode: sessionDetail?.admitMode,
+            roomStartedAt: sessionDetail?.roomStartedAt,
+            hostId: sessionDetail?.hostId,
+            hostName: sessionDetail?.hostName,
           }}
           chatConfig={{
-            restGetPath: `/sessions/group-sessions/${resolvedId || id}/chat/`,
+            restGetPath:  `/sessions/group-sessions/${resolvedId || id}/chat/`,
             restPostPath: `/sessions/group-sessions/${resolvedId || id}/chat/send/`,
-            wsPath: `/ws/group-session/${resolvedId || id}/chat/`,
+            wsPath:       `/ws/group-session/${resolvedId || id}/chat/`,
           }}
           groupSession={true}
           groupSessionRemainingMs={remainingMs}
           isHost={isHost}
-          onLeave={() => navigate("/teacher/group-sessions")}
+          onLeave={() => navigate("/group-sessions")}
           onEndSession={isHost ? handleEndSession : null}
         />
         <RoomAudioRenderer />
+        <MobileAudioGate />
       </LiveKitRoom>
     </div>
   );
