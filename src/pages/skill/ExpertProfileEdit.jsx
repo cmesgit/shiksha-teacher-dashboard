@@ -48,8 +48,9 @@ const MISSING_LABELS = {
 };
 
 const BLANK = {
-  // teaching
-  category: "", subject_description: "", bio: "", languages: "",
+  // teaching — `categories` is the full multi-subject set; `category` stays
+  // as its first entry for backward compatibility with older consumers.
+  category: "", categories: [], subject_description: "", bio: "", languages: "",
   availability: "", hourly_rate: 0,
   // location
   class_mode: "online", class_location: "",
@@ -92,6 +93,9 @@ export default function ExpertProfileEdit() {
           ...BLANK,
           ...d,
           category:   d.category || "",
+          categories: Array.isArray(d.categories) && d.categories.length
+                        ? d.categories
+                        : (d.category ? [d.category] : []),
           languages:  Array.isArray(d.languages) ? d.languages.join(", ") : (d.languages || ""),
           hourly_rate: d.hourly_rate ?? 0,
         });
@@ -123,7 +127,7 @@ export default function ExpertProfileEdit() {
   //    matches what the server will decide. ──────────────────────────────────
   const missing = useMemo(() => {
     const m = [];
-    const hasSubject = !!(f.category || (f.subject_description || "").trim());
+    const hasSubject = !!((f.categories || []).length || f.category || (f.subject_description || "").trim());
     if (!hasSubject)                       m.push("subject_description");
     if (!(f.languages || "").trim())       m.push("languages");
     if (!(f.bio || "").trim())             m.push("bio");
@@ -151,7 +155,8 @@ export default function ExpertProfileEdit() {
     // Fields common to both encodings. languages goes as a comma string;
     // the backend accepts either a CSV string or a list.
     const fields = {
-      category:            f.category || "",
+      categories:          f.categories || [],
+      category:            (f.categories && f.categories[0]) || f.category || "",
       subject_description: f.subject_description || "",
       bio:                 f.bio || "",
       availability:        f.availability || "",
@@ -288,13 +293,33 @@ export default function ExpertProfileEdit() {
 
             {cats.length > 0 && (
               <div className="sk-field">
-                <label>Subject</label>
-                <select className="sk-input" value={f.category} onChange={set("category")}>
-                  <option value="">Select a subject…</option>
-                  {cats.map((c) => (
-                    <option key={c.slug || c.id} value={c.slug}>{c.label}</option>
-                  ))}
-                </select>
+                <label>Subjects <span style={{ fontWeight: 500, color: "#9aa9af" }}>— pick every subject you teach</span></label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                  {cats.map((c) => {
+                    const slug = c.slug || c.id;
+                    const on = (f.categories || []).includes(slug);
+                    return (
+                      <button key={slug} type="button"
+                        onClick={() => {
+                          setSaved(false);
+                          setF((prev) => {
+                            const cur = prev.categories || [];
+                            const next = on ? cur.filter((x) => x !== slug) : [...cur, slug];
+                            return { ...prev, categories: next, category: next[0] || "" };
+                          });
+                        }}
+                        style={{
+                          fontSize: 12.5, fontWeight: 700, padding: "7px 14px", borderRadius: 100,
+                          cursor: "pointer", transition: "all .15s",
+                          border: on ? "1.5px solid #0a808a" : "1.5px solid #e3dccf",
+                          background: on ? "#e7f3f4" : "#fff",
+                          color: on ? "#0a808a" : "#6b7c83",
+                        }}>
+                        {on ? "✓ " : ""}{c.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

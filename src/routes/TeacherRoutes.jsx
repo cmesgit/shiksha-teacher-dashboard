@@ -56,17 +56,29 @@ import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
 import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
+import BatchProgress from "../pages/BatchProgress";
+import BatchProgressDetail from "../pages/BatchProgressDetail";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
-import ExpertCourses from "../pages/skill/ExpertCourses";
+import ExpertCourse from "../pages/skill/ExpertCourse";      // "My Course" — 1-on-1 profile + availability
 import ExpertBookings from "../pages/skill/ExpertBookings";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
 // Earnings removed — guest experts settle payment directly with learners.
-import ExpertPromote from "../pages/skill/ExpertPromote";       // NEW (subscription)
-import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // NEW (profile + location + UPI)
-import SkillInbox from "../pages/SkillInbox"; // NEW
-import SkillSessionLive from "../pages/skill/SkillSessionLive"; // NEW (skill LiveKit room)
+import ExpertPromote from "../pages/skill/ExpertPromote";       // subscription (reached from dashboard)
+import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // profile + location + UPI ("Edit Course")
+import SkillInbox from "../pages/SkillInbox";
+import SkillSessionLive from "../pages/skill/SkillSessionLive"; // skill LiveKit room
+
+// Counselling (career counsellor console) — third track, gated on the
+// COUNSELOR role. CounselorLayout is its own onboarding gate: teachers
+// without an approved counsellor profile see the apply form / status
+// screen instead of these child routes' content.
+import CounselorLayout from "../layout/CounselorLayout";
+import CounselorSchedule from "../pages/counsellor/CounselorSchedule";
+import CounselorSession from "../pages/counsellor/CounselorSession";
+import CounselorAvailability from "../pages/counsellor/CounselorAvailability";
+import CounselorProfile from "../pages/counsellor/CounselorProfile";
 
 import { LOGIN_URL } from "../config/urls";
 
@@ -102,12 +114,24 @@ export default function TeacherRoutes() {
         element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
       >
         <Route index element={<ExpertDashboard />} />
-        <Route path="courses" element={<ExpertCourses />} />
+        <Route path="course" element={<ExpertCourse />} />       {/* My Course — 1-on-1 profile + availability */}
         <Route path="bookings" element={<ExpertBookings />} />
+        {/* availability kept as a deep link; it now lives inside "My Course" */}
         <Route path="availability" element={<ExpertAvailability />} />
-        <Route path="promote" element={<ExpertPromote />} />     {/* NEW */}
-        <Route path="profile" element={<ExpertProfileEdit />} /> {/* NEW */}
-        <Route path="inbox" element={<SkillInbox />} /> {/* NEW */}
+        <Route path="promote" element={<ExpertPromote />} />
+        <Route path="profile" element={<ExpertProfileEdit />} /> {/* opened via "Edit Course" */}
+        <Route path="inbox" element={<SkillInbox />} />
+      </Route>
+
+      {/* ── Counselling — CounselorLayout (own onboarding gate) ── */}
+      <Route
+        path="/teacher/counsellor"
+        element={<ProtectedTeacherRoute><CounselorLayout /></ProtectedTeacherRoute>}
+      >
+        <Route index element={<CounselorSchedule />} />
+        <Route path="appointments/:id" element={<CounselorSession />} />
+        <Route path="availability" element={<CounselorAvailability />} />
+        <Route path="profile" element={<CounselorProfile />} />
       </Route>
 
       {/* ── Academy / Faculty — TeacherLayout ── */}
@@ -171,6 +195,10 @@ export default function TeacherRoutes() {
 
         {/* Group Sessions */}
         <Route path="group-sessions" element={<GroupSessions />} />
+
+        {/* Batch Progress (linked from Sidebar; param name must be :batchId) */}
+        <Route path="batch-progress" element={<BatchProgress />} />
+        <Route path="batch-progress/:batchId" element={<BatchProgressDetail />} />
       </Route>
     </Routes>
   );

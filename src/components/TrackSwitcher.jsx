@@ -17,7 +17,7 @@
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { RiGraduationCapFill, RiSparkling2Fill, RiLockLine } from "react-icons/ri";
+import { RiGraduationCapFill, RiSparkling2Fill, RiLockLine, RiUserHeartLine } from "react-icons/ri";
 import { HOME_URL } from "../config/urls";
 import "../styles/trackSwitcher.css";
 
@@ -26,18 +26,32 @@ const TRACKS = [
   { key: "skill",   label: "Skill Dev", Icon: RiSparkling2Fill,    route: "/teacher/expert"    },
 ];
 
+// Counselling only ever appears for accounts holding the COUNSELOR role —
+// regular teachers never see a locked pill they can't use. The apply form
+// itself lives at /teacher/counsellor for whenever the programme is
+// announced; it isn't reachable through this switcher until approved.
+const COUNSELLOR_TRACK = {
+  key: "counsellor", label: "Counselling", Icon: RiUserHeartLine, route: "/teacher/counsellor",
+};
+
 export default function TrackSwitcher() {
   const navigate     = useNavigate();
   const { pathname } = useLocation();
-  const { teacherInfo } = useAuth();
+  const { teacherInfo, hasRole } = useAuth();
 
   const isGuest   = teacherInfo?.type === "GUEST";
   const isBoth    = teacherInfo?.type === "BOTH";
   const isFaculty = !isGuest && !isBoth;
 
-  const current = pathname.startsWith("/teacher/expert") ? "skill" : "academy";
+  const showCounsellor = hasRole("COUNSELOR");
+  const TRACKS_WITH_COUNSELLOR = showCounsellor ? [...TRACKS, COUNSELLOR_TRACK] : TRACKS;
+
+  const current = pathname.startsWith("/teacher/counsellor") ? "counsellor"
+                : pathname.startsWith("/teacher/expert")     ? "skill"
+                : "academy";
 
   const canAccess = (key) => {
+    if (key === "counsellor") return showCounsellor;
     if (isGuest)   return key === "skill";
     if (isFaculty) return key === "academy";
     return true; // BOTH can access both
@@ -45,6 +59,8 @@ export default function TrackSwitcher() {
 
   const handleClick = (track) => {
     if (!canAccess(track.key)) {
+      // Counselling pill is never rendered when inaccessible (see
+      // TRACKS_WITH_COUNSELLOR above), so this branch is unreachable for it.
       // A guest hasn't added the Faculty track yet — send them to the Faculty
       // intro page (on the marketing domain), which explains the track and
       // routes into the add-a-track application.
@@ -58,7 +74,7 @@ export default function TrackSwitcher() {
 
   return (
     <div className="trackSwitcher ctx-teacher" role="tablist" aria-label="Learning track">
-      {TRACKS.map(({ key, label, Icon, route }) => {
+      {TRACKS_WITH_COUNSELLOR.map(({ key, label, Icon, route }) => {
         const accessible = canAccess(key);
         const active     = key === current;
         return (

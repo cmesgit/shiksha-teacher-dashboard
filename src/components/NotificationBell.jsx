@@ -67,12 +67,30 @@ export default function NotificationBell() {
   };
 
   const handleNotifClick = (notif) => {
-    const { type, subject_id, id, is_private_session, is_group_session } = notif;
+    const { type, subject_id, id, is_private_session, is_group_session, link_url } = notif;
     if (id) markOneRead(id);
 
     // Teacher app is mounted under /teacher — every navigate() must include
     // that prefix or it falls through to the root RedirectToMainLogin and
     // the user lands on a blank page.
+
+    // notifications-app events (counseling.*, forum.*, ...) carry a
+    // link_url. The backend's counsellor-facing paths are /counselor/...
+    // (app-agnostic, no /teacher prefix) — map them into this app's route
+    // space. Anything else with a link_url that already looks like a real
+    // in-app path (e.g. future /teacher/... or /forum/... verbs) is used
+    // as-is; anything unrecognised falls back to the counsellor schedule
+    // rather than a dead route.
+    if (link_url && link_url.startsWith("/")) {
+      const mapped = link_url
+        .replace(/^\/counselor\/appointments/, "/teacher/counsellor/appointments")
+        .replace(/^\/counselor\/availability/, "/teacher/counsellor/availability")
+        .replace(/^\/counselor\/apply/, "/teacher/counsellor")
+        .replace(/^\/counselor$/, "/teacher/counsellor");
+      navigate(mapped.startsWith("/teacher") ? mapped : "/teacher/counsellor");
+      setOpen(false);
+      return;
+    }
 
     // Private session: teacher's page is at /teacher/private-sessions.
     if (is_private_session || type === "PRIVATE_SESSION") {
