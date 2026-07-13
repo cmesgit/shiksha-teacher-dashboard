@@ -209,6 +209,13 @@ export default function NotificationBell() {
               })
             )}
           </div>
+
+          <button
+            className="notif-bell-seeall"
+            onClick={() => { setOpen(false); navigate("/teacher/chat?view=notifications"); }}
+          >
+            See all in Communication Center
+          </button>
         </div>
       )}
     </div>
