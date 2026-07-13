@@ -31,7 +31,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   FiInbox, FiUsers, FiBell, FiSettings, FiHeadphones, FiPlus,
-  FiMessageSquare, FiMegaphone,
+  FiMessageSquare, FiRadio,
 } from "react-icons/fi";
 import { ChatAPI } from "./chatClient";
 import ConversationList from "./comm/ConversationList";
@@ -49,7 +49,7 @@ const SIDEBAR_ITEMS = [
   { key: "courses", label: "Courses", Icon: CATEGORY_META.courses.Icon, kind: "category" },
   { key: "faculty", label: "Faculty", Icon: CATEGORY_META.faculty.Icon, kind: "category" },
   { key: "guest_experts", label: "Guest Experts", Icon: CATEGORY_META.guest_experts.Icon, kind: "category" },
-  { key: "announcements", label: "Announcements", Icon: FiMegaphone, kind: "category" },
+  { key: "announcements", label: "Announcements", Icon: FiRadio, kind: "category" },
   { key: "support", label: "Support", Icon: FiHeadphones, kind: "view" },
   { key: "directory", label: "Directory", Icon: FiUsers, kind: "view" },
   { key: "notifications", label: "Notifications", Icon: FiBell, kind: "view" },
@@ -234,7 +234,7 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
         {view === "inbox" && category === "announcements" && !active && courseChips.length > 0 && (
           <div className="cc-announcements-picker">
             <EmptyState
-              icon={<FiMegaphone size={22} />}
+              icon={<FiRadio size={22} />}
               title="Pick a course"
               hint="Open a course's Announcements channel."
             />

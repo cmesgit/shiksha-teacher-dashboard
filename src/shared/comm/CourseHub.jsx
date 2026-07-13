@@ -10,7 +10,7 @@
 // a plain chat thread" with the hub the spec actually asked for.
 import { useEffect, useState } from "react";
 import {
-  FiX, FiMessageCircle, FiFolder, FiUsers, FiClipboard, FiMegaphone,
+  FiX, FiMessageCircle, FiFolder, FiUsers, FiClipboard, FiRadio,
   FiFileText, FiDownload, FiCalendar, FiSend,
 } from "react-icons/fi";
 import { ChatAPI } from "../chatClient";
@@ -20,7 +20,7 @@ import { Avatar, rolesLabel, timeAgo, Spinner, EmptyState } from "./common";
 
 const TABS = [
   { key: "discussion", label: "Discussion", Icon: FiMessageCircle },
-  { key: "announcements", label: "Announcements", Icon: FiMegaphone },
+  { key: "announcements", label: "Announcements", Icon: FiRadio },
   { key: "resources", label: "Resources", Icon: FiFolder },
   { key: "assignments", label: "Assignments", Icon: FiClipboard },
   { key: "members", label: "Members", Icon: FiUsers },
@@ -146,7 +146,7 @@ function AnnouncementsTab({ courseId, canPost }) {
         </div>
       )}
       {messages.length === 0 ? (
-        <EmptyState icon={<FiMegaphone size={22} />} title="No announcements yet" hint={canPost ? "Post the first one above." : "Check back for updates from your teacher."} />
+        <EmptyState icon={<FiRadio size={22} />} title="No announcements yet" hint={canPost ? "Post the first one above." : "Check back for updates from your teacher."} />
       ) : (
         <div className="cc-messages cc-messages-static">
           {messages.map((m) => (

@@ -8,7 +8,7 @@
 // (Pin · Mute · Archive · Report).
 import { useEffect, useMemo, useState } from "react";
 import {
-  FiPlus, FiSearch, FiMoreHorizontal, FiPin, FiVolumeX, FiArchive, FiFlag,
+  FiPlus, FiSearch, FiMoreHorizontal, FiBookmark, FiVolumeX, FiArchive, FiFlag,
   FiChevronDown, FiChevronRight,
 } from "react-icons/fi";
 import { ChatAPI } from "../chatClient";
@@ -18,7 +18,7 @@ function CardMenu({ conv, onChanged, onClose }) {
   const act = async (fn) => { const c = await fn(); onChanged(c); onClose(); };
   return (
     <div className="cc-card-menu" onMouseLeave={onClose}>
-      <button onClick={() => act(() => ChatAPI.pin(conv.id))}><FiPin size={13} /> {conv.pinned ? "Unpin" : "Pin"}</button>
+      <button onClick={() => act(() => ChatAPI.pin(conv.id))}><FiBookmark size={13} /> {conv.pinned ? "Unpin" : "Pin"}</button>
       <button onClick={() => act(() => (conv.muted_until ? ChatAPI.mute(conv.id, { unmute: true }) : ChatAPI.mute(conv.id, { minutes: 480 })))}>
         <FiVolumeX size={13} /> {conv.muted_until ? "Unmute" : "Mute"}
       </button>
@@ -50,7 +50,7 @@ function ConversationCard({ conv, active, onSelect, onChanged }) {
         <span className="cc-card-body">
           <span className="cc-card-top">
             <span className="cc-card-title">
-              {conv.pinned && <FiPin size={11} className="cc-pin-flag" />}
+              {conv.pinned && <FiBookmark size={11} className="cc-pin-flag" />}
               {conv.title || conv.counterpart?.name || "Conversation"}
             </span>
             <span className="cc-card-time">{timeAgo(conv.last_message_at)}</span>

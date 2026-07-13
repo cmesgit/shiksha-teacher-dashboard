@@ -11,7 +11,7 @@
 // into, rather than the legacy one).
 import { useEffect, useState, useMemo } from "react";
 import {
-  FiBell, FiCheck, FiFilter, FiMessageCircle, FiMegaphone, FiHeadphones,
+  FiBell, FiCheck, FiFilter, FiMessageCircle, FiRadio, FiHeadphones,
   FiCalendar, FiBookOpen, FiCreditCard, FiUserCheck,
 } from "react-icons/fi";
 import api from "../apiClient";
@@ -19,7 +19,7 @@ import { EmptyState, Spinner, dayLabel, timeAgo } from "./common";
 
 const CATEGORY_ICONS = {
   social: FiMessageCircle,
-  announcements: FiMegaphone,
+  announcements: FiRadio,
   support: FiHeadphones,
   bookings: FiCalendar,
   reminders: FiCalendar,

@@ -8,7 +8,7 @@
 // SupportView) — kept in one file so a label or a date format only ever
 // has to change in one place.
 import {
-  FiUsers, FiUser, FiBookOpen, FiHeadphones, FiMegaphone, FiMessageCircle,
+  FiUsers, FiUser, FiBookOpen, FiHeadphones, FiRadio, FiMessageCircle,
 } from "react-icons/fi";
 
 export function initials(name) {
@@ -87,7 +87,7 @@ export const CATEGORY_META = {
   faculty:        { label: "Faculty",       Icon: FiUser },
   guest_experts:  { label: "Guest Experts", Icon: FiUsers },
   students:       { label: "Students",      Icon: FiUsers },
-  announcements:  { label: "Announcements", Icon: FiMegaphone },
+  announcements:  { label: "Announcements", Icon: FiRadio },
   support:        { label: "Support",       Icon: FiHeadphones },
   other:          { label: "Other",         Icon: FiMessageCircle },
 };
