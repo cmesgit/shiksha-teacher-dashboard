@@ -17,6 +17,7 @@ export default function TeacherPrivateSessionUI({
   role = "PRESENTER",
   sessionId: sessionIdProp,
   onLeave,
+  onEndSession,
 }) {
   const isPresenter = true;
 
@@ -291,6 +292,7 @@ export default function TeacherPrivateSessionUI({
         {/* CONTROL BAR */}
         <ControlBar
           onLeave={onLeave}
+          onEndSession={onEndSession}
           role={role}
           activePanel={activePanel}
           onTogglePanel={togglePanel}

@@ -18,7 +18,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
-import { packs } from "../../data/skillMockData";
 import "../../styles/skillDev.css";
 
 /* ── helpers ── */
@@ -56,90 +55,19 @@ function groupByDay(sessions) {
   return Object.entries(map).map(([day, items]) => ({ day, items }));
 }
 
-/* ── Edit-rates modal (unchanged) ── */
-function EditRates({ currentRate, onClose, onSave }) {
-  const [hourly, setHourly] = useState(currentRate || 480);
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      await api.patch("/skill/teacher/profile/", { hourly_rate: hourly });
-      onSave(hourly);
-      onClose();
-    } catch { setSaving(false); }
-  };
-
-  const rows = [
-    { label: "5 sessions",  hrs: 5,  discount: 10 },
-    { label: "10 sessions", hrs: 10, discount: 18 },
-  ];
-  const total = (p) => Math.round(hourly * p.hrs * (1 - p.discount / 100));
-
-  return (
-    <div className="sk-modal-bg" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="sk-modal sk-modal--sm">
-        <div className="sk-modal__head">
-          <div><h3>Edit rates</h3><p>Set your hourly rate and session packages</p></div>
-          <button className="sk-modal__x" onClick={onClose}><Icon.x size={16} /></button>
-        </div>
-        <div className="sk-modal__body">
-          <div className="sk-modal__panel">
-            <div style={{ fontSize: 10.5, fontWeight: 700, color: "#6b7c83", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 8 }}>
-              Base hourly rate
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 800, fontSize: 28, color: "#1a2c33" }}>₹</span>
-              <input
-                type="number" value={hourly} onChange={(e) => setHourly(+e.target.value)}
-                style={{ border: "1px solid #d7e3e5", borderRadius: 9, padding: "10px 14px", fontSize: 22, fontWeight: 800, color: "#0a808a", width: 120, fontFamily: "Montserrat, sans-serif", outline: "none" }}
-              />
-              <span style={{ fontSize: 13, color: "#6b7c83" }}>/session</span>
-            </div>
-          </div>
-          <div className="sk-modal__panel">
-            <div style={{ fontSize: 10.5, fontWeight: 700, color: "#6b7c83", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 12 }}>
-              Session packages
-            </div>
-            {rows.map((p, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderTop: i ? "1px solid #eef3f4" : "none" }}>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#1a2c33" }}>{p.label}</div>
-                <div style={{ fontSize: 12, color: "#6b7c83" }}>{p.discount}% off</div>
-                <div style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 800, fontSize: 14, color: "#0a808a", minWidth: 72, textAlign: "right" }}>
-                  ₹{total(p).toLocaleString("en-IN")}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="sk-modal__foot">
-          <button className="sk-btn sk-btn--ghost" onClick={onClose}>Cancel</button>
-          <button className="sk-btn" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save rates"}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Main component ── */
 export default function ExpertBookings() {
   const navigate = useNavigate();
   const [sessions,   setSessions]   = useState([]);
   const [loading,    setLoading]    = useState(true);
-  const [hourlyRate, setHourlyRate] = useState(480);
-  const [editRates,  setEditRates]  = useState(false);
   const [acting,     setActing]     = useState({});
 
   const load = useCallback(() => {
     setLoading(true);
-    Promise.all([
-      api.get("/skill/teacher/sessions/"),
-      api.get("/accounts/me/"),
-    ]).then(([sRes, mRes]) => {
-      setSessions(sRes.data || []);
-      const rate = mRes.data?.teacher?.rate || mRes.data?.teacher?.hourly_rate;
-      if (rate) setHourlyRate(rate);
-    }).catch(() => {}).finally(() => setLoading(false));
+    api.get("/skill/teacher/sessions/")
+      .then((sRes) => setSessions(sRes.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -147,14 +75,13 @@ export default function ExpertBookings() {
   const pending   = sessions.filter(s => s.status === "requested");
   const scheduled = sessions.filter(s => s.status === "confirmed");
   const grouped   = groupByDay(scheduled);
-  const tpacks    = packs(hourlyRate);
 
   const confirm = async (sess) => {
     setActing(a => ({ ...a, [sess.id]: "confirming" }));
     try {
       await api.post(`/skill/teacher/sessions/${sess.id}/confirm/`);
       setSessions(ss => ss.map(s => s.id === sess.id ? { ...s, status: "confirmed" } : s));
-    } catch { } finally {
+    } catch { /* leave the request as-is on failure */ } finally {
       setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
     }
   };
@@ -164,7 +91,7 @@ export default function ExpertBookings() {
     try {
       await api.post(`/skill/teacher/sessions/${sess.id}/decline/`);
       setSessions(ss => ss.filter(s => s.id !== sess.id));
-    } catch { } finally {
+    } catch { /* leave the request as-is on failure */ } finally {
       setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
     }
   };
@@ -181,7 +108,7 @@ export default function ExpertBookings() {
     try {
       await api.post(`/skill/teacher/sessions/${sess.id}/complete/`);
       setSessions(ss => ss.map(s => s.id === sess.id ? { ...s, status: "completed" } : s));
-    } catch { }
+    } catch { /* keep the session as-is on failure */ }
   };
 
   // Navigate to /teacher/expert/inbox with this learner pre-selected.
@@ -202,31 +129,6 @@ export default function ExpertBookings() {
         <div>
           <div className="sk-head__title">Bookings</div>
           <div className="sk-head__sub">1-on-1 live tutoring — requests and your schedule</div>
-        </div>
-      </div>
-
-      {/* Offering summary */}
-      <div className="rd-card teacher">
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontFamily: "Montserrat, sans-serif", fontSize: 16.5, fontWeight: 800, color: "#1a2c33" }}>
-              1-on-1 live tutoring
-            </div>
-            <div style={{ fontSize: 12, color: "#6b7c83", marginTop: 2 }}>
-              Learners book your time by the hour or as a package · ₹{hourlyRate}/hr
-            </div>
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            {tpacks.map((p) => (
-              <div key={p.label} style={{ background: "#eef6f7", borderRadius: 11, padding: "10px 14px", textAlign: "center" }}>
-                <div style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 800, fontSize: 16, color: "#0a808a" }}>
-                  ₹{p.total.toLocaleString("en-IN")}
-                </div>
-                <div style={{ fontSize: 10.5, color: "#6b7c83", fontWeight: 600 }}>{p.label}</div>
-              </div>
-            ))}
-            <button className="sk-btn sk-btn--ghost" onClick={() => setEditRates(true)}>Edit rates</button>
-          </div>
         </div>
       </div>
 
@@ -341,14 +243,6 @@ export default function ExpertBookings() {
           </div>
         ))}
       </div>
-
-      {editRates && (
-        <EditRates
-          currentRate={hourlyRate}
-          onClose={() => setEditRates(false)}
-          onSave={(r) => setHourlyRate(r)}
-        />
-      )}
     </div>
   );
 }

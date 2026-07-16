@@ -35,6 +35,10 @@ export default function GroupSessionControlBar({
   const [otherOpen, setOtherOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [micBusy, setMicBusy] = useState(false);
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [micError, setMicError] = useState("");
+  const [videoError, setVideoError] = useState("");
   const [isLocked, setIsLocked] = useState(
     (session?.admitMode || session?.admit_mode || "").toLowerCase() === "locked"
   );
@@ -164,19 +168,41 @@ export default function GroupSessionControlBar({
     // playback in case the RoomAudioRenderer was autoplay-suppressed.
     room?.startAudio?.().catch(() => {});
     if (isStudent && !canUnmute && !micOn) return;
+    if (micBusy) return;
 
+    setMicBusy(true);
+    setMicError("");
     const next = !micOn;
-    await localParticipant.setMicrophoneEnabled(next);
-    setMicOn(next);
+    try {
+      await localParticipant.setMicrophoneEnabled(next);
+      setMicOn(next);
+    } catch (e) {
+      console.error("Failed to toggle microphone:", e);
+      setMicError("Couldn't access mic");
+      setTimeout(() => setMicError(""), 3000);
+    } finally {
+      setMicBusy(false);
+    }
   };
 
   const toggleVideo = async () => {
     if (!localParticipant) return;
     if (isStudent && !canVideo && !videoOn) return;
+    if (videoBusy) return;
 
+    setVideoBusy(true);
+    setVideoError("");
     const next = !videoOn;
-    await localParticipant.setCameraEnabled(next);
-    setVideoOn(next);
+    try {
+      await localParticipant.setCameraEnabled(next);
+      setVideoOn(next);
+    } catch (e) {
+      console.error("Failed to toggle camera:", e);
+      setVideoError("Couldn't access camera");
+      setTimeout(() => setVideoError(""), 3000);
+    } finally {
+      setVideoBusy(false);
+    }
   };
 
   const toggleScreen = async () => {
@@ -249,7 +275,7 @@ export default function GroupSessionControlBar({
       <div className="gs-cb-timer">{formatTime(elapsed)}</div>
 
       <div className="gs-cb-center">
-        <button className="gs-cb-btn" onClick={toggleMic} title={micOn ? "Mute" : "Unmute"}>
+        <button className="gs-cb-btn" onClick={toggleMic} disabled={micBusy} title={micError || (micOn ? "Mute" : "Unmute")}>
           <div className={`gs-cb-icon ${micOn ? "" : "gs-cb-icon--off"}`}>
             {micOn ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
@@ -257,10 +283,10 @@ export default function GroupSessionControlBar({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
             )}
           </div>
-          <span className="gs-cb-label">{micOn ? "Mute" : "Unmute"}</span>
+          <span className="gs-cb-label">{micError || (micOn ? "Mute" : "Unmute")}</span>
         </button>
 
-        <button className="gs-cb-btn" onClick={toggleVideo} title={videoOn ? "Turn off camera" : "Turn on camera"}>
+        <button className="gs-cb-btn" onClick={toggleVideo} disabled={videoBusy} title={videoError || (videoOn ? "Turn off camera" : "Turn on camera")}>
           <div className={`gs-cb-icon ${videoOn ? "" : "gs-cb-icon--off"}`}>
             {videoOn ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
@@ -268,7 +294,7 @@ export default function GroupSessionControlBar({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             )}
           </div>
-          <span className="gs-cb-label">Video</span>
+          <span className="gs-cb-label">{videoError || "Video"}</span>
         </button>
 
         <button className="gs-cb-btn" onClick={toggleScreen} title="Share screen">

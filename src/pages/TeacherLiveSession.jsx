@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import api from "../api/apiClient";
 import ClassroomUI from "../components/live/ClassroomUI";
+import ReconnectingBanner from "../components/live/ReconnectingBanner";
 
 const cacheKey = (id) => `livekit_session_${id}`;
 
@@ -145,6 +146,7 @@ export default function TeacherLiveSession() {
         audio
         style={liveKitWrap}
       >
+        <ReconnectingBanner />
         <ClassroomUI
           role={sessionData.role}
           sessionId={id}

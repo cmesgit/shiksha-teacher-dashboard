@@ -10,10 +10,12 @@
  * Collected here (spec "skill dev guest expert profile"):
  *   • Personal — full name, date of birth, phone, profile photo
  *   • Teaching — subject (category or free-text description), languages,
- *                about-you, hourly fee
+ *                about-you
  *   • Location — class mode (home / travel / online) + exact location for the
  *                two offline modes, with pincode / city / district / state
- *   • Payment  — the expert's own UPI payee details (learners pay P2P)
+ *
+ * Pricing/payment is intentionally NOT collected: booking is free at launch
+ * and toggled globally from admin, so there is no rate or UPI-payee field.
  *
  * A live checklist mirrors the backend's completeness rule so the expert can
  * see exactly what's still needed to get listed. Partial saves are allowed —
@@ -23,6 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
+import { useBunnyUpload } from "../../hooks/useBunnyUpload";
 import "../../styles/skillDev.css";
 
 const MODES = [
@@ -38,7 +41,6 @@ const MISSING_LABELS = {
   subject_description: "Subject & description",
   languages:          "Languages",
   bio:                "About you",
-  hourly_rate:        "Hourly fee",
   class_mode:         "Class mode",
   class_location:     "Class location",
   full_name:          "Full name",
@@ -51,14 +53,12 @@ const BLANK = {
   // teaching — `categories` is the full multi-subject set; `category` stays
   // as its first entry for backward compatibility with older consumers.
   category: "", categories: [], subject_description: "", bio: "", languages: "",
-  availability: "", hourly_rate: 0,
+  availability: "",
   // location
   class_mode: "online", class_location: "",
   pincode: "", state: "", district: "", city: "",
   // personal
   full_name: "", date_of_birth: "", phone: "",
-  // payment
-  payment_upi: "", payment_name: "", payment_note: "",
 };
 
 export default function ExpertProfileEdit() {
@@ -76,6 +76,19 @@ export default function ExpertProfileEdit() {
   const [photoUrl, setPhotoUrl] = useState("");   // existing photo from server
   const [photoFile, setPhotoFile] = useState(null); // newly chosen file
   const [photoPreview, setPhotoPreview] = useState(""); // object URL for preview
+
+  // Intro video — a short clip advertising what this expert teaches. One
+  // per profile, uploaded via Bunny, same pattern as Academy recordings.
+  const [introVideoUrl, setIntroVideoUrl] = useState("");     // ready embed URL, or ""
+  const [introVideoPending, setIntroVideoPending] = useState(false); // uploaded, still transcoding
+  const {
+    upload: uploadIntroVideo,
+    progress: introProgress,
+    uploading: introUploading,
+  } = useBunnyUpload({
+    createUrl: "/skill/teacher/intro-video/create/",
+    signUrl: "/skill/teacher/intro-video/upload-url/",
+  });
 
   // ── Load categories (optional) + the current profile ──────────────────────
   useEffect(() => {
@@ -97,15 +110,39 @@ export default function ExpertProfileEdit() {
                         ? d.categories
                         : (d.category ? [d.category] : []),
           languages:  Array.isArray(d.languages) ? d.languages.join(", ") : (d.languages || ""),
-          hourly_rate: d.hourly_rate ?? 0,
         });
         setPhotoUrl(d.photo || "");
+        setIntroVideoUrl(d.intro_video_embed_url || "");
+        setIntroVideoPending(!!d.intro_video_bunny_id && !d.intro_video_embed_url);
       })
       .catch(() => setErr("Couldn't load your profile."))
       .finally(() => { if (alive) setLoading(false); });
 
     return () => { alive = false; };
   }, []);
+
+  const onIntroVideoFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const allowed = ["video/mp4", "video/webm", "video/quicktime"];
+    if (!allowed.includes(file.type)) {
+      setErr("Only MP4, WebM, or MOV files are allowed.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024 * 1024) {
+      setErr("File is too large (max 4 GB).");
+      return;
+    }
+    setErr("");
+    try {
+      const videoId = await uploadIntroVideo(file, { title: `intro-${f.full_name || "expert"}` });
+      await api.post("/skill/teacher/intro-video/save/", { video_id: videoId });
+      // Bunny still needs to transcode — not playable immediately.
+      setIntroVideoPending(true);
+    } catch {
+      setErr("Video upload failed. Please try again.");
+    }
+  };
 
   // Revoke the preview object URL when it changes / on unmount.
   useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
@@ -131,7 +168,6 @@ export default function ExpertProfileEdit() {
     if (!hasSubject)                       m.push("subject_description");
     if (!(f.languages || "").trim())       m.push("languages");
     if (!(f.bio || "").trim())             m.push("bio");
-    if (!(Number(f.hourly_rate) > 0))      m.push("hourly_rate");
     if (!MODES.some((x) => x.v === f.class_mode)) m.push("class_mode");
     if (OFFLINE.has(f.class_mode) && !(f.class_location || "").trim()) m.push("class_location");
     if (!(f.full_name || "").trim())       m.push("full_name");
@@ -160,7 +196,6 @@ export default function ExpertProfileEdit() {
       subject_description: f.subject_description || "",
       bio:                 f.bio || "",
       availability:        f.availability || "",
-      hourly_rate:         Number(f.hourly_rate) || 0,
       class_mode:          f.class_mode,
       class_location:      f.class_location || "",
       pincode:             f.pincode || "",
@@ -170,9 +205,6 @@ export default function ExpertProfileEdit() {
       full_name:           f.full_name || "",
       date_of_birth:       f.date_of_birth || "",
       phone:               f.phone || "",
-      payment_upi:         f.payment_upi || "",
-      payment_name:        f.payment_name || "",
-      payment_note:        f.payment_note || "",
     };
 
     let request;
@@ -218,7 +250,7 @@ export default function ExpertProfileEdit() {
       <div className="sk-head">
         <div>
           <div className="sk-head__title">My profile</div>
-          <div className="sk-head__sub">How learners see you — and how they pay you.</div>
+          <div className="sk-head__sub">How learners see you on your public listing.</div>
         </div>
       </div>
 
@@ -273,6 +305,38 @@ export default function ExpertProfileEdit() {
                 <label>Profile photo</label>
                 <input className="sk-input" type="file" accept="image/*" onChange={onPhoto} />
               </div>
+            </div>
+
+            <div className="sk-field">
+              <label>Intro video <span style={{ fontWeight: 500, color: "#9aa9af" }}>— a short clip advertising what you teach</span></label>
+              {introVideoUrl ? (
+                <div style={{ marginTop: 4 }}>
+                  <iframe
+                    src={introVideoUrl}
+                    title="Your intro video"
+                    style={{ width: "100%", aspectRatio: "16/9", border: "none", borderRadius: 10 }}
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                    allowFullScreen
+                  />
+                  <label className="sk-btn sk-btn--ghost" style={{ display: "inline-flex", marginTop: 8, cursor: "pointer" }}>
+                    Replace video
+                    <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={onIntroVideoFile} style={{ display: "none" }} />
+                  </label>
+                </div>
+              ) : introUploading ? (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ height: 8, borderRadius: 999, background: "#e9eef0", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${introProgress}%`, background: "#13899b", transition: "width .2s" }} />
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#9aa9af", marginTop: 4 }}>Uploading… {introProgress}%</div>
+                </div>
+              ) : introVideoPending ? (
+                <div style={{ fontSize: 11.5, color: "#9aa9af", marginTop: 4 }}>
+                  Processing your video — check back in a few minutes.
+                </div>
+              ) : (
+                <input className="sk-input" type="file" accept="video/mp4,video/webm,video/quicktime" onChange={onIntroVideoFile} />
+              )}
             </div>
 
             <div className="sk-field">
@@ -338,16 +402,12 @@ export default function ExpertProfileEdit() {
               <label>Languages (comma-separated)</label>
               <input className="sk-input" value={f.languages} onChange={set("languages")} placeholder="English, Hindi, Manipuri" />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div className="sk-field"><label>Rate (₹ / hour)</label>
-                <input className="sk-input" type="number" min="0" value={f.hourly_rate} onChange={set("hourly_rate")} /></div>
-              <div className="sk-field"><label>Availability note</label>
-                <input className="sk-input" value={f.availability} onChange={set("availability")} placeholder="e.g. Evenings & weekends" /></div>
-            </div>
+            <div className="sk-field"><label>Availability note</label>
+              <input className="sk-input" value={f.availability} onChange={set("availability")} placeholder="e.g. Evenings & weekends" /></div>
           </div>
         </div>
 
-        {/* ── Column 2: Location + payment ── */}
+        {/* ── Column 2: Location ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="rd-card teacher" style={{ marginBottom: 0 }}>
             <h4>Where you teach</h4>
@@ -389,26 +449,6 @@ export default function ExpertProfileEdit() {
                 Online classes are held over video — no address needed.
               </div>
             )}
-          </div>
-
-          <div className="rd-card teacher" style={{ marginBottom: 0 }}>
-            <h4>How learners pay you</h4>
-            <div style={{ fontSize: 12, color: "#6b7c83", lineHeight: 1.5, marginBottom: 10 }}>
-              Payments are settled directly between you and the learner — ShikshaCom doesn't take a cut.
-              These details are shown to a learner after they book.
-            </div>
-            <div className="sk-field">
-              <label>Your UPI ID</label>
-              <input className="sk-input" value={f.payment_upi} onChange={set("payment_upi")} placeholder="yourname@okaxis" />
-            </div>
-            <div className="sk-field">
-              <label>Payee name</label>
-              <input className="sk-input" value={f.payment_name} onChange={set("payment_name")} />
-            </div>
-            <div className="sk-field">
-              <label>Note for learners (optional)</label>
-              <input className="sk-input" value={f.payment_note} onChange={set("payment_note")} placeholder="e.g. Add a reference with your name" />
-            </div>
           </div>
         </div>
       </div>

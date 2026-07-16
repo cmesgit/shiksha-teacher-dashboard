@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import privateSessionService from "../api/privateSessionService";
 import TeacherPrivateClassroomUI from "../components/live/TeacherPrivateClassroomUI";
+import ReconnectingBanner from "../components/live/ReconnectingBanner";
 import "../styles/privateSessions.css";
 
 /* ── Same fullscreen wrapper as TeacherLiveSession ── */
@@ -75,7 +76,15 @@ export default function PrivateSessionLive() {
     return () => { cancelled = true; };
   }, [id]);
 
-  const handleLeave = async () => {
+  // Just steps out — the session stays "ongoing" for the student, same as
+  // the student's own Leave. Rejoinable later from the sessions list.
+  const handleLeave = () => {
+    navigate("/teacher/private-sessions");
+  };
+
+  // Explicit, confirmed action that actually ends the session for both
+  // parties (was previously what the plain Leave button did unconditionally).
+  const handleEndSession = async () => {
     try {
       await privateSessionService.endSession(id);
     } catch (err) {
@@ -155,10 +164,12 @@ export default function PrivateSessionLive() {
         style={liveKitWrap}
         onDisconnected={() => navigate("/teacher/private-sessions")}
       >
+        <ReconnectingBanner />
         <TeacherPrivateClassroomUI
           role="PRESENTER"
           sessionId={id}
           onLeave={handleLeave}
+          onEndSession={handleEndSession}
         />
         <RoomAudioRenderer />
       </LiveKitRoom>

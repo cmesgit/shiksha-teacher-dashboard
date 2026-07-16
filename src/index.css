@@ -1,3 +1,8 @@
+/* Design-system tokens — single source of truth for the merged Academy +
+   Skill-Dev (Expert) look. Must be the first statement (@import rule). The
+   per-track accent switch fires off data-track on each layout root. */
+@import "./shared/tokens.css";
+
 * {
   margin: 0;
   padding: 0;
