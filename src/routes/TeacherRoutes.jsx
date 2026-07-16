@@ -26,6 +26,7 @@ import AssignmentView from "../pages/AssignmentView";
 import SubmissionView from "../pages/SubmissionView";
 import Quizzes from "../pages/Quizzes";
 import CreateQuiz from "../pages/CreateQuiz";
+import QuizBank from "../pages/QuizBank";
 import QuizView from "../pages/QuizView";
 import QuizDraftPreview from "../pages/QuizDraftPreview";
 import QuizSubmissionView from "../pages/QuizSubmissionView";
@@ -157,6 +158,7 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/assignments/:assignmentId/submissions" element={<SubmissionView />} />
 
         {/* Quizzes */}
+        <Route path="quiz-bank" element={<QuizBank />} />
         <Route path="classes/:subjectId/quizzes" element={<Quizzes />} />
         <Route path="classes/:subjectId/quizzes/create" element={<CreateQuiz />} />
         <Route path="classes/:subjectId/quizzes/:quizId/draft" element={<QuizDraftPreview />} />

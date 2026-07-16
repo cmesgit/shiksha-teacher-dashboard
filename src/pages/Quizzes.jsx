@@ -4,6 +4,13 @@ import { IoChevronBack } from "react-icons/io5";
 import "../styles/quizzes.css";
 import api from "../api/apiClient";
 
+const STATUS_META = {
+  draft:    { label: "Draft",           cls: "quiz-status--draft" },
+  pending:  { label: "Pending review",  cls: "quiz-status--pending" },
+  approved: { label: "✓ Published",     cls: "quiz-status--approved" },
+  rejected: { label: "Changes requested", cls: "quiz-status--rejected" },
+};
+
 export default function Quizzes() {
   const navigate = useNavigate();
   const { subjectId } = useParams();
@@ -165,41 +172,46 @@ export default function Quizzes() {
                   {quiz.is_published ? "View" : "Preview"}
                 </button>
 
-                {quiz.is_published ? (
-                  <>
-                    <span className="quiz-published-badge">✓ Published</span>
-                    <button
-                      className="quiz-delete-btn"
-                      onClick={() => handleDelete(quiz)}
-                      disabled={deletingId === quiz.id}
-                      title="Delete this quiz (will warn if students have attempted it)"
-                    >
-                      {deletingId === quiz.id ? "Deleting…" : "Delete"}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      className={`quiz-publish-btn ${publishingId === quiz.id ? "loading" : ""}`}
-                      onClick={() => handlePublish(quiz.id)}
-                      disabled={publishingId === quiz.id || (quiz.questions_count ?? 0) === 0}
-                      title={
-                        (quiz.questions_count ?? 0) === 0
-                          ? "Add at least one question before publishing"
-                          : "Publish this quiz"
-                      }
-                    >
-                      {publishingId === quiz.id ? "Publishing…" : "Publish"}
-                    </button>
-                    <button
-                      className="quiz-delete-btn"
-                      onClick={() => handleDelete(quiz)}
-                      disabled={deletingId === quiz.id}
-                    >
-                      {deletingId === quiz.id ? "Deleting…" : "Delete"}
-                    </button>
-                  </>
+                {(() => {
+                  const meta = STATUS_META[quiz.review_status] || STATUS_META.draft;
+                  return (
+                    <span className={`quiz-status-badge ${meta.cls}`} title={quiz.review_note || ""}>
+                      {meta.label}
+                    </span>
+                  );
+                })()}
+
+                {quiz.review_status === "rejected" && quiz.review_note && (
+                  <span className="quiz-rejection-note">“{quiz.review_note}”</span>
                 )}
+
+                {(quiz.review_status === "draft" || quiz.review_status === "rejected") && (
+                  <button
+                    className={`quiz-publish-btn ${publishingId === quiz.id ? "loading" : ""}`}
+                    onClick={() => handlePublish(quiz.id)}
+                    disabled={publishingId === quiz.id || (quiz.questions_count ?? 0) === 0}
+                    title={
+                      (quiz.questions_count ?? 0) === 0
+                        ? "Add at least one question before submitting"
+                        : "Send to admin for verification"
+                    }
+                  >
+                    {publishingId === quiz.id
+                      ? "Submitting…"
+                      : quiz.review_status === "rejected"
+                        ? "Resubmit for review"
+                        : "Submit for review"}
+                  </button>
+                )}
+
+                <button
+                  className="quiz-delete-btn"
+                  onClick={() => handleDelete(quiz)}
+                  disabled={deletingId === quiz.id}
+                  title="Delete this quiz (will warn if students have attempted it)"
+                >
+                  {deletingId === quiz.id ? "Deleting…" : "Delete"}
+                </button>
               </div>
 
             </div>

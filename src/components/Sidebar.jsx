@@ -8,7 +8,7 @@
  * /teacher/batch-progress.
  */
 import { useEffect, useState } from "react";
-import { FiUsers, FiHome, FiChevronDown, FiCheckSquare } from "react-icons/fi";
+import { FiUsers, FiHome, FiChevronDown, FiCheckSquare, FiLayers } from "react-icons/fi";
 import { MdDashboard } from "react-icons/md";
 import { FaChalkboardTeacher } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
@@ -107,6 +107,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
             ))}
           </div>
         )}
+
+        <div className={`menu-item ${isActive("/teacher/quiz-bank") ? "active" : ""}`}
+          onClick={() => { navigate("/teacher/quiz-bank"); setSidebarOpen(false); }}>
+          <FiLayers /><span>Quiz Bank</span>
+        </div>
 
         <div className={`menu-item ${isActive("/teacher/batch-progress") ? "active" : ""}`}
           onClick={() => { navigate("/teacher/batch-progress"); setSidebarOpen(false); }}>

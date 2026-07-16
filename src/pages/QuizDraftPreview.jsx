@@ -51,15 +51,16 @@ export default function QuizDraftPreview() {
   }, [quizId]);
 
   const handlePublish = async () => {
-    if (!window.confirm("Publish this quiz? Students will be able to attempt it immediately and questions cannot be edited after publishing.")) return;
+    if (!window.confirm("Submit this quiz for admin review? Once submitted, questions can't be edited until it's approved or sent back.")) return;
     setPublishing(true);
     setPublishError(null);
     try {
       await api.patch(`/teacher/quizzes/${quizId}/publish/`);
-      // Redirect to the proper published view
-      navigate(`/teacher/classes/${subjectId}/quizzes/${quizId}`, { replace: true });
+      // Reload so the banner reflects the new review_status immediately.
+      const res = await api.get(`/quizzes/${quizId}/draft/`);
+      setQuiz(res.data);
     } catch (err) {
-      setPublishError(err.response?.data?.detail || "Failed to publish quiz.");
+      setPublishError(err.response?.data?.detail || "Failed to submit quiz for review.");
     } finally {
       setPublishing(false);
     }
@@ -85,24 +86,42 @@ export default function QuizDraftPreview() {
   };
 
   const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+  const reviewStatus = quiz.review_status || (quiz.is_published ? "approved" : "draft");
+  const canSubmit = quiz.is_editable !== false && (reviewStatus === "draft" || reviewStatus === "rejected");
+
+  const BANNER_COPY = {
+    draft: { cls: "qdp-draft-badge", text: "DRAFT — Not visible to students" },
+    pending: { cls: "qdp-draft-badge qdp-badge--pending", text: "⏳ Submitted — awaiting admin verification" },
+    approved: { cls: "qdp-draft-badge qdp-badge--approved", text: "✓ Approved — live for students" },
+    rejected: { cls: "qdp-draft-badge qdp-badge--rejected", text: "⚠ Changes requested by admin" },
+  };
+  const banner = BANNER_COPY[reviewStatus] || BANNER_COPY.draft;
 
   return (
     <div className="qdp-page">
       {/* Banner */}
       <div className="qdp-draft-banner">
-        <span className="qdp-draft-badge">DRAFT — Not visible to students</span>
+        <span className={banner.cls}>{banner.text}</span>
         <div className="qdp-banner-actions">
           {publishError && <span className="qdp-publish-error">{publishError}</span>}
-          <button
-            className="qdp-publish-btn"
-            onClick={handlePublish}
-            disabled={publishing || questions.length === 0}
-            title={questions.length === 0 ? "Add questions before publishing" : ""}
-          >
-            {publishing ? "Publishing…" : "🚀 Publish Quiz"}
-          </button>
+          {canSubmit && (
+            <button
+              className="qdp-publish-btn"
+              onClick={handlePublish}
+              disabled={publishing || questions.length === 0}
+              title={questions.length === 0 ? "Add questions before submitting" : ""}
+            >
+              {publishing ? "Submitting…" : reviewStatus === "rejected" ? "Resubmit for review" : "Submit for review"}
+            </button>
+          )}
         </div>
       </div>
+
+      {reviewStatus === "rejected" && quiz.review_note && (
+        <div className="qdp-rejection-banner">
+          <strong>Admin feedback:</strong> {quiz.review_note}
+        </div>
+      )}
 
       <button
         className="qdp-back-btn"
@@ -206,19 +225,19 @@ export default function QuizDraftPreview() {
         </div>
 
         {/* Bottom publish CTA */}
-        {questions.length > 0 && (
+        {questions.length > 0 && canSubmit && (
           <div className="qdp-bottom-cta">
             <p className="qdp-cta-note">
-              Everything looks good? Publishing makes this quiz live for students.
+              Everything looks good? Submitting sends this quiz to an admin for verification.
               <br />
-              <strong>Questions cannot be edited after publishing.</strong>
+              <strong>Questions can't be edited again until it's approved or sent back.</strong>
             </p>
             <button
               className="qdp-publish-btn-lg"
               onClick={handlePublish}
               disabled={publishing}
             >
-              {publishing ? "Publishing…" : "🚀 Publish Quiz"}
+              {publishing ? "Submitting…" : reviewStatus === "rejected" ? "Resubmit for review" : "Submit for review"}
             </button>
           </div>
         )}

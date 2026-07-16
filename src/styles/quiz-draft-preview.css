@@ -307,3 +307,31 @@
   font-size: 14px;
   font-weight: 500;
 }
+
+/* ── review-status variants ── */
+.qdp-badge--pending {
+  color: #b45309;
+  background: #fff4e0;
+  border-color: #f3d9bd;
+}
+.qdp-badge--approved {
+  color: #1f8a45;
+  background: #e6f9f0;
+  border-color: #a7e3bf;
+}
+.qdp-badge--rejected {
+  color: #c0392b;
+  background: #fdeaea;
+  border-color: #f5c6c6;
+}
+
+.qdp-rejection-banner {
+  margin: 14px 28px 0;
+  background: #fdeaea;
+  border: 1px solid #f5c6c6;
+  color: #7a1f1f;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
