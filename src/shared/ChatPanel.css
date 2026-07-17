@@ -228,6 +228,7 @@
 .cc-bubble-file-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
 .cc-bubble-file-size { font-size: 10.5px; opacity: .7; }
 .cc-bubble-file-dl { flex-shrink: 0; opacity: .8; }
+.cc-bubble-expiry { display: block; font-size: 10.5px; opacity: .6; margin: -2px 0 6px 2px; }
 .cc-bubble-file-pending { animation: cc-file-pending-pulse 1.4s ease-in-out infinite; cursor: default; }
 @keyframes cc-file-pending-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 

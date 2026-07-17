@@ -67,7 +67,7 @@ export default function NotificationBell() {
   };
 
   const handleNotifClick = (notif) => {
-    const { type, subject_id, id, is_private_session, is_group_session, link_url } = notif;
+    const { type, subject_id, id, is_private_session, is_group_session, is_skill_session, link_url } = notif;
     if (id) markOneRead(id);
 
     // Teacher app is mounted under /teacher — every navigate() must include
@@ -104,6 +104,15 @@ export default function NotificationBell() {
     // them to the Group Sessions page instead of /teacher/live-sessions.
     if (is_group_session) {
       navigate("/teacher/group-sessions");
+      setOpen(false);
+      return;
+    }
+
+    // Skill-Dev (expert 1-on-1) session notifications — confirm/decline/
+    // cancel/complete/reschedule all carry this flag. No per-booking detail
+    // route exists on this side, so always land on the bookings list.
+    if (is_skill_session) {
+      navigate("/teacher/expert/bookings");
       setOpen(false);
       return;
     }

@@ -15,6 +15,19 @@ import { Avatar, formatClock } from "./common";
 
 const REACTION_SET = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
+// Temporary file sharing: chat attachments auto-expire N days after upload
+// (chat.tasks.expire_old_attachments on the backend). Renders nothing once
+// expired — the message will have soft-deleted into the tombstone below by
+// the time that happens, so this only ever shows a still-live countdown.
+function expiryLabel(expiresAt) {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return null;
+  const days = Math.ceil(ms / 86400000);
+  if (days <= 1) return "Expires today";
+  return `Expires in ${days} days`;
+}
+
 function AttachmentView({ attachment, uploading }) {
   if (!attachment) return null;
   if (uploading || !attachment.url) {
@@ -28,22 +41,29 @@ function AttachmentView({ attachment, uploading }) {
       </div>
     );
   }
+  const expiry = expiryLabel(attachment.expires_at);
   if (attachment.kind === "IMAGE") {
     return (
-      <a href={attachment.url} target="_blank" rel="noreferrer" className="cc-bubble-image-link">
-        <img src={attachment.url} alt={attachment.name} className="cc-bubble-image" loading="lazy" />
-      </a>
+      <div className="cc-bubble-attachment">
+        <a href={attachment.url} target="_blank" rel="noreferrer" className="cc-bubble-image-link">
+          <img src={attachment.url} alt={attachment.name} className="cc-bubble-image" loading="lazy" />
+        </a>
+        {expiry && <span className="cc-bubble-expiry">{expiry}</span>}
+      </div>
     );
   }
   return (
-    <a href={attachment.url} target="_blank" rel="noreferrer" className="cc-bubble-file">
-      <span className="cc-bubble-file-icon"><FiFileText size={18} /></span>
-      <span className="cc-bubble-file-meta">
-        <span className="cc-bubble-file-name">{attachment.name}</span>
-        <span className="cc-bubble-file-size">{attachment.size ? `${Math.max(1, Math.round(attachment.size / 1024))} KB` : ""}</span>
-      </span>
-      <span className="cc-bubble-file-dl"><FiDownload size={15} /></span>
-    </a>
+    <div className="cc-bubble-attachment">
+      <a href={attachment.url} target="_blank" rel="noreferrer" className="cc-bubble-file">
+        <span className="cc-bubble-file-icon"><FiFileText size={18} /></span>
+        <span className="cc-bubble-file-meta">
+          <span className="cc-bubble-file-name">{attachment.name}</span>
+          <span className="cc-bubble-file-size">{attachment.size ? `${Math.max(1, Math.round(attachment.size / 1024))} KB` : ""}</span>
+        </span>
+        <span className="cc-bubble-file-dl"><FiDownload size={15} /></span>
+      </a>
+      {expiry && <span className="cc-bubble-expiry">{expiry}</span>}
+    </div>
   );
 }
 
@@ -82,7 +102,9 @@ export default function MessageBubble({
       <div className={"cc-msg" + (mine ? " cc-msg-mine" : "")}>
         <div className="cc-bubble cc-bubble-deleted">
           <FiTrash2 size={12} />
-          {msg.deleted_reason ? "Removed by a moderator" : "This message was deleted"}
+          {msg.deleted_reason === "expired"
+            ? "This file has expired"
+            : msg.deleted_reason ? "Removed by a moderator" : "This message was deleted"}
         </div>
       </div>
     );
