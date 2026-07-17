@@ -10,7 +10,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -23,7 +23,7 @@
 }
 
 .av-back-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
 }
 
 /* Header bar with title + search */
@@ -59,7 +59,7 @@
 }
 
 .av-search input:focus {
-  border-color: #4ba7b5;
+  border-color: #425f7f;
 }
 
 .av-search-icon {
@@ -89,7 +89,7 @@
 }
 
 .av-edit-btn {
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -100,7 +100,7 @@
 }
 
 .av-edit-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
 }
 
 /* Details section */

@@ -9,7 +9,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -22,12 +22,13 @@
 }
 
 .ur-back-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
 }
 
 .ur-title-container {
-  background: #f5fbfc;
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e5eaed;
+  border-radius: 12px;
   padding: 20px 32px;
   display: flex;
   justify-content: space-between;
@@ -58,7 +59,7 @@
 }
 
 .ur-search input:focus {
-  border-color: #4ba7b5;
+  border-color: #425f7f;
 }
 
 .ur-search-icon {
@@ -71,8 +72,9 @@
 }
 
 .ur-form-container {
-  background: #f5fbfc;
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e5eaed;
+  border-radius: 12px;
   padding: 40px 32px;
   flex: 1;
   display: flex;
@@ -129,7 +131,7 @@
 }
 
 .ur-input:focus {
-  border-bottom-color: #4ba7b5;
+  border-bottom-color: #425f7f;
 }
 
 .ur-file-name {
@@ -142,8 +144,8 @@
 
 .ur-attach-btn {
   background: transparent;
-  color: #4ba7b5;
-  border: 2px solid #4ba7b5;
+  color: #425f7f;
+  border: 2px solid #425f7f;
   border-radius: 20px;
   padding: 8px 24px;
   font-size: 13px;
@@ -152,7 +154,7 @@
 }
 
 .ur-attach-btn:hover {
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
 }
 

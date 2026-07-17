@@ -59,6 +59,9 @@ import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 import BatchProgress from "../pages/BatchProgress";
 import BatchProgressDetail from "../pages/BatchProgressDetail";
+import AssignmentsLanding from "../pages/AssignmentsLanding";
+import StudyMaterialsLanding from "../pages/StudyMaterialsLanding";
+import RecordingsLanding from "../pages/RecordingsLanding";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
@@ -156,6 +159,12 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/assignments/create" element={<CreateAssignment />} />
         <Route path="classes/:subjectId/assignments/:assignmentId" element={<AssignmentView />} />
         <Route path="classes/:subjectId/assignments/:assignmentId/submissions" element={<SubmissionView />} />
+
+        {/* CONTENT top-level landings (class pickers) — close the loose
+            ends where the sidebar promotes per-class screens to nav items. */}
+        <Route path="assignments" element={<AssignmentsLanding />} />
+        <Route path="study-materials" element={<StudyMaterialsLanding />} />
+        <Route path="recordings" element={<RecordingsLanding />} />
 
         {/* Quizzes */}
         <Route path="quiz-bank" element={<QuizBank />} />

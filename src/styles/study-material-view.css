@@ -23,7 +23,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -58,7 +58,7 @@
 }
 
 .smv-back-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
   transform: translateX(-4px);
   box-shadow: 0 4px 12px rgba(75, 167, 181, 0.3);
 }
@@ -113,7 +113,7 @@
   left: 0;
   width: 0;
   height: 3px;
-  background: linear-gradient(90deg, #4ba7b5, #3d9aa8);
+  background: linear-gradient(90deg, #425f7f, #354d67);
   border-radius: 2px;
   transition: width 0.4s ease;
 }
@@ -139,7 +139,7 @@
 }
 
 .smv-search input:focus {
-  border-color: #4ba7b5;
+  border-color: #425f7f;
   box-shadow: 0 0 0 3px rgba(75, 167, 181, 0.12);
   width: 200px;
   transform: translateY(-1px);
@@ -165,7 +165,7 @@
 }
 
 .smv-search input:focus ~ .smv-search-icon {
-  color: #4ba7b5;
+  color: #425f7f;
   transform: translateY(-50%) scale(1.1) rotate(90deg);
 }
 
@@ -255,7 +255,7 @@
 }
 
 .smv-meta-card:hover .smv-value-bold {
-  color: #4ba7b5;
+  color: #425f7f;
 }
 
 /* Files section */
@@ -273,7 +273,7 @@
 }
 
 .smv-files-count-badge {
-  background: linear-gradient(135deg, #4ba7b5, #3d9aa8);
+  background: linear-gradient(135deg, #425f7f, #354d67);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -445,7 +445,7 @@
 }
 
 .smv-file-card:hover .smv-file-name {
-  color: #4ba7b5;
+  color: #425f7f;
 }
 
 .smv-file-ext {
@@ -467,7 +467,7 @@
   background: transparent;
   border: none;
   border-left: 1px solid #eee;
-  color: #4ba7b5;
+  color: #425f7f;
   font-size: 12px;
   font-weight: 600;
   padding: 0 14px;
@@ -500,7 +500,7 @@
 
 .smv-copy-btn:hover {
   background: #eef6f8;
-  color: #3d9aa8;
+  color: #354d67;
   padding: 0 18px;
   font-weight: 700;
 }
@@ -576,13 +576,13 @@
 }
 
 .smv-content-card::-webkit-scrollbar-thumb {
-  background: #4ba7b5;
+  background: #425f7f;
   border-radius: 10px;
   transition: background 0.3s ease;
 }
 
 .smv-content-card::-webkit-scrollbar-thumb:hover {
-  background: #3d9aa8;
+  background: #354d67;
 }
 
 /* Responsive adjustments */

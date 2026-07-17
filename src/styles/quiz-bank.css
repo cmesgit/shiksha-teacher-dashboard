@@ -9,25 +9,26 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
+  background: #fff;
+  color: #425f7f;
+  border: 1px solid #cfdbe6;
+  border-radius: 8px;
+  padding: 7px 14px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   width: fit-content;
   flex-shrink: 0;
 }
-.qb-back-btn:hover { background: #3d9aa8; }
+.qb-back-btn:hover { background: #eef1f2; }
 
 .qb-header {
-  background: #f5fbfc;
-  border-radius: 16px;
-  padding: 20px 28px;
+  background: transparent;
+  border-radius: 0;
+  padding: 4px 4px 16px;
+  border-bottom: 1px solid #e5eaed;
 }
-.qb-title { font-size: 22px; font-weight: 700; color: #1f2d3d; margin: 0; }
+.qb-title { font-family: "Montserrat", system-ui, sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #1a2c33; margin: 0; }
 .qb-subtitle { font-size: 13px; color: #5a6b78; margin: 6px 0 0; max-width: 640px; }
 
 .qb-toolbar {
@@ -43,16 +44,16 @@
 
 .qb-tabs { display: flex; gap: 6px; flex-shrink: 0; }
 .qb-tab {
-  border: 1px solid #e3ecee;
-  background: #f5fbfc;
-  color: #4ba7b5;
+  border: 1px solid #e5eaed;
+  background: #fff;
+  color: #6b7c83;
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
 }
-.qb-tab--active { background: #4ba7b5; border-color: #4ba7b5; color: #fff; }
+.qb-tab--active { background: #425f7f; border-color: #425f7f; color: #fff; }
 
 .qb-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 .qb-filters select {
@@ -129,7 +130,7 @@
   padding: 3px 9px;
   border-radius: 999px;
 }
-.qb-chip--topic { background: #e6f4f6; color: #257078; }
+.qb-chip--topic { background: #e6f4f6; color: #425f7f; }
 .qb-chip--diff.qb-chip--easy { background: #e9f8ee; color: #1f8a45; }
 .qb-chip--diff.qb-chip--medium { background: #fff4e0; color: #b45309; }
 .qb-chip--diff.qb-chip--hard { background: #fdeaea; color: #b91c1c; }

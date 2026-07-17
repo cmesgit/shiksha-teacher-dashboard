@@ -1,6 +1,6 @@
 .students-page {
   padding: 16px 24px 32px;
-  background: #bcd6da;
+  background: #eef1f2;
   min-height: 100%;
 }
 
@@ -14,7 +14,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -66,7 +66,7 @@
 
 .students-search input:focus {
   outline: none;
-  border-color: #4ba7b5;
+  border-color: #425f7f;
 }
 
 .students-search-icon {
@@ -137,7 +137,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   display: flex;
   align-items: center;
