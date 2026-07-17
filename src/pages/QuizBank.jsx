@@ -4,6 +4,7 @@ import { IoChevronBack, IoCheckmarkCircle } from "react-icons/io5";
 import { FiSearch } from "react-icons/fi";
 import api from "../api/apiClient";
 import "../styles/quiz-bank.css";
+import { LoadingState } from "../components/StateViews";
 
 const DIFF_LABEL = { easy: "Easy", medium: "Medium", hard: "Hard" };
 
@@ -167,7 +168,7 @@ export default function QuizBank() {
       </div>
 
       {loading ? (
-        <div className="qb-loading">Loading…</div>
+        <LoadingState plain label="Loading quizzes" />
       ) : error ? (
         <div className="qb-error">{error}</div>
       ) : items.length === 0 ? (

@@ -4,6 +4,7 @@ import { FiCamera } from "react-icons/fi";
 import api from "../api/apiClient";
 import privateSessionService from "../api/privateSessionService";
 import "../styles/profile.css";
+import { LoadingState } from "../components/StateViews";
 
 function fmtTime(t) {
   if (!t) return "";
@@ -152,7 +153,7 @@ export default function Profile() {
   };
 
   if (loading) {
-    return <div className="tp-page"><p className="tp-loading">Loading profile...</p></div>;
+    return <LoadingState label="Loading profile" />;
   }
 
   if (error || !profile) {

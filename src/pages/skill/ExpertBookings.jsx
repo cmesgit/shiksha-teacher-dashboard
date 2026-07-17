@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 /* ── helpers ── */
 function fmtWhen(iso) {
@@ -141,7 +142,7 @@ export default function ExpertBookings() {
           Accepting a request confirms the slot for the learner.
         </p>
         {loading ? (
-          <div className="sk-empty">Loading…</div>
+          <LoadingState plain label="Loading requests" />
         ) : pending.length === 0 ? (
           <div className="sk-empty">No pending requests right now.</div>
         ) : pending.map((s) => {
@@ -186,7 +187,7 @@ export default function ExpertBookings() {
           <span style={{ fontSize: 11.5, color: "#6b7c83" }}>{scheduled.length} upcoming</span>
         </div>
         {loading ? (
-          <div className="sk-empty" style={{ marginTop: 14 }}>Loading…</div>
+          <LoadingState plain label="Loading sessions" />
         ) : scheduled.length === 0 ? (
           <div className="sk-empty" style={{ marginTop: 14 }}>No scheduled sessions yet.</div>
         ) : grouped.map((g) => (

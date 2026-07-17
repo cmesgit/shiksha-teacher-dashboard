@@ -27,6 +27,7 @@ import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
 import { useBunnyUpload } from "../../hooks/useBunnyUpload";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 const MODES = [
   { v: "online", label: "Online only" },
@@ -243,7 +244,7 @@ export default function ExpertProfileEdit() {
       .finally(() => setSaving(false));
   };
 
-  if (loading) return <div className="sk-page"><div className="sk-empty">Loading your profile…</div></div>;
+  if (loading) return <LoadingState label="Loading your profile" />;
 
   return (
     <div className="sk-page">

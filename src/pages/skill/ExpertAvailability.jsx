@@ -11,6 +11,7 @@ import { Icon } from "../../components/SkillIcons";
 import { DAYS, SLOTS } from "../../api/availabilityStore";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 export default function ExpertAvailability() {
   const [avail,   setAvail]   = useState({ open: [], booked: [] });
@@ -101,7 +102,7 @@ export default function ExpertAvailability() {
         </div>
 
         {loading ? (
-          <div className="sk-empty">Loading availability…</div>
+          <LoadingState plain label="Loading availability" />
         ) : (
           <div style={{ overflowX: "auto" }}>
             <div style={{

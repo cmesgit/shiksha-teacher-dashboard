@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/apiClient";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
 import "../styles/teacherGroupSessions.css";
+import { LoadingState } from "../components/StateViews";
 
 /* ═══════════════════════════════════════════════════════════
    HELPERS
@@ -1260,7 +1261,7 @@ useEffect(() => {
         </div>
 
         {loading ? (
-          <div className="sg__loading sg__loading--figma">Loading group sessions…</div>
+          <LoadingState plain label="Loading group sessions" />
         ) : visibleGroups.length > 0 ? (
           <div className="sg__figmaGrid">
             {visibleGroups.map((g) => (

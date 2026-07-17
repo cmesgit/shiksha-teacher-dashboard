@@ -5,6 +5,7 @@ import { MdCancel } from "react-icons/md";
 import api from "../api/apiClient";
 import "../styles/live-sessions.css";
 import sessionBanner from "../assets/live-session-banner.png";
+import { LoadingState } from "../components/StateViews";
 
 /* =====================================
    🔥 COUNTDOWN FUNCTION
@@ -248,9 +249,7 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
           </div>
         )}
 
-        {loading && (
-          <p className="live-sessions-empty">Loading sessions…</p>
-        )}
+        {loading && <LoadingState plain label="Loading sessions" />}
         {error && (
           <p className="live-sessions-empty" style={{ color: "#b91c1c" }}>
             {error}

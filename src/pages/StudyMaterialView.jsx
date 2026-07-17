@@ -4,6 +4,7 @@ import { FaRegFolder } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import api from "../api/apiClient";
 import "../styles/study-material-view.css";
+import { LoadingState } from "../components/StateViews";
 
 const getFileExt = (name = "") => {
   const ext = name.split(".").pop().toUpperCase();
@@ -42,7 +43,7 @@ export default function StudyMaterialView() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <LoadingState label="Loading material" />;
   if (!material) return <div>Material not found</div>;
 
   const files = material.files || [];

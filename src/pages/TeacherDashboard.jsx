@@ -50,6 +50,7 @@ import AcademyRejectionBanner from "../components/AcademyRejectionBanner";
 
 import api from "../api/apiClient";
 import useNotificationSocket from "../hooks/useNotificationSocket";
+import { LoadingState } from "../components/StateViews";
 
 const DATE_FORMAT = { day: "2-digit", month: "short", year: "numeric" };
 const DATETIME_FORMAT = {
@@ -336,11 +337,7 @@ export default function TeacherDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="dashboard">
-        <div className="dash-card"><p>Loading your dashboard…</p></div>
-      </div>
-    );
+    return <LoadingState label="Loading your dashboard" />;
   }
 
   if (error) {

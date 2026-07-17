@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import "../styles/assignments.css";
+import { LoadingState } from "../components/StateViews";
 
 const formatDate = (dateStr) => {
   const date = new Date(dateStr);
@@ -64,7 +65,7 @@ export default function Assignments() {
     );
   };
 
-  if (loading) return <div className="assignments-loading">Loading assignments...</div>;
+  if (loading) return <LoadingState label="Loading assignments" />;
 
   return (
     <div className="assignments-page">

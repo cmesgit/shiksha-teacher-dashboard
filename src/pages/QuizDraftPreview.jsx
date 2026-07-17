@@ -15,6 +15,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/quiz-draft-preview.css";
+import { LoadingState } from "../components/StateViews";
 
 const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
 
@@ -66,7 +67,7 @@ export default function QuizDraftPreview() {
     }
   };
 
-  if (loading) return <div className="qdp-loading">Loading preview…</div>;
+  if (loading) return <LoadingState label="Loading preview" />;
   if (fetchError) return (
     <div className="qdp-page">
       <button className="qdp-back-btn" onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}>

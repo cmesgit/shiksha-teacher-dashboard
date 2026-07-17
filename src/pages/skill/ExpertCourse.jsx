@@ -23,6 +23,7 @@ import { Icon } from "../../components/SkillIcons";
 import { DAYS, SLOTS } from "../../api/availabilityStore";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 const MODE_LABEL = { online: "Online", home: "At my place", travel: "I travel" };
 
@@ -87,11 +88,7 @@ export default function ExpertCourse() {
   };
 
   if (loading) {
-    return (
-      <div className="sk-page">
-        <div className="sk-empty">Loading your profile…</div>
-      </div>
-    );
+    return <LoadingState label="Loading your profile" />;
   }
 
   const subject   = profile?.headline || profile?.subject_description || "Your 1-on-1 course";

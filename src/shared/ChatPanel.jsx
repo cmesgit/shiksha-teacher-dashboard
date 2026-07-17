@@ -219,6 +219,7 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
           conversations={listConversations}
           loading={convLoading}
           error={convError}
+          onRetry={loadConversations}
           activeId={activeId}
           category={category}
           categories={presentCategories}

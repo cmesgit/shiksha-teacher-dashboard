@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 export default function ExpertPromote() {
   const [s, setS]           = useState(null);
@@ -40,7 +41,7 @@ export default function ExpertPromote() {
     act(() => api.post("/skill/subscription/submit-payment/", { upi_reference: ref, payer_vpa: vpa }));
   };
 
-  if (loading) return <div className="sk-page"><div className="sk-empty">Loading…</div></div>;
+  if (loading) return <LoadingState label="Loading subscription" />;
   if (!s)      return <div className="sk-page"><div className="sk-empty">{err || "Unavailable."}</div></div>;
 
   const free      = s.billing_mode === "free";

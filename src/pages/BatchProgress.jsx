@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/batch-progress.css";
+import { LoadingState } from "../components/StateViews";
 
 function Bar({ percent }) {
   return (
@@ -52,7 +53,7 @@ export default function BatchProgress() {
         </div>
 
         {loading ? (
-          <p className="bp-muted">Loading your batches…</p>
+          <LoadingState plain label="Loading your batches" />
         ) : totalBatches === 0 ? (
           <div className="bp-empty">
             <p className="bp-empty-title">No batches to track yet.</p>

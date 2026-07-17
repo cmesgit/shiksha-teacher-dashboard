@@ -15,8 +15,19 @@ import { Avatar, formatClock } from "./common";
 
 const REACTION_SET = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
-function AttachmentView({ attachment }) {
+function AttachmentView({ attachment, uploading }) {
   if (!attachment) return null;
+  if (uploading || !attachment.url) {
+    return (
+      <div className="cc-bubble-file cc-bubble-file-pending">
+        <span className="cc-bubble-file-icon"><FiFileText size={18} /></span>
+        <span className="cc-bubble-file-meta">
+          <span className="cc-bubble-file-name">{attachment.name}</span>
+          <span className="cc-bubble-file-size">Sending…</span>
+        </span>
+      </div>
+    );
+  }
   if (attachment.kind === "IMAGE") {
     return (
       <a href={attachment.url} target="_blank" rel="noreferrer" className="cc-bubble-image-link">
@@ -106,7 +117,7 @@ export default function MessageBubble({
               <span className="cc-reply-quote-body">{msg.reply_to.body_preview || "Attachment"}</span>
             </button>
           )}
-          {msg.attachment && <AttachmentView attachment={msg.attachment} />}
+          {msg.attachment && <AttachmentView attachment={msg.attachment} uploading={msg._uploading} />}
           {msg.body && <div className="cc-bubble-text">{msg.body}</div>}
 
           <div className="cc-bubble-meta">

@@ -90,6 +90,7 @@ export default function ConversationList({
   conversations,
   loading,
   error,
+  onRetry,
   activeId,
   category = "all",
   categories,
@@ -173,7 +174,11 @@ export default function ConversationList({
         {loading ? (
           <SkeletonRows n={6} />
         ) : error ? (
-          <EmptyState title="Couldn't load your messages" hint="Check your connection and try again." />
+          <EmptyState
+            title="Couldn't load your messages"
+            hint="Check your connection and try again."
+            action={onRetry && <button className="cc-btn-primary" onClick={onRetry}>Retry</button>}
+          />
         ) : filtered.length === 0 && !showGlobalExtras ? (
           <EmptyState
             title={q ? "No matches" : "No conversations yet"}

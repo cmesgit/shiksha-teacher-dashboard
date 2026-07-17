@@ -13,6 +13,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import * as privateSessionService from "../api/privateSessionService";
 import "../styles/privateSessions.css";
+import { LoadingState } from "../components/StateViews";
 
 /* ── Helpers ── */
 
@@ -178,7 +179,7 @@ export default function PrivateSessionsDashboard() {
         </button>
       </div>
 
-      {loading && <div className="tps__loading">Loading...</div>}
+      {loading && <LoadingState plain label="Loading sessions" />}
       {error && <div className="tps__empty" style={{ color: "#ef4444" }}>{error}</div>}
 
       {/* ═══ SCHEDULED ═══ */}

@@ -4,6 +4,7 @@ import { FiSearch } from "react-icons/fi";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/create-quiz.css";
+import { LoadingState } from "../components/StateViews";
 
 const createEmptyQuestion = () => ({
   question: "",
@@ -732,7 +733,7 @@ export default function CreateQuiz() {
 
             <div className="cq-bank-list">
               {bankLoading ? (
-                <p className="cq-bank-empty">Loading…</p>
+                <LoadingState plain label="Loading questions" />
               ) : bankItems.length === 0 ? (
                 <p className="cq-bank-empty">No matching questions yet.</p>
               ) : (

@@ -20,6 +20,7 @@ import { FiSearch } from "react-icons/fi";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/students.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function AllStudents() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function AllStudents() {
   }, []);
 
   // Early returns for loading/error states
-  if (loading) return <div className="students-loading">Loading students...</div>;
+  if (loading) return <LoadingState label="Loading students" />;
   if (!data) return <div className="students-loading">Failed to load students.</div>;
 
   // Filter students based on search input

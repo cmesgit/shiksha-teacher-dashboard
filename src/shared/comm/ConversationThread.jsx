@@ -72,6 +72,7 @@ export default function ConversationThread({
   const toastTimer = useRef(null);
   const fileInputRef = useRef(null);
   const seededDraft = useRef(false);
+  const pendingFilesRef = useRef(new Map()); // tempId -> { file, caption, reply_to } for retry
 
   useEffect(() => { setConv(conversation); }, [conversation]);
 
@@ -212,24 +213,59 @@ export default function ConversationThread({
   };
 
   const retrySend = (msg) => {
+    if (msg.message_type === "FILE" && pendingFilesRef.current.has(msg.client_id)) {
+      retryUpload(msg.client_id);
+      return;
+    }
     setMessages((prev) => prev.map((x) => (x.client_id === msg.client_id ? { ...x, _pending: true, _failed: false } : x)));
     sockRef.current?.send(msg.body, msg.client_id, msg.reply_to?.id);
   };
 
-  const onPickFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !conv?.id) return;
+  const runUpload = async (tempId) => {
+    const entry = pendingFilesRef.current.get(tempId);
+    if (!entry || !conv?.id) return;
     setUploading(true);
     try {
-      const msg = await ChatAPI.uploadAttachment(conv.id, file, { caption: draft.trim(), reply_to: replyTo?.id });
-      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-      setDraft(""); setReplyTo(null);
+      const msg = await ChatAPI.uploadAttachment(conv.id, entry.file, { caption: entry.caption, reply_to: entry.reply_to });
+      pendingFilesRef.current.delete(tempId);
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((m) => m.id !== tempId);
+        return withoutTemp.some((m) => m.id === msg.id) ? withoutTemp : [...withoutTemp, msg];
+      });
     } catch (err) {
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: false, _uploading: false, _failed: true } : m)));
       pushToast(err?.response?.data?.reason || "Couldn't send that file.", "err");
     } finally {
       setUploading(false);
     }
+  };
+
+  const retryUpload = (tempId) => {
+    setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, _pending: true, _uploading: true, _failed: false } : m)));
+    runUpload(tempId);
+  };
+
+  // Optimistic like send(): the bubble appears immediately with a "sending"
+  // placeholder instead of the composer just freezing until the upload
+  // resolves — the file object itself is kept in pendingFilesRef so a
+  // failed upload can be retried without re-picking the file.
+  const onPickFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !conv?.id) return;
+    const tempId = uid();
+    pendingFilesRef.current.set(tempId, { file, caption: draft.trim(), reply_to: replyTo?.id });
+    setMessages((prev) => [...prev, {
+      id: tempId, client_id: tempId,
+      body: draft.trim(), message_type: "FILE",
+      attachment: { name: file.name, size: file.size },
+      reactions: [], reply_to: replyTo,
+      created_at: new Date().toISOString(),
+      sender: { name: "You", identity: "me" },
+      _pending: true, _uploading: true,
+    }]);
+    setDraft(""); setReplyTo(null);
+    runUpload(tempId);
   };
 
   const refreshConv = useCallback(async () => {

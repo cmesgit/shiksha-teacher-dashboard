@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiLock, FiCalendar, FiFileText, FiChevronDown, FiX } from "react-icons/fi";
 import api from "../api/apiClient";
 import "../styles/private-details.css";
+import { LoadingState } from "../components/StateViews";
 
 /* ────────────────────────────────────────────────────────────
    VALUE FORMATTERS
@@ -368,7 +369,7 @@ export default function PrivateDetails() {
   };
 
   if (loading) {
-    return <div className="pd-page"><p className="pd-loading">Loading...</p></div>;
+    return <LoadingState label="Loading your details" />;
   }
 
   if (error || !profile) {
