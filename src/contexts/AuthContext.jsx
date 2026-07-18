@@ -249,11 +249,15 @@ export function AuthProvider({ children }) {
   };
 
   // ── Profile PIN ────────────────────────────────────────────────────────────
-  const setProfilePin = async (profileId, pin) => {
+  // Setting / changing / resetting / removing a PIN requires the ACCOUNT
+  // password (server-enforced). This is also the "forgot PIN" path: pass the
+  // account password + a new pin (or "" to remove) — no old PIN needed.
+  const setProfilePin = async (profileId, pin, password) => {
     try {
       const res = await api.post("/accounts/profiles/pin/", {
         profile_id: profileId,
         pin: pin || "",
+        password: password || "",
       });
       const refreshed = await api.get("/accounts/profiles/");
       setProfiles(refreshed.data);

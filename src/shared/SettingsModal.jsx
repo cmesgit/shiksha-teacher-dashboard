@@ -98,6 +98,13 @@ const PREF_DEFS = [
 ];
 const LANGS = ["English", "Hindi", "Telugu", "Tamil", "Kannada", "Bengali", "Marathi"];
 
+/* LearnerProfile academic/choice options — mirror accounts.models.LearnerProfile. */
+const CLASS_OPTS   = [["", "—"], ["8", "Class 8"], ["9", "Class 9"], ["10", "Class 10"], ["11", "Class 11"], ["12", "Class 12"]];
+const STREAM_OPTS  = [["", "—"], ["science", "Science"], ["commerce", "Commerce"], ["arts", "Arts"]];
+const BOARD_OPTS   = [["", "—"], ["cbse", "CBSE"], ["icse", "ICSE"], ["mbse", "Mizoram Board (MBSE)"], ["nios", "NIOS"], ["other", "Other State Board"]];
+const STUDYING_OPTS = [["", "—"], ["yes", "Yes"], ["no", "No"]];
+const HIGHED_OPTS  = [["", "—"], ["below_8", "Below Class 8"], ["8", "Class 8"], ["9", "Class 9"], ["10", "Class 10"], ["11", "Class 11"], ["12", "Class 12"]];
+
 function loadShkPrefs() {
   try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
 }
@@ -218,6 +225,13 @@ export default function SettingsModal({
     display_name: "", bio: "",
     first_name: "", last_name: "", phone: "", gender: "", date_of_birth: "",
     state: "", district: "", city_town: "", pin_code: "",
+    // Academic
+    currently_studying: "", current_class: "", stream: "", board: "",
+    board_other: "", school_name: "", academic_year: "",
+    highest_education: "", reason_not_studying: "",
+    // Parent / guardian
+    father_name: "", father_phone: "", mother_name: "", mother_phone: "",
+    guardian_name: "", guardian_phone: "", parent_guardian_email: "",
   });
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -233,8 +247,11 @@ export default function SettingsModal({
   /* sub-flows */
   const [adding, setAdding]         = useState(false);
   const [newProfile, setNewProfile] = useState({ name: "", relationship: "DEPENDENT" });
-  const [pinEditing, setPinEditing] = useState(false);
+  const [pinMode, setPinMode]       = useState(null);   // 'set' | 'remove' | null
   const [pinValue, setPinValue]     = useState("");
+  const [pinPassword, setPinPassword] = useState("");   // account password re-auth
+  const [removeMode, setRemoveMode] = useState(false);  // delete-profile confirm
+  const [removePassword, setRemovePassword] = useState("");
   const [pw, setPw]                 = useState({ old: "", next: "", confirm: "" });
   const [pwBusy, setPwBusy]         = useState(false);
   const [pwMsg, setPwMsg]           = useState("");
@@ -245,7 +262,9 @@ export default function SettingsModal({
   useEffect(() => {
     if (!open) return;
     setTab(initialTab); setErr(""); setOkMsg(""); setPwMsg("");
-    setAdding(false); setPinEditing(false);
+    setAdding(false);
+    setPinMode(null); setPinValue(""); setPinPassword("");
+    setRemoveMode(false); setRemovePassword("");
     setPhotoFile(null); setPhotoPreview(null);
     setRealPhotoFile(null); setRealPhotoPreview(null);
     setPw({ old: "", next: "", confirm: "" });
@@ -274,10 +293,7 @@ export default function SettingsModal({
     }
   };
 
-  const selectRow = (row) => {
-    setEditId(row.id); setPinEditing(false); setPinValue("");
-    setPhotoFile(null); setPhotoPreview(null);
-    setRealPhotoFile(null); setRealPhotoPreview(null);
+  const fillForm = (row) => {
     const stored = loadPrefs(email);
     setForm({
       display_name: row.display_name || "",
@@ -291,7 +307,38 @@ export default function SettingsModal({
       district:     row.district || "",
       city_town:    row.city_town || "",
       pin_code:     row.pin_code || "",
+      currently_studying:  row.currently_studying || "",
+      current_class:       row.current_class || "",
+      stream:              row.stream || "",
+      board:               row.board || "",
+      board_other:         row.board_other || "",
+      school_name:         row.school_name || "",
+      academic_year:       row.academic_year || "",
+      highest_education:   row.highest_education || "",
+      reason_not_studying: row.reason_not_studying || "",
+      father_name:         row.father_name || "",
+      father_phone:        row.father_phone || "",
+      mother_name:         row.mother_name || "",
+      mother_phone:        row.mother_phone || "",
+      guardian_name:       row.guardian_name || "",
+      guardian_phone:      row.guardian_phone || "",
+      parent_guardian_email: row.parent_guardian_email || "",
     });
+  };
+
+  const selectRow = async (row) => {
+    setEditId(row.id);
+    setPinMode(null); setPinValue(""); setPinPassword("");
+    setRemoveMode(false); setRemovePassword("");
+    setPhotoFile(null); setPhotoPreview(null);
+    setRealPhotoFile(null); setRealPhotoPreview(null);
+    // The /profiles/ list is lean (no academic/guardian fields); fetch the full
+    // detail so a parent can view+edit any child's complete profile.
+    fillForm(row);
+    try {
+      const res = await api.get(`/accounts/profiles/${row.id}/`);
+      if (res?.data) fillForm({ ...row, ...res.data });
+    } catch { /* keep the lean fields already shown */ }
   };
 
   const currentRow = rows.find((r) => r.id === editId) || activeProfile;
@@ -329,6 +376,13 @@ export default function SettingsModal({
       fd.append("district",      form.district || "");
       fd.append("city_town",     form.city_town || "");
       fd.append("pin_code",      form.pin_code || "");
+      // Academic + parent/guardian (all optional — empty clears the field).
+      [
+        "currently_studying", "current_class", "stream", "board", "board_other",
+        "school_name", "academic_year", "highest_education", "reason_not_studying",
+        "father_name", "father_phone", "mother_name", "mother_phone",
+        "guardian_name", "guardian_phone", "parent_guardian_email",
+      ].forEach((k) => fd.append(k, form[k] || ""));
       if (photoFile)     fd.append("avatar_image", photoFile);
       if (realPhotoFile) fd.append("profile_photo", realPhotoFile);
       await api.patch(`/accounts/profiles/${editId}/`, fd);
@@ -362,37 +416,49 @@ export default function SettingsModal({
     } finally { setSaving(false); }
   };
 
-  /* ── remove profile ── */
+  /* ── remove profile (requires account password) ── */
   const handleRemoveProfile = async () => {
     if (!currentRow || rows.length <= 1) return;
-    if (!window.confirm(`Remove "${currentRow.display_name}"? This can't be undone.`)) return;
+    if (!removePassword) { setErr("Enter your account password to remove this profile."); return; }
     setSaving(true); setErr("");
     try {
-      await api.delete(`/accounts/profiles/${currentRow.id}/`);
+      await api.delete(`/accounts/profiles/${currentRow.id}/`, { data: { password: removePassword } });
+      setRemoveMode(false); setRemovePassword("");
       await bootstrap?.(); await refreshProfiles();
     } catch (e) {
       const d = e?.response?.data;
-      setErr(d?.detail || "Could not remove profile.");
+      setErr(d?.password || d?.detail ||
+        (typeof d === "string" ? d : "Could not remove profile."));
     } finally { setSaving(false); }
   };
 
-  /* ── PIN ── */
+  /* ── PIN (all changes require the ACCOUNT password — also the forgot-PIN path) ── */
   const handleSavePin = async () => {
     if (!/^\d{4,6}$/.test(pinValue)) { setErr("PIN must be 4–6 digits."); return; }
+    if (!pinPassword) { setErr("Enter your account password to change the PIN."); return; }
     setSaving(true); setErr("");
     try {
-      await api.post("/accounts/profiles/pin/", { profile_id: editId, pin: pinValue });
-      setPinEditing(false); setPinValue("");
+      await api.post("/accounts/profiles/pin/", { profile_id: editId, pin: pinValue, password: pinPassword });
+      setPinMode(null); setPinValue(""); setPinPassword("");
       await bootstrap?.(); await refreshProfiles(); setOkMsg("PIN updated.");
-    } catch { setErr("Could not update PIN."); } finally { setSaving(false); }
+    } catch (e) {
+      const d = e?.response?.data;
+      setErr(d?.password || d?.pin ||
+        (typeof d === "string" ? d : "Could not update PIN."));
+    } finally { setSaving(false); }
   };
 
   const handleRemovePin = async () => {
+    if (!pinPassword) { setErr("Enter your account password to remove the PIN."); return; }
     setSaving(true); setErr("");
     try {
-      await api.post("/accounts/profiles/pin/", { profile_id: editId, pin: "" });
+      await api.post("/accounts/profiles/pin/", { profile_id: editId, pin: "", password: pinPassword });
+      setPinMode(null); setPinPassword("");
       await bootstrap?.(); await refreshProfiles(); setOkMsg("PIN removed.");
-    } catch { setErr("Could not remove PIN."); } finally { setSaving(false); }
+    } catch (e) {
+      const d = e?.response?.data;
+      setErr(d?.password || (typeof d === "string" ? d : "Could not remove PIN."));
+    } finally { setSaving(false); }
   };
 
   /* ── change password ── */
@@ -488,10 +554,6 @@ export default function SettingsModal({
               <input className="sm-input" value={form.display_name}
                 onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} />
 
-              <label className="sm-label">Class &amp; board</label>
-              <input className="sm-input" value={classBoard(currentRow) || "—"} readOnly
-                title="Set during onboarding" />
-
               <label className="sm-label">Bio</label>
               <textarea className="sm-input sm-textarea" rows={2} value={form.bio}
                 placeholder="A short line about you"
@@ -561,6 +623,108 @@ export default function SettingsModal({
                   onChange={(e) => setForm((f) => ({ ...f, pin_code: e.target.value }))} />
               </div>
 
+              {/* ── academic details ── */}
+              <div className="sm-sec">Academic details</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label className="sm-label">Currently studying?</label>
+                  <select className="sm-select" value={form.currently_studying}
+                    onChange={(e) => setForm((f) => ({ ...f, currently_studying: e.target.value }))}>
+                    {STUDYING_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="sm-label">Class</label>
+                  <select className="sm-select" value={form.current_class}
+                    onChange={(e) => setForm((f) => ({ ...f, current_class: e.target.value }))}>
+                    {CLASS_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="sm-label">Stream</label>
+                  <select className="sm-select" value={form.stream}
+                    onChange={(e) => setForm((f) => ({ ...f, stream: e.target.value }))}>
+                    {STREAM_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="sm-label">Board</label>
+                  <select className="sm-select" value={form.board}
+                    onChange={(e) => setForm((f) => ({ ...f, board: e.target.value }))}>
+                    {BOARD_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+              {form.board === "other" && (
+                <>
+                  <label className="sm-label">Board name (other)</label>
+                  <input className="sm-input" value={form.board_other}
+                    onChange={(e) => setForm((f) => ({ ...f, board_other: e.target.value }))} />
+                </>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label className="sm-label">School / institution</label>
+                  <input className="sm-input" value={form.school_name}
+                    onChange={(e) => setForm((f) => ({ ...f, school_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Academic year</label>
+                  <input className="sm-input" placeholder="e.g. 2025–26" value={form.academic_year}
+                    onChange={(e) => setForm((f) => ({ ...f, academic_year: e.target.value }))} />
+                </div>
+              </div>
+              {form.currently_studying === "no" && (
+                <>
+                  <label className="sm-label">Highest education</label>
+                  <select className="sm-select" value={form.highest_education}
+                    onChange={(e) => setForm((f) => ({ ...f, highest_education: e.target.value }))}>
+                    {HIGHED_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                  <label className="sm-label">Reason for not studying</label>
+                  <input className="sm-input" value={form.reason_not_studying}
+                    onChange={(e) => setForm((f) => ({ ...f, reason_not_studying: e.target.value }))} />
+                </>
+              )}
+
+              {/* ── parent / guardian ── */}
+              <div className="sm-sec">Parent / guardian</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label className="sm-label">Father's name</label>
+                  <input className="sm-input" value={form.father_name}
+                    onChange={(e) => setForm((f) => ({ ...f, father_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Father's phone</label>
+                  <input className="sm-input" value={form.father_phone}
+                    onChange={(e) => setForm((f) => ({ ...f, father_phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Mother's name</label>
+                  <input className="sm-input" value={form.mother_name}
+                    onChange={(e) => setForm((f) => ({ ...f, mother_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Mother's phone</label>
+                  <input className="sm-input" value={form.mother_phone}
+                    onChange={(e) => setForm((f) => ({ ...f, mother_phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Guardian's name</label>
+                  <input className="sm-input" value={form.guardian_name}
+                    onChange={(e) => setForm((f) => ({ ...f, guardian_name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="sm-label">Guardian's phone</label>
+                  <input className="sm-input" value={form.guardian_phone}
+                    onChange={(e) => setForm((f) => ({ ...f, guardian_phone: e.target.value }))} />
+                </div>
+              </div>
+              <label className="sm-label">Parent / guardian email</label>
+              <input className="sm-input" type="email" value={form.parent_guardian_email}
+                onChange={(e) => setForm((f) => ({ ...f, parent_guardian_email: e.target.value }))} />
+
               {/* ── PIN ── */}
               <div className="sm-sec">Security · this profile</div>
               <div className="sm-pinrow">
@@ -569,24 +733,47 @@ export default function SettingsModal({
                   <div className="sm-tg-sub">{hasPin ? "This profile is PIN-protected" : "No PIN set"}</div>
                 </div>
                 <div className="sm-row-actions">
-                  {!pinEditing && (
+                  {!pinMode && (
                     <button className="sm-mini"
-                      onClick={() => { setPinEditing(true); setPinValue(""); }}>
-                      {hasPin ? "Change" : "Set PIN"}
+                      onClick={() => { setPinMode("set"); setPinValue(""); setPinPassword(""); setErr(""); }}>
+                      {hasPin ? "Change / reset" : "Set PIN"}
                     </button>
                   )}
-                  {hasPin && !pinEditing && (
-                    <button className="sm-mini sm-mini--danger" onClick={handleRemovePin}>Remove</button>
+                  {hasPin && !pinMode && (
+                    <button className="sm-mini sm-mini--danger"
+                      onClick={() => { setPinMode("remove"); setPinPassword(""); setErr(""); }}>Remove</button>
                   )}
                 </div>
               </div>
-              {pinEditing && (
-                <div className="sm-addform">
+              {pinMode === "set" && (
+                <div className="sm-addform" style={{ flexWrap: "wrap", gap: 8 }}>
                   <input className="sm-input" inputMode="numeric" maxLength={6}
-                    placeholder="4–6 digit PIN" value={pinValue}
+                    placeholder="New 4–6 digit PIN" value={pinValue}
                     onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))} />
+                  <input className="sm-input" type="password" autoComplete="current-password"
+                    placeholder="Account password" value={pinPassword}
+                    onChange={(e) => setPinPassword(e.target.value)} />
+                  <div className="sm-tg-sub" style={{ flexBasis: "100%" }}>
+                    Forgot the current PIN? You don't need it — your account password resets it.
+                  </div>
                   <button className="sm-save sm-save--sm" onClick={handleSavePin} disabled={saving}>
                     Save PIN
+                  </button>
+                  <button className="sm-mini" onClick={() => { setPinMode(null); setPinValue(""); setPinPassword(""); }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {pinMode === "remove" && (
+                <div className="sm-addform" style={{ flexWrap: "wrap", gap: 8 }}>
+                  <input className="sm-input" type="password" autoComplete="current-password"
+                    placeholder="Account password to remove PIN" value={pinPassword}
+                    onChange={(e) => setPinPassword(e.target.value)} />
+                  <button className="sm-save sm-save--sm sm-save--danger" onClick={handleRemovePin} disabled={saving}>
+                    Remove PIN
+                  </button>
+                  <button className="sm-mini" onClick={() => { setPinMode(null); setPinPassword(""); }}>
+                    Cancel
                   </button>
                 </div>
               )}
@@ -615,14 +802,32 @@ export default function SettingsModal({
                 <Toggle on={prefs.directory} onChange={(v) => setPref("directory", v)} />
               </div>
 
-              {/* ── danger zone (learner) ── */}
+              {/* ── danger zone (learner) — removal needs account password ── */}
               {rows.length > 1 && !currentRow?.is_default && (
                 <>
                   <div className="sm-sec">Danger zone</div>
-                  <button className="sm-linkbtn sm-linkbtn--danger"
-                    onClick={handleRemoveProfile} disabled={saving}>
-                    Remove this profile
-                  </button>
+                  {!removeMode ? (
+                    <button className="sm-linkbtn sm-linkbtn--danger"
+                      onClick={() => { setRemoveMode(true); setRemovePassword(""); setErr(""); }} disabled={saving}>
+                      Remove this profile
+                    </button>
+                  ) : (
+                    <div className="sm-addform" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <div className="sm-tg-sub" style={{ flexBasis: "100%" }}>
+                        Removing “{currentRow?.display_name}” can’t be undone. Enter your account password to confirm.
+                      </div>
+                      <input className="sm-input" type="password" autoComplete="current-password"
+                        placeholder="Account password" value={removePassword}
+                        onChange={(e) => setRemovePassword(e.target.value)} />
+                      <button className="sm-save sm-save--sm sm-save--danger"
+                        onClick={handleRemoveProfile} disabled={saving}>
+                        Remove profile
+                      </button>
+                      <button className="sm-mini" onClick={() => { setRemoveMode(false); setRemovePassword(""); }}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
 

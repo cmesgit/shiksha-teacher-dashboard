@@ -58,8 +58,8 @@ function Avatar({ profile, size = 36, fallback }) {
   return <span className="ps-av ps-av--initials" style={style}>{fallback || initials(profile?.display_name) || DEFAULT_EMOJI}</span>;
 }
 
-/* ── PIN modal (unchanged behaviour) ── */
-function PinModal({ profile, onConfirm, onCancel, loading, error }) {
+/* ── PIN modal (with account-password "forgot PIN" escape hatch) ── */
+function PinModal({ profile, onConfirm, onCancel, onForgot, loading, error }) {
   const [pin, setPin] = useState("");
   const inputs = useRef([]);
   useEffect(() => { inputs.current[0]?.focus(); }, []);
@@ -92,6 +92,51 @@ function PinModal({ profile, onConfirm, onCancel, loading, error }) {
         </div>
         {error && <p className="ps-modal__error">{error}</p>}
         {loading && <p className="ps-modal__sub">Checking…</p>}
+        {onForgot && (
+          <button type="button" className="ps-modal__link" onClick={onForgot}>
+            Forgot PIN?
+          </button>
+        )}
+        <button className="ps-modal__cancel" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Reset PIN via account password (forgot-PIN path — no old PIN needed) ── */
+function ResetPinModal({ profile, onConfirm, onCancel, loading, error }) {
+  const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  const submit = () => {
+    if (!/^\d{4,6}$/.test(pin)) return;
+    if (!password) return;
+    onConfirm(pin, password);
+  };
+  return (
+    <div className="ps-modal-overlay" onClick={onCancel}>
+      <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
+        <Avatar profile={profile} size={56} />
+        <h3 className="ps-modal__title">{profile.display_name}</h3>
+        <p className="ps-modal__sub">Reset PIN with your account password</p>
+        <div className="ps-pw-wrap">
+          <input ref={ref} className="ps-pw-input" inputMode="numeric" maxLength={6}
+            placeholder="New 4–6 digit PIN" value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+        </div>
+        <div className="ps-pw-wrap">
+          <input className="ps-pw-input" type="password" autoComplete="current-password"
+            placeholder="Account password" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+        </div>
+        {error && <p className="ps-modal__error">{error}</p>}
+        {loading && <p className="ps-modal__sub">Saving…</p>}
+        <button className="ps-modal__confirm" onClick={submit}
+          disabled={loading || !/^\d{4,6}$/.test(pin) || !password}>
+          Reset &amp; continue
+        </button>
         <button className="ps-modal__cancel" onClick={onCancel}>Cancel</button>
       </div>
     </div>
@@ -135,11 +180,12 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
 export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }) {
   const {
     user, profiles, activeProfile, teacherInfo,
-    isTeacherContext, selectProfile, enterTeacherMode, switchTrack, logout,
+    isTeacherContext, selectProfile, setProfilePin, enterTeacherMode, switchTrack, logout,
   } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState(null);
+  const [forgotTarget, setForgotTarget] = useState(null);  // reset-PIN-via-password
   const [showPwModal, setShowPwModal] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState("profile");
@@ -154,7 +200,20 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const closeAll = () => { setOpen(false); setPinTarget(null); setShowPwModal(false); setModalError(""); };
+  const closeAll = () => { setOpen(false); setPinTarget(null); setForgotTarget(null); setShowPwModal(false); setModalError(""); };
+
+  // Forgot PIN → reset with the account password (no old PIN), then switch in.
+  const doResetPin = async (newPin, password) => {
+    setModalLoading(true); setModalError("");
+    try {
+      await setProfilePin(forgotTarget.id, newPin, password);
+      const id = forgotTarget.id;
+      setForgotTarget(null);
+      await doSelect(id, newPin);
+    } catch (err) {
+      setModalError(err.message || "Could not reset PIN.");
+    } finally { setModalLoading(false); }
+  };
 
   const handleSelectProfile = (p) => {
     setOpen(false);
@@ -316,7 +375,14 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
       {pinTarget && (
         <PinModal profile={pinTarget}
           onConfirm={(pin) => doSelect(pinTarget.id, pin)}
+          onForgot={() => { const t = pinTarget; setPinTarget(null); setModalError(""); setForgotTarget(t); }}
           onCancel={() => { setPinTarget(null); setModalError(""); }}
+          loading={modalLoading} error={modalError} />
+      )}
+      {forgotTarget && (
+        <ResetPinModal profile={forgotTarget}
+          onConfirm={doResetPin}
+          onCancel={() => { setForgotTarget(null); setModalError(""); }}
           loading={modalLoading} error={modalError} />
       )}
       {showPwModal && (

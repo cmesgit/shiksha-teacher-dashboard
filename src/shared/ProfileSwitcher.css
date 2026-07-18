@@ -99,6 +99,8 @@
 .ps-modal__confirm:disabled { opacity: .55; cursor: not-allowed; }
 .ps-modal__cancel { background: none; border: none; color: #6b7280; font-size: 13px; cursor: pointer; padding: 4px; }
 .ps-modal__cancel:hover { color: #111; }
+.ps-modal__link { background: none; border: none; color: #2563eb; font-size: 12.5px; cursor: pointer; padding: 4px; text-decoration: underline; }
+.ps-modal__link:hover { color: #1d4ed8; }
 
 .ps-pin { display: flex; gap: 10px; justify-content: center; margin: 6px 0; }
 .ps-pin__cell {
