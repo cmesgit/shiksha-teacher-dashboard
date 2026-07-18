@@ -17,6 +17,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
 import Header from "../components/Header";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { Icon } from "../components/SkillIcons";
 import logo from "../assets/Shiksha.svg";
 import { HOME_URL } from "../config/urls";
@@ -94,6 +95,7 @@ export default function SkillDevLayout() {
       <div className="teacher-main">
         <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
         <main className="teacher-content teacher-content--expert">
+          <Breadcrumbs />
           <Outlet />
         </main>
       </div>

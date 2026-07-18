@@ -159,6 +159,8 @@ export default function ConversationThread({
     });
     sockRef.current = sock;
     ChatAPI.markRead(conv.id).catch(() => {});
+    // Tell the global Messages badge (Header) to re-fetch its unread total.
+    window.dispatchEvent(new Event("shiksha:messages-read"));
     return () => { alive = false; sock.close(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv?.id]);

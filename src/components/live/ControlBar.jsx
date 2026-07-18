@@ -9,7 +9,12 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
   const isStudent = !isPresenter;
 
   const room = useRoomContext();
-  const { localParticipant } = useLocalParticipant();
+  const {
+    localParticipant,
+    isMicrophoneEnabled,
+    isCameraEnabled,
+    isScreenShareEnabled,
+  } = useLocalParticipant();
 
   const [micOn, setMicOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
@@ -33,13 +38,18 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
     setVideoOn(false);
   }, [isStudent, localParticipant]);
 
-  /* ── teacher: sync real state from LiveKit ── */
+  /* ── teacher: sync real state from LiveKit ──
+     Depends on the reactive enabled-flags (not just localParticipant) so the
+     icon re-syncs when the mic/camera track actually finishes publishing.
+     Reading the getter once on mount captured a stale `false` (track not yet
+     live), which showed a muted icon while audio was on and forced a
+     double-click to mute. */
   useEffect(() => {
     if (!isPresenter || !localParticipant) return;
-    setMicOn(localParticipant.isMicrophoneEnabled);
-    setVideoOn(localParticipant.isCameraEnabled);
-    setScreenOn(localParticipant.isScreenShareEnabled);
-  }, [isPresenter, localParticipant]);
+    setMicOn(!!isMicrophoneEnabled);
+    setVideoOn(!!isCameraEnabled);
+    setScreenOn(!!isScreenShareEnabled);
+  }, [isPresenter, localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled]);
 
   /* ── timer ── */
   useEffect(() => {

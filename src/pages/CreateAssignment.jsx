@@ -20,6 +20,11 @@ export default function CreateAssignment() {
 
   const [chapters, setChapters]     = useState([]);
   const [chapterId, setChapterId]   = useState(editData?.chapter_id || editData?.chapter?.id || "");
+  // Batch picker (create only): the backend requires a batch on new
+  // assignments so due dates stay cohort-relative. Editing does not change
+  // the batch, so the picker is hidden in edit mode.
+  const [batches, setBatches]       = useState([]);
+  const [batchId, setBatchId]       = useState(editData?.batch_id || editData?.batch?.id || "");
   const [title, setTitle]           = useState(editData?.title || "");
   const [description, setDescription] = useState(editData?.description || "");
   const [dueDate, setDueDate]       = useState(editData?.due_date?.slice(0, 10) || "");
@@ -47,10 +52,31 @@ export default function CreateAssignment() {
     if (subjectId) fetchChapters();
   }, [subjectId]);
 
+  useEffect(() => {
+    if (isEditing) return; // batch is fixed for an existing assignment
+    let cancelled = false;
+    api
+      .get(`/courses/subjects/${subjectId}/batches/`)
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data || [];
+        setBatches(list);
+        if (list.length && !batchId) setBatchId(String(list[0].id));
+      })
+      .catch(() => {
+        if (!cancelled) setBatches([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectId, isEditing]);
+
   // ── Validation ──────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
     if (!chapterId)           e.chapter     = "Chapter required";
+    if (!isEditing && !batchId) e.batch     = "Batch required";
     if (!title.trim())        e.title       = "Title required";
     if (!description.trim())  e.description = "Description required";
     if (!dueDate)             e.dueDate     = "Due date required";
@@ -90,6 +116,7 @@ export default function CreateAssignment() {
     try {
       const formData = new FormData();
       formData.append("chapter_id",   chapterId);
+      if (!isEditing) formData.append("batch_id", batchId);
       formData.append("title",        title);
       formData.append("description",  description);
       formData.append("due_date",     `${dueDate}T23:59:00`);
@@ -149,6 +176,31 @@ export default function CreateAssignment() {
 
       <div className="ca-form-container">
         <div className="ca-form">
+
+          {/* Batch (create only) */}
+          {!isEditing && (
+            <div className="ca-field">
+              <label>Batch</label>
+              {batches.length === 0 ? (
+                <span className="ca-error">
+                  No active batch found for this subject. Create a batch first.
+                </span>
+              ) : (
+                <select
+                  value={batchId}
+                  onChange={(e) => setBatchId(e.target.value)}
+                  className={`ca-input ${errors.batch ? "ca-input-error" : ""}`}
+                >
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.code}){b.year ? ` — ${b.year}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {errors.batch && <span className="ca-error">{errors.batch}</span>}
+            </div>
+          )}
 
           {/* Chapter */}
           <div className="ca-field">

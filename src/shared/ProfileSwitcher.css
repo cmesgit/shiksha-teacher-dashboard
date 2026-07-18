@@ -1,3 +1,5 @@
+/* GENERATED FILE — DO NOT EDIT HERE. Canonical: <workspace>/shared/src/shared/ProfileSwitcher.css
+   Edit the canonical copy, then run `npm run sync:shared`; `npm run check:shared` catches drift. */
 /* ProfileSwitcher — dropdown styled to match the Auth Flow prototype (rd-prof). */
 
 .ps-root { position: relative; display: inline-block; }

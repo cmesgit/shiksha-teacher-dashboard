@@ -1,14 +1,28 @@
 /**
- * ProfileSwitcher.jsx  ·  src/shared/ProfileSwitcher.jsx
- * ──────────────────────────────────────────────────────────────────
- * Dashboard avatar dropdown — styled to match the Auth Flow prototype's
- * `rd-prof` menu: a round avatar trigger that opens a card with the
- * account header, a "Switch profile · same email" list (tick on the
- * active one), an optional Teaching entry, and a menu footer
- * (Manage profiles / Global settings / Log out).
+ * ┌──────────────────────────────────────────────────────────────────────────┐
+ * │  GENERATED FILE — DO NOT EDIT HERE.                                         │
+ * │  Canonical source: <workspace>/shared/src/shared/ProfileSwitcher.jsx        │
+ * │  Edit the canonical copy, then run `npm run sync:shared` (any app) to        │
+ * │  propagate. `npm run check:shared` fails if an app's copy has drifted.       │
+ * └──────────────────────────────────────────────────────────────────────────┘
  *
- * Data wiring is unchanged — profiles, active profile, teacher identity,
- * PIN + account-password confirms all come from useAuth().
+ * ProfileSwitcher — the account avatar dropdown shared by shiksha-frontend,
+ * shiksha-teacher-dashboard and shiksha-student-dashboard.
+ *
+ * Structure: a round avatar trigger that opens a card with the Account header,
+ * a "Switch profile · same email" list (tick on the active Profile), a
+ * "Teaching tracks" list with one explicit entry PER approved/pending Track
+ * (Academy Teacher / Skill-Dev Teacher), and a footer (Manage profiles / Global
+ * settings / Log out).
+ *
+ * Terminology (keep consistent — no "mode" / "context" in labels):
+ *   Account · Profile · Track · Faculty (Academy) · Expert (Skill-Dev).
+ *
+ * Track data comes from useAuth().teacherInfo.tracks = { academy, skill }, each
+ * "locked" | "pending" | "approved" (backend contract). Entering a Track from a
+ * non-teaching context re-confirms the account password via enterTeacherMode(
+ * password, track); flipping between two already-held Tracks while teaching uses
+ * switchTrack(track) with no password.
  */
 import { useState, useRef, useEffect } from "react";
 import {
@@ -21,6 +35,16 @@ import SettingsModal from "./SettingsModal";
 const DEFAULT_EMOJI = "📚";
 const initials = (name) =>
   (name || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+
+/* ── Teaching-track catalogue ──
+ * The two teaching identities an account can hold, surfaced as distinct entries.
+ * `role` is the user-facing identity name (Faculty / Expert); `dest` is the
+ * landing path within the teacher app after the switch. */
+const TRACKS = [
+  { key: "academy", label: "Academy Teacher",   role: "Faculty", emoji: "🎓", dest: "/teacher/dashboard" },
+  { key: "skill",   label: "Skill-Dev Teacher", role: "Expert",  emoji: "⚡", dest: "/teacher/expert/profile" },
+];
+const trackLabel = (key) => TRACKS.find((t) => t.key === key)?.label || "Teaching";
 
 /* ── Avatar (image / emoji / initials) ── */
 function Avatar({ profile, size = 36, fallback }) {
@@ -74,8 +98,8 @@ function PinModal({ profile, onConfirm, onCancel, loading, error }) {
   );
 }
 
-/* ── Account-password confirm (enter teacher mode) ── */
-function PasswordModal({ onConfirm, onCancel, loading, error }) {
+/* ── Account-password confirm (enter a teaching track) ── */
+function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
   const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
   const ref = useRef(null);
@@ -84,7 +108,10 @@ function PasswordModal({ onConfirm, onCancel, loading, error }) {
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
         <span className="ps-av ps-av--emoji" style={{ width: 56, height: 56, fontSize: 28 }}>🎓</span>
-        <h3 className="ps-modal__title">Enter teacher mode</h3>
+        <h3 className="ps-modal__title">{title || "Enter teaching track"}</h3>
+        <p style={{ fontSize: 12, color: "#8a8a8a", margin: "4px 0 10px", lineHeight: 1.5 }}>
+          For security, enter your <b>account login password</b> (the one you use to sign in to ShikshaCom).
+        </p>
         <p className="ps-modal__sub">Confirm your account password</p>
         <div className="ps-pw-wrap">
           <input ref={ref} type={show ? "text" : "password"} value={pw}
@@ -108,7 +135,7 @@ function PasswordModal({ onConfirm, onCancel, loading, error }) {
 export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }) {
   const {
     user, profiles, activeProfile, teacherInfo,
-    isTeacherContext, selectProfile, enterTeacherMode, logout,
+    isTeacherContext, selectProfile, enterTeacherMode, switchTrack, logout,
   } = useAuth();
 
   const [open, setOpen] = useState(false);
@@ -144,22 +171,60 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
     finally { setModalLoading(false); }
   };
 
-  const handleTeacherClick = () => { setOpen(false); setModalError(""); setShowPwModal(true); };
+  // Destination after a successful track switch: resolve `dest` against the
+  // teacher app origin (teachUrl), falling back to teachUrl itself.
+  const destUrl = (dest) => {
+    const base = teachUrl || "";
+    if (!dest) return base;
+    const origin = base ? new URL(base, window.location.href).origin : "";
+    return origin + dest;
+  };
+
+  const [pendingTrack, setPendingTrack] = useState(null);
+  const [pendingDest,  setPendingDest]  = useState("");
+
+  // Entry point for a track button. From a non-teaching context we re-confirm
+  // the account password; while already teaching we flip tracks password-free.
+  const goToTrack = (track, dest) => {
+    setOpen(false); setModalError("");
+    if (isTeacherContext) { doSwitchTrack(track, dest); return; }
+    setPendingTrack(track); setPendingDest(dest);
+    setShowPwModal(true);
+  };
+
+  const doSwitchTrack = async (track, dest) => {
+    try {
+      const res = await switchTrack(track);
+      if (res.ok) { closeAll(); window.location.href = destUrl(dest); }
+    } catch { /* already-teaching flip failed (rare race) — leave view as-is */ }
+  };
+
   const doEnterTeacher = async (password) => {
     setModalLoading(true); setModalError("");
     try {
-      const result = await enterTeacherMode(password);
-      if (result.ok) { closeAll(); if (teachUrl) window.location.href = teachUrl; return; }
+      const result = await enterTeacherMode(password, pendingTrack || undefined);
+      if (result.ok) { closeAll(); window.location.href = destUrl(pendingDest); return; }
       if (result.needsSignup) { closeAll(); if (teacherSignupUrl) window.location.href = teacherSignupUrl; return; }
-      if (result.notApproved) { setModalError("Your teacher account is awaiting admin approval."); return; }
+      if (result.notApproved)  { setModalError("Your teacher account is awaiting admin approval."); return; }
+      if (result.trackPending) { setModalError("This track is awaiting approval — you'll get access once it's reviewed."); return; }
+      if (result.trackLocked)  { setModalError("This track isn't enabled on your account yet. Apply from Settings → Teacher identity."); return; }
     } catch (err) { setModalError(err.message || "Incorrect password."); }
     finally { setModalLoading(false); }
   };
 
-  const accountName = activeProfile?.display_name || user?.username || "Account";
+  const accountName  = activeProfile?.display_name || user?.username || "Account";
   const accountEmail = user?.email || "";
-  const teacherLabel = teacherInfo?.type === "GUEST" ? "Expert teacher" : "Faculty";
+  const activeTrack  = teacherInfo?.active_track || null;
+  const teacherEmoji = activeTrack === "skill" ? "⚡" : "🎓";
+  const headerName   = isTeacherContext ? trackLabel(activeTrack) : accountName;
   const subFor = (p) => (p.relationship === "DEPENDENT" ? "Child profile" : "Primary");
+
+  // Tracks worth showing: the ones the account actually holds (approved or in
+  // review). Locked tracks are hidden — the account can apply from Settings.
+  const tracks = teacherInfo?.tracks || {};
+  const visibleTracks = teacherInfo
+    ? TRACKS.filter((t) => tracks[t.key] === "approved" || tracks[t.key] === "pending")
+    : [];
 
   return (
     <>
@@ -169,15 +234,15 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
           onClick={() => setOpen((v) => !v)}
           aria-haspopup="menu" aria-expanded={open} title="Account & profiles"
         >
-          {isTeacherContext ? "🎓" : initials(accountName)}
+          {isTeacherContext ? teacherEmoji : initials(accountName)}
         </button>
 
         {open && (
           <div className="ps-prof" role="menu">
             <div className="ps-prof-head">
-              <div className="ps-prof-head__av">{isTeacherContext ? "🎓" : initials(accountName)}</div>
+              <div className="ps-prof-head__av">{isTeacherContext ? teacherEmoji : initials(accountName)}</div>
               <div className="ps-prof-head__txt">
-                <div className="ps-prof-head__nm">{isTeacherContext ? "Teacher mode" : accountName}</div>
+                <div className="ps-prof-head__nm">{headerName}</div>
                 {accountEmail && <div className="ps-prof-head__em">{accountEmail}</div>}
               </div>
             </div>
@@ -199,23 +264,37 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
               );
             })}
 
-            {teacherInfo && (
+            {visibleTracks.length > 0 && (
               <>
-                <div className="ps-prof-sec">Teaching</div>
-                <button
-                  className={`ps-prof-item ${isTeacherContext ? "active" : ""}`}
-                  onClick={isTeacherContext ? undefined : handleTeacherClick}
-                  disabled={isTeacherContext} role="menuitem"
-                >
-                  <span className="ps-prof-item__av ps-prof-item__av--teacher">🎓</span>
-                  <div className="ps-prof-item__txt">
-                    <div className="ps-prof-item__nm">{teacherLabel}</div>
-                    <div className="ps-prof-item__sub">
-                      {isTeacherContext ? "Current mode" : "Switch to teaching"}
-                    </div>
-                  </div>
-                  {isTeacherContext && <span className="ps-prof-item__tick"><RiCheckLine /></span>}
-                </button>
+                <div className="ps-prof-sec">Teaching tracks</div>
+                {visibleTracks.map((t) => {
+                  const status  = tracks[t.key];            // "approved" | "pending"
+                  const active  = isTeacherContext && activeTrack === t.key;
+                  const pending = status === "pending";
+                  const locked  = active || pending;        // not a switch target
+                  return (
+                    <button
+                      key={t.key}
+                      className={`ps-prof-item ${active ? "active" : ""}`}
+                      onClick={locked ? undefined : () => goToTrack(t.key, t.dest)}
+                      disabled={locked}
+                      role="menuitem"
+                    >
+                      <span className="ps-prof-item__av ps-prof-item__av--teacher">{t.emoji}</span>
+                      <div className="ps-prof-item__txt">
+                        <div className="ps-prof-item__nm">{t.label}</div>
+                        <div className="ps-prof-item__sub">
+                          {active ? "Current track"
+                            : pending ? `${t.role} · awaiting approval`
+                            : t.role}
+                        </div>
+                      </div>
+                      {active
+                        ? <span className="ps-prof-item__tick"><RiCheckLine /></span>
+                        : <RiLockLine className="ps-prof-item__lock" />}
+                    </button>
+                  );
+                })}
               </>
             )}
 
@@ -226,7 +305,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
               <button className="ps-mi" onClick={() => openSettings("account")} role="menuitem">
                 <RiSettings3Line /> Global settings
               </button>
-              <button className="ps-mi ps-mi--logout" onClick={logout} role="menuitem">
+              <button className="ps-mi ps-mi--logout" onClick={() => logout()} role="menuitem">
                 <RiLogoutBoxRLine /> Log out
               </button>
             </div>
@@ -241,13 +320,16 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl }
           loading={modalLoading} error={modalError} />
       )}
       {showPwModal && (
-        <PasswordModal onConfirm={doEnterTeacher}
+        <PasswordModal
+          title={`Switch to ${trackLabel(pendingTrack)}`}
+          onConfirm={doEnterTeacher}
           onCancel={() => { setShowPwModal(false); setModalError(""); }}
           loading={modalLoading} error={modalError} />
       )}
 
       <SettingsModal open={settingsOpen} tab={settingsTab} onClose={() => setSettingsOpen(false)}
-        teacherSignupUrl={teacherSignupUrl} teachUrl={teachUrl} />
+        teacherSignupUrl={teacherSignupUrl} teachUrl={teachUrl}
+        onManageTrack={(track, dest) => { setSettingsOpen(false); goToTrack(track, dest); }} />
     </>
   );
 }

@@ -130,7 +130,10 @@ export default function Profile() {
         updates.photo = res.data?.photo || avatarPreview;
 
         if (updates.photo) {
-          localStorage.setItem("avatar", updates.photo);
+          // Live-update any mounted avatar via the event; the photo also comes
+          // back from the server on next /me/. (Dropped a write-only
+          // localStorage "avatar" key here — it was never read, and an
+          // account-global key is the wrong scope for a per-profile avatar.)
           window.dispatchEvent(new CustomEvent("avatar-updated", { detail: updates.photo }));
         }
       } else {

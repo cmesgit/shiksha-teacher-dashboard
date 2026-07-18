@@ -6,6 +6,7 @@
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
 import ProfileSwitcher from "../shared/ProfileSwitcher";
 import TrackSwitcher from "./TrackSwitcher";
+import MessageIcon from "./MessageIcon";
 import NotificationBell from "./NotificationBell";
 import "../styles/header.css";
 import "../shared/ProfileSwitcher.css";
@@ -19,6 +20,7 @@ export default function Header({ onMenuClick, isExpertPage }) {
       </button>
       <div style={{ flex: 1 }} />
       <TrackSwitcher />
+      <MessageIcon />
       <NotificationBell />
       <ProfileSwitcher
         teacherSignupUrl={`${HOME_URL}/signup?role=teacher`}

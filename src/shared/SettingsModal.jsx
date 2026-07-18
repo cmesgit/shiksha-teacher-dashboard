@@ -1,8 +1,18 @@
 /**
+ * ┌──────────────────────────────────────────────────────────────────────────┐
+ * │  GENERATED FILE — DO NOT EDIT HERE.                                         │
+ * │  Canonical source: <workspace>/shared/src/shared/SettingsModal.jsx          │
+ * │  Edit the canonical copy, then run `npm run sync:shared` (any app) to        │
+ * │  propagate. `npm run check:shared` fails if an app's copy has drifted.       │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
  * SettingsModal.jsx · src/shared/SettingsModal.jsx
  * ──────────────────────────────────────────────────────────────────
  * One Settings surface, byte-identical across landing / student / teacher.
  * No cross-domain redirects — each domain manages everything in-app.
+ *
+ * Terminology (keep consistent — no "mode" / "context" in labels):
+ *   Account · Profile · Track · Faculty (Academy) · Expert (Skill-Dev).
  *
  * Tabs
  * ────
@@ -45,7 +55,7 @@ const loadPrefs = (email) => {
   try { return JSON.parse(localStorage.getItem(prefsKey(email)) || "{}"); } catch { return {}; }
 };
 const savePrefs = (email, p) => {
-  try { localStorage.setItem(prefsKey(email), JSON.stringify(p)); } catch {}
+  try { localStorage.setItem(prefsKey(email), JSON.stringify(p)); } catch { /* ignore */ }
 };
 
 /* Cross-domain destinations (faculty form, expert editor, add-track) are
@@ -73,15 +83,60 @@ function TrackBadge({ status }) {
   return <span className={`sm-badge ${cls}`}>{label}</span>;
 }
 
+
+/* ── Notifications & language (design parity) ──────────────────────────────
+   The Claude design lists these toggles under Skill Dev / Global settings.
+   The backend has no preference columns yet, so they're stored per-device
+   (localStorage) and labelled honestly as such. */
+const PREFS_KEY = "shk_prefs_v1";
+const PREF_DEFS = [
+  { k: "session_reminders",     label: "Session reminders" },
+  { k: "booking_confirmations", label: "Booking confirmations" },
+  { k: "new_messages",          label: "New messages" },
+  { k: "review_prompts",        label: "Review prompts" },
+  { k: "promo_emails",          label: "Promotional emails" },
+];
+const LANGS = ["English", "Hindi", "Telugu", "Tamil", "Kannada", "Bengali", "Marathi"];
+
+function loadShkPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
+}
+
+function PrefsSection() {
+  const [prefs, setPrefs] = useState(loadShkPrefs);
+  const save = (next) => { setPrefs(next); try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* ignore */ } };
+  const flip = (k) => save({ ...prefs, [k]: !(prefs[k] ?? true) });
+
+  return (
+    <>
+      <div className="sm-sec">Notifications</div>
+      <div className="sm-teacher-note">Saved on this device.</div>
+      {PREF_DEFS.map(({ k, label }) => (
+        <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 2px", borderBottom: "1px solid #f2f0ea" }}>
+          <span style={{ fontSize: 13.5 }}>{label}</span>
+          <Toggle on={prefs[k] ?? true} onChange={() => flip(k)} />
+        </div>
+      ))}
+
+      <div className="sm-sec" style={{ marginTop: 18 }}>Language preference</div>
+      <select className="sm-input" style={{ maxWidth: 260 }}
+        value={prefs.language || "English"}
+        onChange={(e) => save({ ...prefs, language: e.target.value })}>
+        {LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
+      </select>
+    </>
+  );
+}
+
 /* ── Teacher identity section ── */
-function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfileUrl }) {
+function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfileUrl, onManageTrack }) {
   if (!teacherInfo) return null;
   const tracks = teacherInfo.tracks || {};
 
   const TRACK_DEFS = [
     { key: "academy", label: "Faculty",          sub: "Academic teaching (Academy)", icon: "🎓",
       manageUrl: facultyFormUrl,   manageLabel: "Application form" },
-    { key: "skill",   label: "Expert (Skill Dev)", sub: "Skill-development sessions",  icon: "⚡",
+    { key: "skill",   label: "Expert (Skill-Dev)", sub: "Skill-development sessions",  icon: "⚡",
       manageUrl: expertProfileUrl, manageLabel: "Edit profile" },
   ];
 
@@ -89,7 +144,7 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
     <>
       <div className="sm-sec sm-sec--teacher">Teacher identity</div>
       <div className="sm-teacher-note">
-        Your teaching tracks. Skill Dev lists once your expert profile is complete;
+        Your teaching tracks. Skill-Dev lists once your expert profile is complete;
         Academy requires admin approval. Use the links to fill in or edit each
         track's details — the advertised expert profile and the faculty
         application both live behind these.
@@ -120,8 +175,16 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
                     Apply
                   </a>
                 )}
-                {held && manageUrl && (
-                  <a className="sm-mini" href={manageUrl}>{manageLabel}</a>
+                {held && (
+                  onManageTrack ? (
+                    /* From learner context the teacher app needs a password
+                       unlock first — route through the switcher's flow instead
+                       of a raw link that bounces to login. */
+                    <button type="button" className="sm-mini"
+                      onClick={() => onManageTrack(key, key === "skill" ? "/teacher/expert/profile" : "/teacher/dashboard")}>
+                      {manageLabel} 🔒
+                    </button>
+                  ) : (manageUrl && <a className="sm-mini" href={manageUrl}>{manageLabel}</a>)
                 )}
               </div>
             </div>
@@ -135,8 +198,7 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
 /* ══════════════════════════════════ main ══════════════════════════════════ */
 export default function SettingsModal({
   open, tab: initialTab = "profile", onClose,
-  teacherSignupUrl = "/signup?role=teacher", teachUrl = "",
-}) {
+  teacherSignupUrl = "/signup?role=teacher", teachUrl = "", onManageTrack,}) {
   const { user, profiles, activeProfile, teacherInfo, api, bootstrap, logout } = useAuth();
 
   /* Cross-domain destinations, derived from the host app's props so they're
@@ -565,10 +627,12 @@ export default function SettingsModal({
               )}
 
               {/* ── teacher identity section ── */}
+              <PrefsSection />
               <TeacherSection teacherInfo={teacherInfo}
                 mkAddTrack={mkAddTrack}
                 facultyFormUrl={facultyFormUrl}
-                expertProfileUrl={expertProfileUrl} />
+                expertProfileUrl={expertProfileUrl}
+            onManageTrack={onManageTrack} />
             </>
           )}
 

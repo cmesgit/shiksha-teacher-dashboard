@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import api from "../api/apiClient";
@@ -45,6 +45,30 @@ export default function TeacherCreateLiveSession() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Batch picker: a live session now belongs to a specific batch (the
+  // backend requires batch_id). Fetch the batches this teacher can schedule
+  // this subject for, and default to the first one.
+  const [batches, setBatches] = useState([]);
+  const [batchId, setBatchId] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get(`/courses/subjects/${subjectId}/batches/`)
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data || [];
+        setBatches(list);
+        if (list.length) setBatchId(String(list[0].id));
+      })
+      .catch(() => {
+        if (!cancelled) setBatches([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subjectId]);
+
   /* =====================================
      🔥 START NOW
   ===================================== */
@@ -52,6 +76,12 @@ export default function TeacherCreateLiveSession() {
     if (!form.title) {
       setError("Please enter a session title.");
       toast.error("Please enter a session title");
+      return;
+    }
+
+    if (!batchId) {
+      setError("Please select a batch.");
+      toast.error("Please select a batch");
       return;
     }
 
@@ -66,6 +96,7 @@ export default function TeacherCreateLiveSession() {
         title: form.title,
         description: form.description,
         subject_id: subjectId,
+        batch_id: batchId,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         force_live: true,
@@ -92,7 +123,7 @@ export default function TeacherCreateLiveSession() {
   const handleSubmit = async () => {
     setError(null);
 
-    if (!form.title || !form.start_time) {
+    if (!form.title || !form.start_time || !batchId) {
       setError("Please fill all required fields.");
       toast.error("Please fill all required fields");
       return;
@@ -108,6 +139,7 @@ export default function TeacherCreateLiveSession() {
         title: form.title,
         description: form.description,
         subject_id: subjectId,
+        batch_id: batchId,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         force_live: true
@@ -127,6 +159,7 @@ export default function TeacherCreateLiveSession() {
         err.response?.data?.start_time?.[0] ||
         err.response?.data?.end_time?.[0] ||
         err.response?.data?.subject_id?.[0] ||
+        err.response?.data?.batch_id?.[0] ||
         err.response?.data?.non_field_errors?.[0] ||
         "Failed to create session.";
 
@@ -162,6 +195,29 @@ export default function TeacherCreateLiveSession() {
         {error && <div className="lsc-error">⚠ {error}</div>}
 
         <div className="lsc-form">
+
+          {/* BATCH */}
+          <div className="lsc-field">
+            <label>Batch *</label>
+            {batches.length === 0 ? (
+              <div className="lsc-error">
+                No active batch found for this subject. Create a batch first.
+              </div>
+            ) : (
+              <select
+                className="lsc-input"
+                value={batchId}
+                onChange={(e) => setBatchId(e.target.value)}
+              >
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.code})
+                    {b.year ? ` — ${b.year}` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
           {/* TITLE */}
           <div className="lsc-field">

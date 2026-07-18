@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import Breadcrumbs from "../components/Breadcrumbs";
 import TeacherTopSliderTabs from "../components/TeacherTopSliderTabs";
 import useSwipeBack from "../utils/useSwipeBack";
 import "./layout.css";
@@ -49,6 +50,7 @@ export default function TeacherLayout() {
           <TeacherTopSliderTabs active={active} setActive={setActive} />
         )}
         <main className="teacher-content" {...swipeHandlers}>
+          <Breadcrumbs />
           <Outlet context={{ active, setActive }} />
         </main>
       </div>
