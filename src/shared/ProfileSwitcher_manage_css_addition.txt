@@ -1,6 +1,0 @@
-/* Add to ProfileSwitcher.css — Manage profiles link */
-.ps-dropdown__item--manage {
-  color: #374151;
-  text-decoration: none;
-}
-.ps-dropdown__item--manage:hover { background: #f9fafb; color: #111; }

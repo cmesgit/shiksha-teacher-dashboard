@@ -48,7 +48,6 @@ import AllStudentDetail from "../pages/AllStudentDetail";
 import ProtectedTeacherRoute from "./ProtectedTeacherRoute";
 import QuizStudentAttemptsView from "../pages/QuizStudentAttemptsView";
 import PrivateSessionsDashboard from "../pages/PrivateSessionsDashboard";
-import PrivateRequestDetail from "../pages/PrivateRequestDetail";
 import PrivateSessionAvailability from "../pages/PrivateSessionAvailability";
 import PrivateSessionDetail from "../pages/PrivateSessionDetail";
 import ChangePassword from "../pages/ChangePassword";
