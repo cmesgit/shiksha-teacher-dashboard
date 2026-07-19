@@ -205,7 +205,10 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   const [showPwModal, setShowPwModal] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState("profile");
-  const openSettings = (t) => { setOpen(false); setSettingsTab(t); setSettingsOpen(true); };
+  const [settingsFocusTeacher, setSettingsFocusTeacher] = useState(false);
+  const openSettings = (t, focusTeacher = false) => {
+    setOpen(false); setSettingsTab(t); setSettingsFocusTeacher(focusTeacher); setSettingsOpen(true);
+  };
   const [modalError, setModalError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
   const ref = useRef(null);
@@ -459,7 +462,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
                 <p className="ps-empty-tracks__body">
                   Teach academic classes as <b>Faculty</b> or run skill sessions as an <b>Expert</b> — all under this account.
                 </p>
-                <button className="ps-empty-tracks__cta" onClick={() => openSettings("profile")}>
+                <button className="ps-empty-tracks__cta" onClick={() => openSettings("profile", true)}>
                   <RiAddLine /> Become a teacher
                 </button>
               </div>
@@ -515,7 +518,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           loading={modalLoading} error={modalError} />
       )}
 
-      <SettingsModal open={settingsOpen} tab={settingsTab} onClose={() => setSettingsOpen(false)}
+      <SettingsModal open={settingsOpen} tab={settingsTab} focusTeacher={settingsFocusTeacher} onClose={() => setSettingsOpen(false)}
         teacherSignupUrl={teacherSignupUrl} teachUrl={teachUrl}
         onManageTrack={(track, dest) => { setSettingsOpen(false); goToTrack(track, dest); }} />
     </>

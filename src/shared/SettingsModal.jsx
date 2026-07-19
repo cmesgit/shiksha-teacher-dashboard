@@ -218,7 +218,7 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
 
 /* ══════════════════════════════════ main ══════════════════════════════════ */
 export default function SettingsModal({
-  open, tab: initialTab = "profile", onClose,
+  open, tab: initialTab = "profile", focusTeacher = false, onClose,
   teacherSignupUrl = "/signup?role=teacher", teachUrl = "", onManageTrack,}) {
   const { user, profiles, activeProfile, teacherInfo, api, bootstrap, logout } = useAuth();
 
@@ -269,6 +269,7 @@ export default function SettingsModal({
   const [pw, setPw]                 = useState({ old: "", next: "", confirm: "" });
   const [pwBusy, setPwBusy]         = useState(false);
   const [pwMsg, setPwMsg]           = useState("");
+  const teacherSecRef = useRef(null);
 
   const email = user?.email || "";
 
@@ -292,6 +293,18 @@ export default function SettingsModal({
     refreshProfiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // "Become a teacher" opens straight on this tab but the Teacher identity
+  // section sits below ~10 unrelated profile-editing sections — jump to it
+  // instead of leaving the user staring at Display name / Bio / Academic
+  // details. Deferred a tick so the tab's content has actually painted.
+  useEffect(() => {
+    if (!open || !focusTeacher || initialTab !== "profile") return;
+    const t = setTimeout(() => {
+      teacherSecRef.current?.scrollIntoView({ block: "start" });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [open, focusTeacher, initialTab]);
 
   const refreshProfiles = async () => {
     try {
@@ -848,13 +861,15 @@ export default function SettingsModal({
                 </>
               )}
 
-              {/* ── teacher identity section ── */}
               <PrefsSection />
-              <TeacherSection teacherInfo={teacherInfo}
-                mkAddTrack={mkAddTrack}
-                facultyFormUrl={facultyFormUrl}
-                expertProfileUrl={expertProfileUrl}
-            onManageTrack={onManageTrack} />
+              {/* ── teacher identity section ── */}
+              <div ref={teacherSecRef}>
+                <TeacherSection teacherInfo={teacherInfo}
+                  mkAddTrack={mkAddTrack}
+                  facultyFormUrl={facultyFormUrl}
+                  expertProfileUrl={expertProfileUrl}
+                  onManageTrack={onManageTrack} />
+              </div>
             </>
           )}
 
