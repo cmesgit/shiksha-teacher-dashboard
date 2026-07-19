@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import { IoChevronBack } from "react-icons/io5";
+import { LoadingState } from "../components/StateViews";
 
 export default function LiveSessionDetail() {
   const { id, subjectId } = useParams();
@@ -30,7 +31,7 @@ export default function LiveSessionDetail() {
     fetch();
   }, [id]);
 
-  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+  if (loading) return <LoadingState label="Loading session" />;
   if (!session) return <div style={{ padding: 20 }}>Session not found.</div>;
 
   const start = new Date(session.start_time);

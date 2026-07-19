@@ -42,6 +42,7 @@ import "../styles/dashboard.css";
 import { useAuth } from "../contexts/AuthContext";
 import { HOME_URL } from "../config/urls";
 
+import NavIcon from "../components/NavIcon";
 import LiveSessionCard  from "../components/LiveSessionCard";
 import CalendarWidget   from "../components/CalendarWidget";
 import AssignmentItem   from "../components/AssignmentItem";
@@ -50,6 +51,7 @@ import AcademyRejectionBanner from "../components/AcademyRejectionBanner";
 
 import api from "../api/apiClient";
 import useNotificationSocket from "../hooks/useNotificationSocket";
+import { LoadingState } from "../components/StateViews";
 
 const DATE_FORMAT = { day: "2-digit", month: "short", year: "numeric" };
 const DATETIME_FORMAT = {
@@ -98,6 +100,24 @@ function isSameDay(a, b) {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+function initialsOf(name) {
+  return (name || "")
+    .trim().split(/\s+/).slice(0, 2)
+    .map((w) => w[0]).join("").toUpperCase() || "S";
+}
+
+function timeAgo(dateStr) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "yesterday" : `${days}d ago`;
 }
 
 function startsInLabel(dateStr, now) {
@@ -153,7 +173,7 @@ export default function TeacherDashboard() {
   const outletContext = useOutletContext();
   const active        = outletContext?.active || "sessions";
   const navigate      = useNavigate();
-  const { teacherInfo } = useAuth();
+  const { teacherInfo, user } = useAuth();
 
   const academyStatus = teacherInfo?.tracks?.academy ?? "approved"; // older /me/ shapes: assume approved
   const rejectionReason = teacherInfo?.academy_rejection_reason || "";
@@ -234,6 +254,8 @@ export default function TeacherDashboard() {
   const assignments     = data?.assignments      ?? [];
   const quizzes         = data?.quizzes          ?? [];
   const privateSessions = data?.private_sessions ?? [];
+  const gradingQueue    = data?.grading_queue    ?? [];
+  const gradingCount    = data?.grading_count    ?? gradingQueue.length;
 
   // ── calendar events ────────────────────────────────────────────────
   const calendarEvents = useMemo(() => {
@@ -330,17 +352,43 @@ export default function TeacherDashboard() {
     else setSelectedDate(date);
   };
 
+  // ── greeting + stat row (mockup) — derived from real data ──────────
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = (
+    user?.name || user?.full_name || user?.username ||
+    (user?.email ? user.email.split("@")[0] : "") || "Teacher"
+  ).trim().split(/\s+/)[0];
+  const todayLong = new Date().toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+  const nowStat = new Date();
+  const todaySessionsCount = allSessions.filter((s) => {
+    const d = new Date(s.dateTime);
+    return !Number.isNaN(d.getTime()) && isSameDay(d, nowStat);
+  }).length;
+  const pendingAssignments = assignments.filter((a) => {
+    const d = a.due ? new Date(a.due) : null;
+    return !d || Number.isNaN(d.getTime()) || d >= nowStat;
+  }).length;
+  const pendingQuizzes = quizzes.filter((q) => {
+    const d = q.due ? new Date(q.due) : null;
+    return !d || Number.isNaN(d.getTime()) || d >= nowStat;
+  }).length;
+  const statCards = [
+    { icon: "video", iconBg: "#e6f4f6", iconColor: "#13899b", value: todaySessionsCount, label: "Sessions today" },
+    { icon: "cal",   iconBg: "#e8edfb", iconColor: "#1d4ed8", value: sessions.length,    label: "This week" },
+    { icon: "file",  iconBg: "#ecf8ee", iconColor: "#2f9d42", value: pendingAssignments, label: "Assignments due" },
+    { icon: "help",  iconBg: "#fff8f0", iconColor: "#d97706", value: pendingQuizzes,     label: "Quizzes due" },
+  ];
+
   // ── gates before content ───────────────────────────────────────────
   if (academyStatus !== "approved") {
     return <AcademyGate status={academyStatus} reason={rejectionReason} />;
   }
 
   if (loading) {
-    return (
-      <div className="dashboard">
-        <div className="dash-card"><p>Loading your dashboard…</p></div>
-      </div>
-    );
+    return <LoadingState label="Loading your dashboard" />;
   }
 
   if (error) {
@@ -438,6 +486,30 @@ export default function TeacherDashboard() {
 
       <AcademyRejectionBanner />
 
+      {/* Greeting */}
+      <div className="dash-greeting">
+        <h1>{greeting}, {firstName} 👋</h1>
+        <p>{todayLong}</p>
+      </div>
+
+      {/* Stat row */}
+      <div className="dash-stats">
+        {statCards.map((st) => (
+          <div className="dash-stat" key={st.label}>
+            <div className="dash-stat__icon" style={{ background: st.iconBg, color: st.iconColor }}>
+              <NavIcon name={st.icon} size={18} color={st.iconColor} />
+            </div>
+            <div>
+              <div className="dash-stat__value">{st.value}</div>
+              <div className="dash-stat__label">{st.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="dash-grid">
+      <div className="dash-col dash-col--main">
+
       {/* Faculty ⟷ Expert switch lives in the shared header (TrackSwitcher). */}
 
       {/* Row 1: Live Sessions */}
@@ -452,12 +524,38 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Calendar */}
-      <CalendarWidget
-        events={calendarEvents}
-        selectedDate={selectedDate}
-        onDateSelect={handleDateSelect}
-      />
+      {/* Grading Queue — submissions awaiting review (real data) */}
+      <div className="dash-card">
+        <div className="dash-card-header">
+          <h4>Grading Queue</h4>
+          <span className="dash-remaining">{gradingCount} pending</span>
+        </div>
+        <div className="dash-card-body">
+          {gradingQueue.length === 0 && <p>All caught up 🎉</p>}
+          {gradingQueue.map((g) => (
+            <div key={g.id} className="grade-item">
+              <div className="grade-item__avatar">{initialsOf(g.student)}</div>
+              <div className="grade-item__body">
+                <div className="grade-item__student">
+                  {g.student} <span className="grade-item__batch">· {g.subject}</span>
+                </div>
+                <div className="grade-item__meta">{g.title} · {timeAgo(g.submitted_at)}</div>
+              </div>
+              <button
+                type="button"
+                className="grade-item__btn"
+                onClick={() => {
+                  if (g.subject_id && g.assignment_id) {
+                    navigate(`/teacher/classes/${g.subject_id}/assignments/${g.assignment_id}/submissions`);
+                  }
+                }}
+              >
+                Grade
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Assignments */}
       <div className="dash-card">
@@ -513,6 +611,17 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
+      </div>{/* /dash-col--main */}
+
+      <div className="dash-col dash-col--rail">
+
+      {/* Calendar */}
+      <CalendarWidget
+        events={calendarEvents}
+        selectedDate={selectedDate}
+        onDateSelect={handleDateSelect}
+      />
+
       {/* Notifications — single, server-isolated source */}
       <div className="dash-card">
         <div className="dash-card-header">
@@ -565,6 +674,9 @@ export default function TeacherDashboard() {
           ))}
         </div>
       </div>
+
+      </div>{/* /dash-col--rail */}
+      </div>{/* /dash-grid */}
 
     </div>
   );

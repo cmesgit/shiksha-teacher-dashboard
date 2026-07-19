@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import privateSessionService from "../api/privateSessionService";
 import "../styles/privateSessions.css";
+import { LoadingState } from "../components/StateViews";
 
 /* ── Normalize fields — handles both mock + real API shapes ── */
 function norm(s) {
@@ -144,7 +145,7 @@ export default function PrivateSessionDetail() {
       <div className="tps__sidebar-back">
         <button className="tps__back" onClick={goBack}>‹ Back to Sessions</button>
       </div>
-      <div className="tps__page"><p className="tps__loading">Loading session details...</p></div>
+      <LoadingState label="Loading session details" />
     </div>
   );
   if (error) return (

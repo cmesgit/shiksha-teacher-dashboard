@@ -1,6 +1,6 @@
 /* Page background area */
 .classes-wrapper {
-  background: #bcd6da;
+  background: #eef1f2;
   min-height: 100%;
   overflow-x: hidden;
   overflow-y: visible;
@@ -8,8 +8,9 @@
 
 /* White rounded container */
 .classes-container {
-  background: #f5fbfc;
-  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #e5eaed;
+  border-radius: 12px;
   padding: 24px 28px;
   min-height: 100%;
   display: flex;
@@ -112,7 +113,7 @@
 .subject-count {
   font-size: 34px;
   font-weight: 700;
-  color: #4ba7b5;
+  color: #425f7f;
   line-height: 1;
   vertical-align: baseline;
 }
@@ -120,7 +121,7 @@
 /* Label */
 .subject-label {
   font-size: 12px;
-  color: #4ba7b5;
+  color: #425f7f;
   vertical-align: baseline;
   word-break: break-word;
 }

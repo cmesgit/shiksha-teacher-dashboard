@@ -1,23 +1,69 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { FiSearch } from "react-icons/fi";
+import { IoCheckmarkCircle } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/create-quiz.css";
+import { LoadingState } from "../components/StateViews";
 
 const createEmptyQuestion = () => ({
   question: "",
   options: ["", "", "", ""],
   answerIndex: null,
   explanation: "",
+  topic: "",
+  difficulty: "medium",
 });
 
 const createEmptyError = () => ({
   question: "",
   options: ["", "", "", ""],
+  optionsGeneral: "",
   answer: "",
   explanation: "",
 });
 
 const TIME_PRESETS = [5, 10, 15, 30];
+
+const TOPIC_PLACEHOLDER = "e.g. Integration";
+
+/* ── bulk-paste parser ──
+   One question per block (blank-line separated): first line is the
+   question text, following lines are "A) option" / "a. option" style
+   choices, star the correct one with a trailing "*". */
+function parseBulkImport(text) {
+  const blocks = (text || "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  const out = [];
+  for (const block of blocks) {
+    const lines = block.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length < 3) continue;
+    const qText = lines[0].replace(/^(Q[:.)]?\s*|\d+[.)]\s*)/i, "");
+    const options = [];
+    let answerIndex = 0;
+    for (const line of lines.slice(1)) {
+      const m = line.match(/^[A-Da-d][.)]\s*(.+)$/);
+      if (!m) continue;
+      let optText = m[1].trim();
+      if (optText.endsWith("*") || line.includes("*")) {
+        answerIndex = options.length;
+        optText = optText.replace(/\s*\*\s*$/, "");
+      }
+      options.push(optText);
+    }
+    if (qText && options.length >= 2) {
+      while (options.length < 4) options.push("");
+      out.push({
+        question: qText,
+        options: options.slice(0, 6),
+        answerIndex,
+        explanation: "",
+        topic: "",
+        difficulty: "medium",
+      });
+    }
+  }
+  return out;
+}
 
 /* ── tiny inline popup ── */
 function FieldError({ msg, onDismiss }) {
@@ -40,12 +86,28 @@ export default function CreateQuiz() {
   const { subjectId } = useParams();
 
   const [title, setTitle] = useState("");
+  const [quizType, setQuizType] = useState("mock"); // "mock" | "practice"
   const [questions, setQuestions] = useState([createEmptyQuestion()]);
   const [loading, setLoading] = useState(false);
   const [timeLimit, setTimeLimit] = useState(10);
   const [customTime, setCustomTime] = useState("");
   const [useCustom, setUseCustom] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  /* ── bulk paste / import ── */
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const importPreview = useMemo(() => parseBulkImport(importText), [importText]);
+
+  /* ── question bank drawer ── */
+  const [showBank, setShowBank] = useState(false);
+  const [bankScope, setBankScope] = useState("mine");
+  const [bankTopic, setBankTopic] = useState("");
+  const [bankDifficulty, setBankDifficulty] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
+  const [bankItems, setBankItems] = useState([]);
+  const [bankLoading, setBankLoading] = useState(false);
+  const [bankSelected, setBankSelected] = useState(() => new Set());
 
   /* ── validation errors ── */
   const [titleError, setTitleError] = useState("");
@@ -97,6 +159,41 @@ export default function CreateQuiz() {
     clearQError(qIndex, "answer");
   };
 
+  const updateTopic = (index, value) => {
+    const copy = [...questions];
+    copy[index].topic = value;
+    setQuestions(copy);
+  };
+
+  const updateDifficulty = (index, value) => {
+    const copy = [...questions];
+    copy[index].difficulty = value;
+    setQuestions(copy);
+  };
+
+  /* Append parsed/reused questions (from bulk import or the bank) onto the
+     end of the local list — they flow through the exact same "Create"
+     submission as manually-typed questions. If the only row on the page is
+     still the untouched first blank question, replace it instead of
+     leaving an empty question dangling in the middle of the list. */
+  const appendQuestions = (newOnes) => {
+    if (!newOnes.length) return;
+    setQuestions((prev) => {
+      const isBlankFirst =
+        prev.length === 1 &&
+        !prev[0].question.trim() &&
+        prev[0].options.every((o) => !o.trim());
+      return isBlankFirst ? newOnes : [...prev, ...newOnes];
+    });
+    setQErrors((prev) => {
+      const isBlankFirst = prev.length === 1;
+      const fresh = newOnes.map(() => createEmptyError());
+      return isBlankFirst && questions.length === 1 && !questions[0].question.trim()
+        ? fresh
+        : [...prev, ...fresh];
+    });
+  };
+
   const addQuestion = () => {
     setQuestions([...questions, createEmptyQuestion()]);
     setQErrors((prev) => [...prev, createEmptyError()]);
@@ -107,6 +204,72 @@ export default function CreateQuiz() {
     if (questions.length === 1) return; // keep at least one
     setQuestions((prev) => prev.filter((_, i) => i !== index));
     setQErrors((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  /* ── bulk paste / import ── */
+  const openImport = () => setShowImport(true);
+  const closeImport = () => { setShowImport(false); setImportText(""); };
+  const doImport = () => {
+    if (!importPreview.length) return;
+    appendQuestions(importPreview);
+    closeImport();
+  };
+
+  /* ── question bank drawer ── */
+  useEffect(() => {
+    if (!showBank) return;
+    let cancelled = false;
+    (async () => {
+      setBankLoading(true);
+      try {
+        const res = await api.get("/teacher/question-bank/", {
+          params: {
+            scope: bankScope,
+            subject: subjectId || undefined,
+            topic: bankTopic || undefined,
+            difficulty: bankDifficulty || undefined,
+            search: bankSearch || undefined,
+          },
+        });
+        if (!cancelled) setBankItems(res.data.results || res.data);
+      } catch (err) {
+        console.error("Failed to load question bank", err);
+        if (!cancelled) setBankItems([]);
+      } finally {
+        if (!cancelled) setBankLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [showBank, bankScope, bankTopic, bankDifficulty, bankSearch, subjectId]);
+
+  const openBank = () => setShowBank(true);
+  const closeBank = () => { setShowBank(false); setBankSelected(new Set()); };
+
+  const toggleBankItem = (id) => {
+    setBankSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const addFromBank = () => {
+    const picked = bankItems.filter((b) => bankSelected.has(b.id));
+    if (!picked.length) { closeBank(); return; }
+    const mapped = picked.map((b) => {
+      const choices = b.choices || [];
+      const correctIdx = Math.max(0, choices.findIndex((c) => c.is_correct));
+      return {
+        question: b.text,
+        options: choices.map((c) => c.text),
+        answerIndex: correctIdx,
+        explanation: b.explanation || "",
+        topic: b.topic || "",
+        difficulty: b.difficulty || "medium",
+      };
+    });
+    appendQuestions(mapped);
+    closeBank();
   };
 
   /* ── cancel handlers ── */
@@ -145,14 +308,13 @@ export default function CreateQuiz() {
         valid = false;
       }
 
-      q.options.forEach((opt, i) => {
-        if (!opt.trim()) {
-          err.options[i] = `Option ${String.fromCharCode(97 + i).toUpperCase()} is required.`;
-          valid = false;
-        }
-      });
+      const filledCount = q.options.filter((o) => o.trim()).length;
+      if (filledCount < 2) {
+        err.optionsGeneral = "At least 2 answer options are required.";
+        valid = false;
+      }
 
-      if (q.answerIndex === null) {
+      if (q.answerIndex === null || !q.options[q.answerIndex]?.trim()) {
         err.answer = "Please select the correct answer.";
         valid = false;
       }
@@ -181,23 +343,27 @@ export default function CreateQuiz() {
         description: "",
         // due_date removed — quizzes no longer expire
         time_limit_minutes: effectiveTimeLimit,
+        quiz_type: quizType,
       });
 
       const quizId = quizRes.data.id;
 
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        await api.post(`/teacher/quizzes/${quizId}/questions/`, {
+      await api.post(`/teacher/quizzes/${quizId}/questions/bulk/`, {
+        questions: questions.map((q, i) => ({
           text: q.question,
           order: i + 1,
           marks: 1,
           explanation: q.explanation,
-          choices: q.options.map((opt, index) => ({
-            text: opt,
-            is_correct: index === q.answerIndex,
-          })),
-        });
-      }
+          topic: q.topic.trim(),
+          difficulty: q.difficulty,
+          choices: q.options
+            .map((opt, index) => ({
+              text: opt.trim(),
+              is_correct: index === q.answerIndex,
+            }))
+            .filter((c) => c.text),
+        })),
+      });
 
       alert("Quiz created successfully");
       navigate(`/teacher/classes/${subjectId}/quizzes`);
@@ -265,9 +431,41 @@ export default function CreateQuiz() {
 
             <span className="cq-timer-display">{effectiveTimeLimit} min selected</span>
           </div>
+
+          {/* Quiz type */}
+          <div className="cq-type-picker">
+            <span className="cq-timer-label">Mode</span>
+            <div className="cq-timer-presets">
+              <button
+                type="button"
+                className={`cq-timer-btn ${quizType === "mock" ? "active" : ""}`}
+                onClick={() => setQuizType("mock")}
+                title="Timed, full-paper navigation, graded only on submit"
+              >
+                Mock test — timed
+              </button>
+              <button
+                type="button"
+                className={`cq-timer-btn ${quizType === "practice" ? "active" : ""}`}
+                onClick={() => setQuizType("practice")}
+                title="Untimed, one question at a time, instant feedback"
+              >
+                Practice — instant feedback
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="cq-form-container">
+          <div className="cq-toolbar-row">
+            <button type="button" className="cq-tool-btn" onClick={openImport}>
+              ⇪ Bulk paste / import
+            </button>
+            <button type="button" className="cq-tool-btn" onClick={openBank}>
+              🗂 Question bank
+            </button>
+          </div>
+
           <div className="cq-questions-list">
             {questions.map((q, qIndex) => {
               const err = qErrors[qIndex] || createEmptyError();
@@ -308,15 +506,40 @@ export default function CreateQuiz() {
                         </span>
                         <div style={{ flex: 1 }}>
                           <input
-                            className={`cq-option-input ${err.options[optIndex] ? "cq-input-error" : ""}`}
-                            placeholder={`Option ${optIndex + 1}`}
+                            className="cq-option-input"
+                            placeholder={optIndex < 2 ? `Option ${optIndex + 1}` : `Option ${optIndex + 1} (optional)`}
                             value={opt}
                             onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
                           />
-                          <FieldError msg={err.options[optIndex]} />
                         </div>
                       </div>
                     ))}
+                  </div>
+                  <FieldError msg={err.optionsGeneral} />
+
+                  {/* Topic + difficulty (used by the question bank & result analytics) */}
+                  <div className="cq-meta-row">
+                    <div className="cq-meta-field">
+                      <span className="cq-meta-label">Topic</span>
+                      <input
+                        className="cq-meta-input"
+                        placeholder={TOPIC_PLACEHOLDER}
+                        value={q.topic}
+                        onChange={(e) => updateTopic(qIndex, e.target.value)}
+                      />
+                    </div>
+                    <div className="cq-meta-field">
+                      <span className="cq-meta-label">Difficulty</span>
+                      <select
+                        className="cq-meta-input"
+                        value={q.difficulty}
+                        onChange={(e) => updateDifficulty(qIndex, e.target.value)}
+                      >
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Answer picker */}
@@ -409,6 +632,143 @@ export default function CreateQuiz() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Bulk paste / import modal */}
+      {showImport && (
+        <div className="quiz-modal-overlay">
+          <div className="cq-import-modal">
+            <h3>Bulk paste questions</h3>
+            <p className="cq-import-hint">
+              Paste from any doc. One question per block: question line, then
+              options A) to D), star (*) the correct one.
+            </p>
+            <textarea
+              className="cq-import-textarea"
+              placeholder={"Q: What is ∫ 2x dx?\nA) x² + C *\nB) 2x² + C\nC) x + C\nD) 2 + C"}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+            />
+            <div className="cq-import-footer">
+              <span className={`cq-import-count ${importPreview.length ? "cq-import-count--ready" : ""}`}>
+                {importPreview.length
+                  ? `✓ ${importPreview.length} question${importPreview.length > 1 ? "s" : ""} detected`
+                  : "Paste above to preview"}
+              </span>
+              <div className="cq-import-actions">
+                <button type="button" className="cq-cancel-btn" onClick={closeImport}>Cancel</button>
+                <button
+                  type="button"
+                  className="cq-create-btn"
+                  disabled={!importPreview.length}
+                  onClick={doImport}
+                >
+                  Add questions
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Question bank drawer */}
+      {showBank && (
+        <>
+          <div className="cq-bank-backdrop" onClick={closeBank} />
+          <div className="cq-bank-drawer">
+            <div className="cq-bank-drawer-header">
+              <h3>Question bank</h3>
+              <button type="button" className="cq-bank-close" onClick={closeBank}>✕</button>
+            </div>
+
+            <div className="cq-bank-tabs">
+              <button
+                type="button"
+                className={`cq-bank-tab ${bankScope === "mine" ? "cq-bank-tab--active" : ""}`}
+                onClick={() => setBankScope("mine")}
+              >
+                My questions
+              </button>
+              <button
+                type="button"
+                className={`cq-bank-tab ${bankScope === "school" ? "cq-bank-tab--active" : ""}`}
+                onClick={() => setBankScope("school")}
+              >
+                School library
+              </button>
+            </div>
+
+            <p className="cq-bank-scope-note">
+              {bankScope === "mine"
+                ? "Every question you write in any approved quiz is saved here automatically — reuse it in one tap."
+                : "Shared by colleagues assigned to your subjects."}
+            </p>
+
+            <div className="cq-bank-filters">
+              <input
+                className="cq-bank-filter-input"
+                placeholder="Filter by topic…"
+                value={bankTopic}
+                onChange={(e) => setBankTopic(e.target.value)}
+              />
+              <select
+                className="cq-bank-filter-input"
+                value={bankDifficulty}
+                onChange={(e) => setBankDifficulty(e.target.value)}
+              >
+                <option value="">Any difficulty</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+            <div className="cq-bank-search">
+              <FiSearch />
+              <input
+                placeholder="Search by topic or keyword…"
+                value={bankSearch}
+                onChange={(e) => setBankSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="cq-bank-list">
+              {bankLoading ? (
+                <LoadingState plain label="Loading questions" />
+              ) : bankItems.length === 0 ? (
+                <p className="cq-bank-empty">No matching questions yet.</p>
+              ) : (
+                bankItems.map((b) => {
+                  const selected = bankSelected.has(b.id);
+                  const correct = b.choices?.find((c) => c.is_correct);
+                  return (
+                    <div
+                      key={b.id}
+                      className={`cq-bank-item ${selected ? "cq-bank-item--selected" : ""}`}
+                      onClick={() => toggleBankItem(b.id)}
+                    >
+                      <div className={`cq-bank-check ${selected ? "cq-bank-check--on" : ""}`}>
+                        {selected && <IoCheckmarkCircle />}
+                      </div>
+                      <div className="cq-bank-item-body">
+                        <div className="cq-bank-item-text">{b.text}</div>
+                        <div className="cq-bank-item-meta">
+                          {b.topic && <span className="cq-bank-item-topic">{b.topic}</span>}
+                          <span>{b.difficulty}</span>
+                          {bankScope === "school" && <span>· {b.author_name}</span>}
+                          {correct && <span className="cq-bank-item-answer">Ans: {correct.text}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <button type="button" className="cq-create-btn cq-bank-add-btn" onClick={addFromBank}>
+              Add {bankSelected.size} selected
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

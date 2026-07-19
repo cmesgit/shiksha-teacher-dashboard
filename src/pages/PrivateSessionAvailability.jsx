@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import * as privateSession from "../api/privateSessionService";
 import "../styles/privateSessions.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function PrivateSessionAvailability() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function PrivateSessionAvailability() {
 
   const totalSlots = Object.values(availability).reduce((acc, slots) => acc + slots.length, 0);
 
-  if (loading) return <div style={{ padding: 20 }}>Loading availability...</div>;
+  if (loading) return <LoadingState label="Loading availability" />;
 
   return (
     <div className="tps__page">

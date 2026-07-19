@@ -5,6 +5,7 @@ const WS_HOST = import.meta.env.VITE_WS_HOST || "api.shikshacom.com";
 
 export default function useLiveSessionChat(sessionId) {
   const [messages, setMessages] = useState([]);
+  const [sessionStatus, setSessionStatus] = useState(null);
   const [connected, setConnected] = useState(false);
   const [rawHistory, setRawHistory] = useState([]);
   const wsRef = useRef(null);
@@ -45,6 +46,10 @@ export default function useLiveSessionChat(sessionId) {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
+
+        if (data.type === "initial_state" || data.type === "session_update") {
+          setSessionStatus(data.data.status);
+        }
 
         if (data.type === "chat_message") {
           const msg = data.data;
@@ -98,5 +103,5 @@ export default function useLiveSessionChat(sessionId) {
     }));
   }, []);
 
-  return { messages, connected, sendMessage };
+  return { messages, connected, sendMessage, sessionStatus };
 }

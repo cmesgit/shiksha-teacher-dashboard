@@ -4,6 +4,7 @@ import { FaRegFolder } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/assignment-view.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function AssignmentView() {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ export default function AssignmentView() {
     fetchAssignment();
   }, [assignmentId]);
 
-  if (loading) return <div>Loading assignment...</div>;
+  if (loading) return <LoadingState label="Loading assignment" />;
   if (!assignment) return <div>Assignment not found</div>;
 
   return (

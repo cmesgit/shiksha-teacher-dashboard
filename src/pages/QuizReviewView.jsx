@@ -4,6 +4,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { IoCheckmarkCircle, IoCloseCircle } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/quiz-review-view.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function QuizReviewView() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const { attemptId, quizId, subjectId, studentId } = useParams();
   }, [attemptId]);
 
   if (!data) {
-    return <div className="qrv-loading">Loading review...</div>;
+    return <LoadingState label="Loading review" />;
   }
 
   const correct = data.questions.filter((q) => q.selected === q.correct).length;

@@ -41,8 +41,9 @@
 //               markAllRead, markOneRead, clearNotifications,
 //               onEvent }   ← onEvent is the only addition.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../api/apiClient";
+import { useAuth } from "../contexts/AuthContext";
 
 const WS_HOST = import.meta.env.VITE_WS_HOST || "api.shikshacom.com";
 const MAX_NOTIFICATIONS = 50;
@@ -256,6 +257,15 @@ function clearNotifications() {
   setState({ notifications: [], unreadCount: 0 });
 }
 
+// Identity switched (profile / context). The feed + unread count are
+// per-identity, so drop the previous profile's items and refetch the new
+// one's. The WS group is per-ACCOUNT, so the socket itself stays valid — only
+// the feed needs to be reloaded.
+function resetForIdentity() {
+  setState({ notifications: [], unreadCount: 0, loading: true });
+  fetchFeed();
+}
+
 // ── the hook ────────────────────────────────────────────────────────
 export default function useNotificationSocket() {
   // Force-update tick: every setState() in the module store calls every
@@ -263,6 +273,11 @@ export default function useNotificationSocket() {
   // state to trigger a re-render. Plain useState — works on any React
   // 16.8+ setup, no dependency on a React-18-only API.
   const [, setTick] = useState(0);
+  // Active identity — the bell lives in the header (outside the routed
+  // Outlet), so an in-place profile/context switch would otherwise leave the
+  // previous profile's notifications on screen.
+  const { activeProfile, context } = useAuth();
+  const idRef = useRef(undefined);
 
   useEffect(() => {
     const listener = () => setTick((t) => t + 1);
@@ -280,6 +295,16 @@ export default function useNotificationSocket() {
       }
     };
   }, []);
+
+  // Reset the shared feed when the active identity actually changes (not on
+  // first mount — start() already fetched it there).
+  useEffect(() => {
+    const key = `${context ?? ""}:${activeProfile?.id ?? ""}`;
+    if (idRef.current === undefined) { idRef.current = key; return; }
+    if (idRef.current === key) return;
+    idRef.current = key;
+    resetForIdentity();
+  }, [activeProfile?.id, context]);
 
   const onEvent = useCallback((cb) => {
     store.eventListeners.add(cb);

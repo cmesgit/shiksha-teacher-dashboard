@@ -1,12 +1,13 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   skillSidebar.css  ·  Expert / Skill Dev sidebar (red-brown #b3402e)
-   Section-grouped nav, ported from the prototype's rd-side teacher + rd-navgroup.
+   skillSidebar.css  ·  Expert / Skill Dev sidebar
+   Chrome merged with the Academy sidebar: constant slate (var(--nav-bg)); only
+   the accent differs per track. Section-grouped nav kept from the prototype.
 ───────────────────────────────────────────────────────────────────────────── */
 
 .sk-side {
   width: 240px;
   flex-shrink: 0;
-  background: #b3402e;
+  background: var(--nav-bg, #425f7f);
   color: #fff;
   padding: 18px 16px;
   display: flex;
@@ -27,9 +28,7 @@
 .sk-side__brand { display: flex; align-items: center; gap: 10px; }
 .sk-side__brand img {
   width: 42px; height: 42px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #fff;
+  object-fit: contain;
   flex-shrink: 0;
 }
 .sk-side__brand h3 { margin: 0; font-size: 15px; font-weight: 700; }

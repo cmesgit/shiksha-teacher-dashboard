@@ -26,6 +26,7 @@ import AssignmentView from "../pages/AssignmentView";
 import SubmissionView from "../pages/SubmissionView";
 import Quizzes from "../pages/Quizzes";
 import CreateQuiz from "../pages/CreateQuiz";
+import QuizBank from "../pages/QuizBank";
 import QuizView from "../pages/QuizView";
 import QuizDraftPreview from "../pages/QuizDraftPreview";
 import QuizSubmissionView from "../pages/QuizSubmissionView";
@@ -39,7 +40,7 @@ import RecordingPlayer from "../pages/RecordingPlayer";
 import LiveSessions from "../pages/LiveSessions";
 import LiveSessionDetail from "../pages/LiveSessionDetail";
 import TeacherCreateLiveSession from "../pages/TeacherCreateLiveSession";
-import Profile from "../pages/Profile";
+import FacultyProfile from "../pages/FacultyProfile";
 import StudentsList from "../pages/StudentsList";
 import StudentDetail from "../pages/StudentDetail";
 import AllStudents from "../pages/AllStudents";
@@ -47,17 +48,18 @@ import AllStudentDetail from "../pages/AllStudentDetail";
 import ProtectedTeacherRoute from "./ProtectedTeacherRoute";
 import QuizStudentAttemptsView from "../pages/QuizStudentAttemptsView";
 import PrivateSessionsDashboard from "../pages/PrivateSessionsDashboard";
-import PrivateRequestDetail from "../pages/PrivateRequestDetail";
 import PrivateSessionAvailability from "../pages/PrivateSessionAvailability";
 import PrivateSessionDetail from "../pages/PrivateSessionDetail";
 import ChangePassword from "../pages/ChangePassword";
 import Chat from "../pages/Chat";
 import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
-import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 import BatchProgress from "../pages/BatchProgress";
 import BatchProgressDetail from "../pages/BatchProgressDetail";
+import AssignmentsLanding from "../pages/AssignmentsLanding";
+import StudyMaterialsLanding from "../pages/StudyMaterialsLanding";
+import RecordingsLanding from "../pages/RecordingsLanding";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
@@ -139,8 +141,9 @@ export default function TeacherRoutes() {
         path="/teacher"
         element={<ProtectedTeacherRoute><TeacherLayout /></ProtectedTeacherRoute>}
       >
-        <Route path="profile" element={<Profile />} />
-        <Route path="private-details" element={<PrivateDetails />} />
+        <Route path="profile" element={<FacultyProfile />} />
+        {/* Old split pages both fold into the unified faculty profile. */}
+        <Route path="private-details" element={<Navigate to="/teacher/profile" replace />} />
         <Route path="dashboard" element={<DashboardEntry />} />
         <Route path="students" element={<AllStudents />} />
         <Route path="students/:studentId" element={<AllStudentDetail />} />
@@ -156,7 +159,14 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/assignments/:assignmentId" element={<AssignmentView />} />
         <Route path="classes/:subjectId/assignments/:assignmentId/submissions" element={<SubmissionView />} />
 
+        {/* CONTENT top-level landings (class pickers) — close the loose
+            ends where the sidebar promotes per-class screens to nav items. */}
+        <Route path="assignments" element={<AssignmentsLanding />} />
+        <Route path="study-materials" element={<StudyMaterialsLanding />} />
+        <Route path="recordings" element={<RecordingsLanding />} />
+
         {/* Quizzes */}
+        <Route path="quiz-bank" element={<QuizBank />} />
         <Route path="classes/:subjectId/quizzes" element={<Quizzes />} />
         <Route path="classes/:subjectId/quizzes/create" element={<CreateQuiz />} />
         <Route path="classes/:subjectId/quizzes/:quizId/draft" element={<QuizDraftPreview />} />

@@ -95,11 +95,14 @@
   --acc-soft:   var(--academy-soft);
   --acc-border: #cfdbe6;
 }
+/* Teacher app: the Expert (Skill-Dev) track's accent is teal, not the learner
+   orange. (--skill / --skill-ink stay orange — they still drive the shared
+   "requested" booking chips.) Only the --acc family is remapped here. */
 [data-track="skill"] {
-  --acc:        var(--skill);
-  --acc-ink:    var(--skill-ink);
-  --acc-soft:   var(--skill-soft);
-  --acc-border: var(--skill-border);
+  --acc:        #13899b;   /* teal — Expert teacher accent */
+  --acc-ink:    #0a808a;   /* darker teal for text/links on white */
+  --acc-soft:   #e6f4f6;
+  --acc-border: #cfe0e3;
 }
 
 /* ── Base primitives components can adopt immediately ─────────────────── */

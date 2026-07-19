@@ -1,8 +1,10 @@
-/* layout.css — Faculty body #c9d1de / Expert body #f3e2da via --expert */
+/* layout.css — unified body across both tracks (var(--page-bg)); the track
+   identity now lives in the accent (data-track on .teacher-layout), not the
+   chrome. The old Faculty #c9d1de / Expert #f3e2da split has been merged. */
 .teacher-layout { display:flex; height:100vh; position:relative; overflow-x:hidden; overflow:hidden; }
 .teacher-main { flex:1; display:flex; flex-direction:column; min-width:0; height:100vh; }
-.teacher-content { background:#c9d1de; padding:16px; flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow-x:hidden; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-.teacher-content--expert { background:#f3e2da; }
+.teacher-content { background:var(--page-bg, #eef1f2); padding:16px; flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; overflow-x:hidden; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+/* .teacher-content--expert kept as a hook but no longer recolors the body. */
 .teacher-main:has(.classroom-layout) { height:100vh; overflow:hidden; }
 .teacher-content:has(.classroom-layout) { flex:1; min-height:0; overflow:hidden !important; padding:14px !important; }
 .sidebar-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:109; backdrop-filter:blur(2px); }

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:shared": "node ../shared/sync.mjs",
+    "check:shared": "node ../shared/sync.mjs --check"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",

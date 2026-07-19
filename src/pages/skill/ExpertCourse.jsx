@@ -1,21 +1,21 @@
 /**
- * src/pages/skill/ExpertCourse.jsx  —  "My Course" (Expert / Skill Dev)
+ * src/pages/skill/ExpertCourse.jsx  —  "My Profile" (Expert / Skill Dev)
  *
- * This is the guest expert's single 1-on-1 teaching profile, matching the
- * Expert_Teacher_Skill_Dev_Dashboard design. It REPLACES the old multi-lecture
- * "create a course" page (ExpertCourses.jsx) — experts on ShikshaCom teach live
- * 1-on-1 sessions, they don't author self-paced courses on the dev site.
+ * The guest expert's single 1-on-1 teaching profile. The "courses" product
+ * concept is scrapped for launch, so this is purely the public teaching
+ * profile + weekly availability that learners see and book against — no rate
+ * or pricing (booking is free at launch, toggled globally from admin).
  *
  * It merges two things that used to be separate screens:
- *   1. the teaching profile (subject, rate, skills, about, languages) and
+ *   1. the teaching profile (subject, skills, about, languages) and
  *   2. the weekly availability grid (was ExpertAvailability.jsx).
  *
  * Wired to:
- *   GET   /skill/teacher/profile/       → headline, rate, skills, about, languages
+ *   GET   /skill/teacher/profile/       → headline, skills, about, languages
  *   GET   /skill/teacher/dashboard/     → rating / students / sessions stats
  *   GET   /skill/teacher/availability/  → { open, booked }
  *   PATCH /skill/teacher/availability/  → { open: [...] }
- * "Edit Course" opens the full profile editor (ExpertProfileEdit).
+ * "Edit Profile" opens the full profile editor (ExpertProfileEdit).
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +23,7 @@ import { Icon } from "../../components/SkillIcons";
 import { DAYS, SLOTS } from "../../api/availabilityStore";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 const MODE_LABEL = { online: "Online", home: "At my place", travel: "I travel" };
 
@@ -87,11 +88,7 @@ export default function ExpertCourse() {
   };
 
   if (loading) {
-    return (
-      <div className="sk-page">
-        <div className="sk-empty">Loading your course…</div>
-      </div>
-    );
+    return <LoadingState label="Loading your profile" />;
   }
 
   const subject   = profile?.headline || profile?.subject_description || "Your 1-on-1 course";
@@ -99,19 +96,18 @@ export default function ExpertCourse() {
   const skills    = profile?.skill_tags || [];
   const languages = profile?.languages || [];
   const about     = profile?.bio || "";
-  const rate      = profile?.hourly_rate ?? 0;
   const mode      = MODE_LABEL[profile?.class_mode] || "Online";
 
   return (
     <div className="sk-page">
       <div className="sk-head">
         <div>
-          <div className="sk-head__title">My Course</div>
+          <div className="sk-head__title">My Profile</div>
           <div className="sk-head__sub">Your 1-on-1 teaching profile — what students see on your public listing.</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="sk-btn sk-btn--ghost" onClick={() => navigate("/teacher/expert/profile")}>
-            <Icon.doc size={14} /> Edit Course
+            <Icon.cap size={14} /> Edit Profile
           </button>
         </div>
       </div>
@@ -142,10 +138,6 @@ export default function ExpertCourse() {
             <Metric icon={<Icon.star size={15} />} value={rating != null ? Number(rating).toFixed(1) : "—"} label="Avg rating" />
             <Metric icon={<Icon.users size={15} />} value={stats.taught ?? 0} label="Students taught" />
             <Metric icon={<Icon.cal size={15} />} value={stats.active ?? 0} label="Active sessions" />
-            <Metric
-              value={<span><span style={{ fontSize: 14, color: "#6b7c83", fontWeight: 700 }}>₹</span>{rate}<span style={{ fontSize: 12, color: "#6b7c83", fontWeight: 600 }}>/hr</span></span>}
-              label="Hourly rate"
-            />
           </div>
         </div>
 

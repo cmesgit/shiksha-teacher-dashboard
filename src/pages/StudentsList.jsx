@@ -3,6 +3,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/students.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function StudentsList() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function StudentsList() {
     if (subjectId) fetchStudents();
   }, [subjectId]);
 
-  if (loading) return <div className="students-loading">Loading students...</div>;
+  if (loading) return <LoadingState label="Loading students" />;
 
   if (!data) return <div className="students-loading">Failed to load students.</div>;
 

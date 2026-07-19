@@ -3,6 +3,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/submission-view.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function SubmissionView() {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ export default function SubmissionView() {
       a.status === b.status ? 0 : a.status === "Submitted" ? -1 : 1
     );
 
-  if (loading) return <div className="sv-loading">Loading submissions...</div>;
+  if (loading) return <LoadingState label="Loading submissions" />;
 
   return (
     <div className="sv-page">

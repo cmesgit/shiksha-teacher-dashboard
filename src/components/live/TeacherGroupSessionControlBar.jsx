@@ -19,7 +19,12 @@ export default function TeacherGroupSessionControlBar({
   const isStudent = !isPresenter;
 
   const room = useRoomContext();
-  const { localParticipant } = useLocalParticipant();
+  const {
+    localParticipant,
+    isMicrophoneEnabled,
+    isCameraEnabled,
+    isScreenShareEnabled,
+  } = useLocalParticipant();
 
   const [micOn, setMicOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
@@ -93,14 +98,17 @@ export default function TeacherGroupSessionControlBar({
     setVideoOn(false);
   }, [isStudent, localParticipant]);
 
-  /* Presenter / teacher / instant-meeting state sync */
+  /* Presenter / teacher / instant-meeting state sync.
+     Keyed on the reactive enabled-flags so the icon re-syncs once the mic/camera
+     track actually publishes (reading the getter once on mount caught a stale
+     `false` and forced a double-click to mute). */
   useEffect(() => {
     if (isStudent || !localParticipant) return;
 
-    setMicOn(!!localParticipant.isMicrophoneEnabled);
-    setVideoOn(!!localParticipant.isCameraEnabled);
-    setScreenOn(!!localParticipant.isScreenShareEnabled);
-  }, [isStudent, localParticipant]);
+    setMicOn(!!isMicrophoneEnabled);
+    setVideoOn(!!isCameraEnabled);
+    setScreenOn(!!isScreenShareEnabled);
+  }, [isStudent, localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled]);
 
   /* Commands received from host */
   useEffect(() => {

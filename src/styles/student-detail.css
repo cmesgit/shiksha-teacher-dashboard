@@ -1,6 +1,6 @@
 .sd-page {
   padding: 16px 24px 32px;
-  background: #bcd6da;
+  background: #eef1f2;
   min-height: 100%;
 }
 
@@ -8,7 +8,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -50,7 +50,7 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   display: flex;
   align-items: center;
@@ -98,7 +98,7 @@
 }
 
 .sd-detail-icon {
-  color: #4ba7b5;
+  color: #425f7f;
   font-size: 20px;
   margin-top: 2px;
   flex-shrink: 0;

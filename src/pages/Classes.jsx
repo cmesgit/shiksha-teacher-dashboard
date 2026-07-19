@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import SubjectCard from "../components/SubjectCard";
 import api from "../api/apiClient";
 import "../styles/classes.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function Classes() {
   const { subjectId } = useParams(); // ✅ correct param name
@@ -37,7 +38,7 @@ export default function Classes() {
     fetchDashboard();
   }, [subjectId]);
 
-  if (loading) return <div>Loading class...</div>;
+  if (loading) return <LoadingState label="Loading class" />;
   if (error) return <div>{error}</div>;
   if (!dashboard) return <div>No data found.</div>;
 

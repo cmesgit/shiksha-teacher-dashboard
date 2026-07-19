@@ -9,7 +9,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -22,12 +22,13 @@
 }
 
 .sr-back-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
 }
 
 .sr-content {
-  background: #f5fbfc;
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e5eaed;
+  border-radius: 12px;
   padding: 28px 32px;
   flex: 1;
   overflow-y: auto;
@@ -68,7 +69,7 @@
 }
 
 .sr-search input:focus {
-  border-color: #4ba7b5;
+  border-color: #425f7f;
 }
 
 .sr-search-icon {
@@ -87,7 +88,7 @@
 }
 
 .sr-add-btn {
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -98,7 +99,7 @@
 }
 
 .sr-add-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
 }
 
 .sr-grid {

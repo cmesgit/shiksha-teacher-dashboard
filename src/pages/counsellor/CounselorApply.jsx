@@ -8,6 +8,7 @@
 import React, { useEffect, useState } from "react";
 import { applyCounselor, getSpecializations } from "../../api/counselorService";
 import "../../styles/counsellor.css";
+import { LoadingState } from "../../components/StateViews";
 
 const EXPERIENCE = [
   ["lt1", "Less than 1 year"], ["1_3", "1–3 years"], ["3_5", "3–5 years"],
@@ -67,7 +68,7 @@ export default function CounselorApply({ onApplied }) {
                 {s.name}
               </button>
             ))}
-            {specs.length === 0 && <span className="co-sub">Loading…</span>}
+            {specs.length === 0 && <LoadingState plain label="Loading specializations" />}
           </div>
         </div>
         <div className="co-field">

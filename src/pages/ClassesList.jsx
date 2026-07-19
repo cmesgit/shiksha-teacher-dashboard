@@ -12,6 +12,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/classes-list.css";
+import { LoadingState } from "../components/StateViews";
 
 export default function ClassesList() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ export default function ClassesList() {
     fetchSubjects();
   }, []);
 
-  if (loading) return <div>Loading classes...</div>;
+  if (loading) return <LoadingState label="Loading classes" />;
 
   const getClassMeta = (subject) =>
     [subject.courseTitle, subject.board, subject.stream]

@@ -4,6 +4,7 @@ import api from "../api/apiClient";
 import { IoChevronBack } from "react-icons/io5";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import "../styles/quiz-view.css";
+import { LoadingState } from "../components/StateViews";
 
 const optionLabels = ["a", "b", "c", "d"];
 
@@ -48,7 +49,7 @@ export default function QuizView() {
   };
 
   if (!quiz) {
-    return <div className="qv-loading">Loading quiz...</div>;
+    return <LoadingState label="Loading quiz" />;
   }
 
   return (

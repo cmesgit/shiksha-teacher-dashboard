@@ -20,7 +20,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -32,13 +32,14 @@
   flex-shrink: 0;
   transition: background 0.2s ease, transform 0.1s ease;
 }
-.assignments-back-btn:hover { background: #3d9aa8; }
+.assignments-back-btn:hover { background: #354d67; }
 .assignments-back-btn:active { transform: scale(0.97); }
 
 /* Header */
 .assignments-title-container {
-  background: #f5fbfc;
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e5eaed;
+  border-radius: 12px;
   padding: 20px 32px;
   display: flex;
   justify-content: space-between;
@@ -61,7 +62,7 @@
 
 /* Count badge next to title */
 .assignments-count-badge {
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -84,7 +85,7 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .assignments-search input:focus {
-  border-color: #4ba7b5;
+  border-color: #425f7f;
   box-shadow: 0 0 0 3px rgba(75, 167, 181, 0.12);
 }
 
@@ -99,8 +100,9 @@
 
 /* List container */
 .assignments-list-container {
-  background: #f5fbfc;
-  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e5eaed;
+  border-radius: 12px;
   padding: 28px 32px;
   flex: 1;
   overflow-y: auto;
@@ -114,7 +116,7 @@
 }
 
 .assignments-create-btn {
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -125,7 +127,7 @@
   transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
 }
 .assignments-create-btn:hover {
-  background: #3d9aa8;
+  background: #354d67;
   box-shadow: 0 4px 12px rgba(75, 167, 181, 0.3);
   transform: translateY(-1px);
 }
@@ -212,7 +214,7 @@
 
 /* View button */
 .assignment-view-btn {
-  background: #4ba7b5;
+  background: #425f7f;
   color: #fff;
   border: none;
   border-radius: 20px;
@@ -223,7 +225,7 @@
   margin-left: 16px;
   transition: background 0.2s ease, transform 0.1s ease;
 }
-.assignment-view-btn:hover { background: #3d9aa8; }
+.assignment-view-btn:hover { background: #354d67; }
 .assignment-view-btn:active { transform: scale(0.97); }
 
 /* ── Responsive ────────────────────────────────────────────── */

@@ -1,3 +1,5 @@
+/* GENERATED FILE — DO NOT EDIT HERE. Canonical: <workspace>/shared/src/shared/SettingsModal.css
+   Edit the canonical copy, then run `npm run sync:shared`; `npm run check:shared` catches drift. */
 /* SettingsModal — teal #0a7d8c palette, matches the uploaded Claude design */
 
 .sm-overlay {
@@ -172,6 +174,7 @@
 .sm-linkbtn--danger { color: #c0392b; border-color: rgba(192,57,43,.4); }
 
 .sm-save--sm { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
+.sm-save--danger { background: #c0392b; border-color: #c0392b; }
 
 /* ── messages ── */
 .sm-mini-msg { font-size: 12px; margin-top: 8px; }

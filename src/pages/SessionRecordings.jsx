@@ -3,6 +3,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { useEffect, useState, useRef } from "react";
 import api from "../api/apiClient";
 import "../styles/session-recordings.css";
+import { LoadingState } from "../components/StateViews";
 
 const STATUS_LABELS = {
   0: "Created",
@@ -118,7 +119,7 @@ export default function SessionRecordings() {
 
         <div className="sr-grid">
 
-          {loading && <p>Loading recordings...</p>}
+          {loading && <LoadingState plain label="Loading recordings" />}
 
           {!loading && recordings.length === 0 && (
             <p style={{ opacity: 0.6 }}>

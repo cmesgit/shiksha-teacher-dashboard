@@ -17,6 +17,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import { HiOutlineMenuAlt3 } from "react-icons/hi";
 import Header from "../components/Header";
+import Breadcrumbs from "../components/Breadcrumbs";
 import { Icon } from "../components/SkillIcons";
 import logo from "../assets/Shiksha.svg";
 import { HOME_URL } from "../config/urls";
@@ -28,13 +29,13 @@ const NAV = [
   { to: "/teacher/expert",              label: "Dashboard",  icon: <Icon.cap size={15} />,   end: true },
 
   { group: "Live 1-on-1" },
-  // "My Course" = the expert's single 1-on-1 teaching profile + weekly
-  // availability (merged). It replaces the old "create a course" screen and
-  // absorbs the standalone Availability page.
-  { to: "/teacher/expert/course",       label: "My Course",  icon: <Icon.doc size={15} /> },
+  // "My Profile" = the expert's single 1-on-1 teaching profile + weekly
+  // availability (merged). The "courses" product concept has been scrapped for
+  // launch; this page is the expert's public profile + availability hub only.
+  { to: "/teacher/expert/course",       label: "My Profile", icon: <Icon.cap size={15} /> },
   { to: "/teacher/expert/bookings",     label: "Bookings",   icon: <Icon.cal size={15} /> },
-  // Earnings removed — guest experts settle payment directly with learners, so
-  // there is no earnings bar on ShikshaCom.
+  // Earnings + Courses scrapped for launch — booking is free (toggled globally
+  // from admin via GlobalSettings), so there is no earnings bar or rate UI.
   { other: true },
   { to: "/teacher/expert/inbox",        label: "Messages",   icon: <Icon.msg size={15} /> },
 ];
@@ -50,7 +51,7 @@ export default function SkillDevLayout() {
   const goTo = (to) => { navigate(to); setSidebarOpen(false); };
 
   return (
-    <div className="teacher-layout">
+    <div className="teacher-layout" data-track="skill">
       {/* Expert sidebar */}
       <aside className={`sk-side${sidebarOpen ? " sk-side--open" : ""}`}>
         <div className="sk-side__top">
@@ -94,6 +95,7 @@ export default function SkillDevLayout() {
       <div className="teacher-main">
         <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
         <main className="teacher-content teacher-content--expert">
+          <Breadcrumbs />
           <Outlet />
         </main>
       </div>

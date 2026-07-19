@@ -12,6 +12,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { FiCheck, FiLock } from "react-icons/fi";
 import api from "../api/apiClient";
 import "../styles/batch-progress.css";
+import { LoadingState } from "../components/StateViews";
 
 function Bar({ percent }) {
   return (
@@ -159,7 +160,7 @@ export default function BatchProgressDetail() {
         {error && <div className="bp-error" role="alert">{error}</div>}
 
         {loading ? (
-          <p className="bp-muted">Loading…</p>
+          <LoadingState plain label="Loading batch progress" />
         ) : !data ? (
           <p className="bp-muted">Nothing to show.</p>
         ) : (data.subjects || []).length === 0 ? (

@@ -1,7 +1,7 @@
-/* header.css — Faculty #c9d1de / Expert #f3e2da via .header--expert */
-.header { height:60px; display:flex; justify-content:flex-end; align-items:center; padding:0 20px;
-  background:#c9d1de; position:relative; z-index:100; gap:8px; flex-shrink:0; border-bottom:1px solid rgba(66,95,127,.12); }
-.header--expert { background:#f3e2da; border-bottom-color:rgba(180,64,46,.12); }
+/* header.css — unified header bg across both tracks (var(--page-bg)).
+   The Faculty/Expert bg split has been merged; .header--expert is now a no-op. */
+.header { height:60px; display:flex; justify-content:flex-end; align-items:center; padding:0 24px;
+  background:#ffffff; position:relative; z-index:100; gap:14px; flex-shrink:0; border-bottom:1px solid #e5eaed; }
 .hamburgerBtn { display:none; border:none; background:transparent; padding:0; margin-right:auto; cursor:pointer; color:#1f2d3d; line-height:1; }
 .hamburgerBtn svg { font-size:30px; } .hamburgerBtn:hover { color:#000; }
 .notif-bell-wrap { position:relative; display:flex; align-items:center; }
@@ -12,6 +12,8 @@
 .notif-bell-header { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; font-weight:600; font-size:14px; border-bottom:1px solid #f3f4f6; }
 .notif-clear-btn { background:none; border:none; color:#6b7280; font-size:12px; cursor:pointer; font-family:inherit; }
 .notif-bell-list { max-height:380px; overflow-y:auto; }
+.notif-bell-seeall { display:block; width:100%; border:none; border-top:1px solid #f3f4f6; background:#fafafa; color:var(--acc-ink, #425f7f); font-weight:700; font-size:12.5px; padding:11px 16px; cursor:pointer; text-align:center; }
+.notif-bell-seeall:hover { background:#f3f4f6; }
 .notif-bell-empty { padding:24px; text-align:center; color:#9ca3af; font-size:13px; }
 .notif-bell-item { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-bottom:1px solid #f9fafb; cursor:pointer; transition:background .15s; }
 .notif-bell-item:hover { background:#f9fafb; }

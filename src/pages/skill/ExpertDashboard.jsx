@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
+import { LoadingState } from "../../components/StateViews";
 
 function fmtWhen(iso) {
   if (!iso) return "Time to be confirmed";
@@ -158,7 +159,7 @@ export default function ExpertDashboard() {
               </button>
             </div>
             {loading ? (
-              <div className="sk-empty">Loading sessions…</div>
+              <LoadingState plain label="Loading sessions" />
             ) : next_up.length === 0 ? (
               <div className="sk-empty">No upcoming sessions. New booking requests will appear here.</div>
             ) : next_up.map((b) => (
@@ -191,7 +192,7 @@ export default function ExpertDashboard() {
           <div className="rd-card teacher" style={{ marginBottom: 0 }}>
             <h4>Recent reviews</h4>
             {loading ? (
-              <div className="sk-empty">Loading reviews…</div>
+              <LoadingState plain label="Loading reviews" />
             ) : recent_reviews.length === 0 ? (
               <div className="sk-empty">No reviews yet — they'll appear here after your first completed sessions.</div>
             ) : recent_reviews.map((r) => (

@@ -1,0 +1,89 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   stateViews.css — shared loading/empty/error card for components/StateViews.jsx.
+   Colors derive from shared/tokens.css so this tracks the per-track accent
+   (--acc: slate under Academy, teal under Skill-Dev) automatically.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.sv-state {
+  max-width: 460px;
+  margin: 28px auto;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e5eaed);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow, 0 1px 3px rgba(26, 44, 51, 0.06));
+  padding: 34px 26px;
+  text-align: center;
+  font-family: var(--font-body, "Poppins", system-ui, sans-serif);
+}
+.sv-state--plain {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 30px 20px;
+}
+.sv-state__label {
+  font-size: 13px;
+  color: var(--ink-3, #6b7c83);
+  margin: 14px 0 0;
+}
+.sv-state .sv-empty__icon { margin-bottom: 16px; }
+.sv-empty__icon--danger { background: var(--danger-soft, #fef2f2); color: var(--danger, #dc2626); }
+.sv-empty__icon--muted { background: var(--acc-soft, var(--academy-soft, #e6edee)); color: var(--acc, var(--academy, #425f7f)); }
+
+.sv-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 3px solid var(--card-border, #e3e9ee);
+  border-top-color: var(--acc, var(--academy, #425f7f));
+  animation: sv-spin 0.7s linear infinite;
+}
+@keyframes sv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .sv-spinner { animation-duration: 1.6s; }
+}
+
+.sv-empty__icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  margin: 0 auto 20px;
+  display: grid;
+  place-items: center;
+  background: var(--acc-soft, var(--academy-soft, #e6edee));
+  color: var(--acc, var(--academy, #425f7f));
+}
+.sv-empty__icon svg { width: 34px; height: 34px; }
+.sv-empty__title {
+  font-family: var(--font-display, "Montserrat", system-ui, sans-serif);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink, #1a2c33);
+  margin: 0 0 8px;
+}
+.sv-empty__text {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-3, #6b7c83);
+  margin: 0 0 22px;
+}
+.sv-empty__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--acc, var(--academy, #425f7f));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-family: var(--font-body, "Poppins", system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.sv-empty__cta:hover { filter: brightness(0.9); transform: translateY(-1px); }
+.sv-empty__cta:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 3px rgba(66,95,127,.35)); }
+.sv-empty__cta svg { width: 15px; height: 15px; }

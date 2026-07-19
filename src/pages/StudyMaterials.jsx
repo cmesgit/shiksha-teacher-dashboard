@@ -4,6 +4,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { MdDelete } from "react-icons/md";
 import api from "../api/apiClient";
 import "../styles/study-materials.css";
+import { LoadingState } from "../components/StateViews";
 
 
 export default function StudyMaterials() {
@@ -44,7 +45,7 @@ export default function StudyMaterials() {
     }
   };
 
-  if (loading) return <div className="sm-loading">Loading study materials...</div>;
+  if (loading) return <LoadingState label="Loading study materials" />;
 
   return (
     <div className="study-materials-page">
