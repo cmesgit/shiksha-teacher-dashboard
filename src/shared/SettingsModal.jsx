@@ -138,8 +138,11 @@ function PrefsSection() {
 
 /* ── Teacher identity section ── */
 function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfileUrl, onManageTrack }) {
-  if (!teacherInfo) return null;
-  const tracks = teacherInfo.tracks || {};
+  // teacherInfo is null for an account that has never held any teaching
+  // track (backend's serialize_teacher() returns None) — that's exactly the
+  // audience "Become a teacher" targets, so render both tracks as locked
+  // instead of bailing out and showing nothing.
+  const tracks = teacherInfo?.tracks || {};
 
   // Academy destinations depend on status: while PENDING the useful surface is
   // still the application form (finish/fix documents); once APPROVED it's the
