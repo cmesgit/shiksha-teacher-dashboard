@@ -4,7 +4,7 @@ import {
   useRoomContext,
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import ChatPanel from "./ChatPanel";
+import LiveChatPanel from "./LiveChatPanel";
 import TeacherControls from "./TeacherControls";
 import ControlBar from "./ControlBar";
 import React, { useState, useRef, useEffect } from "react";
@@ -305,7 +305,7 @@ export default function TeacherPrivateSessionUI({
 
           {/* CHAT PANEL */}
           {activePanel === "chat" && (
-            <ChatPanel
+            <LiveChatPanel
               role={role}
               messages={chatMessages}
               onSendMessage={sendMessage}

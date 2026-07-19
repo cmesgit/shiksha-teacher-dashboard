@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { IoSend } from "react-icons/io5";
 import { HiMicrophone } from "react-icons/hi2";
 import { HiDotsVertical } from "react-icons/hi";
-import "./ChatPanel.css";
+import "./LiveChatPanel.css";
 
-export default function ChatPanel({
+export default function LiveChatPanel({
   role,
   messages = [],
   participants = [],
