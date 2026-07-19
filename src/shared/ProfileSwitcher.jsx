@@ -459,7 +459,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
                 <p className="ps-empty-tracks__body">
                   Teach academic classes as <b>Faculty</b> or run skill sessions as an <b>Expert</b> — all under this account.
                 </p>
-                <button className="ps-empty-tracks__cta" onClick={() => openSettings("account")}>
+                <button className="ps-empty-tracks__cta" onClick={() => openSettings("profile")}>
                   <RiAddLine /> Become a teacher
                 </button>
               </div>
