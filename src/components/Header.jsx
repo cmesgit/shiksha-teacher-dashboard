@@ -10,12 +10,15 @@ import ProfileSwitcher from "../shared/ProfileSwitcher";
 import TrackSwitcher from "./TrackSwitcher";
 import MessageIcon from "./MessageIcon";
 import NotificationBell from "./NotificationBell";
+import { useAuth } from "../contexts/AuthContext";
 import "../styles/header.css";
 import "../shared/ProfileSwitcher.css";
 import { HOME_URL, APP_URL } from "../config/urls";
 
 export default function Header({ onMenuClick, isExpertPage }) {
   const navigate = useNavigate();
+  const { teacherInfo } = useAuth();
+  const isSkillActive = teacherInfo?.active_track === "skill";
   return (
     <header className={`header${isExpertPage ? " header--expert" : ""}`}>
       <button className="hamburgerBtn" onClick={onMenuClick} type="button" aria-label="Open sidebar">
@@ -30,8 +33,10 @@ export default function Header({ onMenuClick, isExpertPage }) {
         learnUrl={APP_URL}
         teachUrl={window.location.origin + "/teacher/dashboard"}
         quickActions={[
-          { label: "Dashboard", icon: <RiDashboardLine />, onClick: () => navigate("/teacher/dashboard") },
-          { label: "My classes", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/classes") },
+          { label: "Dashboard", icon: <RiDashboardLine />, onClick: () => navigate(isSkillActive ? "/teacher/expert" : "/teacher/dashboard") },
+          isSkillActive
+            ? { label: "My course", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/expert/course") }
+            : { label: "My classes", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/classes") },
         ]}
       />
     </header>
