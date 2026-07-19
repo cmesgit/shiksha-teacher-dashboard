@@ -40,7 +40,7 @@ import RecordingPlayer from "../pages/RecordingPlayer";
 import LiveSessions from "../pages/LiveSessions";
 import LiveSessionDetail from "../pages/LiveSessionDetail";
 import TeacherCreateLiveSession from "../pages/TeacherCreateLiveSession";
-import Profile from "../pages/Profile";
+import FacultyProfile from "../pages/FacultyProfile";
 import StudentsList from "../pages/StudentsList";
 import StudentDetail from "../pages/StudentDetail";
 import AllStudents from "../pages/AllStudents";
@@ -54,7 +54,6 @@ import PrivateSessionDetail from "../pages/PrivateSessionDetail";
 import ChangePassword from "../pages/ChangePassword";
 import Chat from "../pages/Chat";
 import TeacherPasswordSettings from "../pages/TeacherPasswordSettings";
-import PrivateDetails from "../pages/PrivateDetails";
 import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 import BatchProgress from "../pages/BatchProgress";
@@ -143,8 +142,9 @@ export default function TeacherRoutes() {
         path="/teacher"
         element={<ProtectedTeacherRoute><TeacherLayout /></ProtectedTeacherRoute>}
       >
-        <Route path="profile" element={<Profile />} />
-        <Route path="private-details" element={<PrivateDetails />} />
+        <Route path="profile" element={<FacultyProfile />} />
+        {/* Old split pages both fold into the unified faculty profile. */}
+        <Route path="private-details" element={<Navigate to="/teacher/profile" replace />} />
         <Route path="dashboard" element={<DashboardEntry />} />
         <Route path="students" element={<AllStudents />} />
         <Route path="students/:studentId" element={<AllStudentDetail />} />

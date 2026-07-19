@@ -35,6 +35,7 @@ const NAV = [
   { l: "Recordings", i: "play", to: "/teacher/recordings" },
   { section: "CONNECT" },
   { l: "Messages", i: "msg", to: "/teacher/chat" },
+  { l: "My Profile", i: "user", to: "/teacher/profile" },
 ];
 
 const initialsOf = (name) =>

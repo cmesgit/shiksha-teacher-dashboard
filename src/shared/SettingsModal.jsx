@@ -41,6 +41,7 @@
  * Class & board shown read-only to protect coded fields.
  */
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "./SettingsModal.css";
 
@@ -140,11 +141,21 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
   if (!teacherInfo) return null;
   const tracks = teacherInfo.tracks || {};
 
+  // Academy destinations depend on status: while PENDING the useful surface is
+  // still the application form (finish/fix documents); once APPROVED it's the
+  // unified faculty-profile editor in the teacher app (/teacher/profile).
+  const academyApproved = tracks.academy === "approved";
+  const facultyEditUrl = expertProfileUrl
+    ? expertProfileUrl.replace(/\/teacher\/expert\/profile\/?$/, "/teacher/profile")
+    : "";
   const TRACK_DEFS = [
     { key: "academy", label: "Faculty",          sub: "Academic teaching (Academy)", icon: "🎓",
-      manageUrl: facultyFormUrl,   manageLabel: "Application form" },
+      manageUrl:   academyApproved ? facultyEditUrl : facultyFormUrl,
+      manageLabel: academyApproved ? "Edit profile" : "Application form",
+      manageDest:  academyApproved ? "/teacher/profile" : "/teacher/dashboard" },
     { key: "skill",   label: "Expert (Skill-Dev)", sub: "Skill-development sessions",  icon: "⚡",
-      manageUrl: expertProfileUrl, manageLabel: "Edit profile" },
+      manageUrl: expertProfileUrl, manageLabel: "Edit profile",
+      manageDest: "/teacher/expert/profile" },
   ];
 
   return (
@@ -157,7 +168,7 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
         application both live behind these.
       </div>
       <div className="sm-track-list">
-        {TRACK_DEFS.map(({ key, label, sub, icon, manageUrl, manageLabel }) => {
+        {TRACK_DEFS.map(({ key, label, sub, icon, manageUrl, manageLabel, manageDest }) => {
           const st = tracks[key] || "locked";
           // Asymmetric Faculty/Guest rule: you may add Faculty (academy) any
           // time it's not held, but you may add Skill ONLY if you've never
@@ -188,7 +199,7 @@ function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfile
                        unlock first — route through the switcher's flow instead
                        of a raw link that bounces to login. */
                     <button type="button" className="sm-mini"
-                      onClick={() => onManageTrack(key, key === "skill" ? "/teacher/expert/profile" : "/teacher/dashboard")}>
+                      onClick={() => onManageTrack(key, manageDest)}>
                       {manageLabel} 🔒
                     </button>
                   ) : (manageUrl && <a className="sm-mini" href={manageUrl}>{manageLabel}</a>)
@@ -480,7 +491,10 @@ export default function SettingsModal({
   if (!open) return null;
 
   /* ─────────────────────────── render ─────────────────────────── */
-  return (
+  // Portalled to document.body: the header this lives under has
+  // backdrop-filter, which makes it the containing block for any
+  // position:fixed descendant and clips the overlay to the header's box.
+  return createPortal(
     <div className="sm-overlay"
       onClick={(e) => { if (e.target.classList.contains("sm-overlay")) onClose?.(); }}>
       <div className="sm-card" role="dialog" aria-modal="true" aria-label="Settings">
@@ -901,6 +915,7 @@ export default function SettingsModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
