@@ -132,7 +132,15 @@
 .live-card-body p  { font-size: 0.78rem; margin: 0 0 2px; opacity: 0.9; }
 .live-card-spacer  { flex: 1; min-height: 8px; }
 .live-card-body .starts-in { font-size: 0.78rem; font-weight: 700; margin: 0; }
-.live-card-body .time       { font-size: 0.82rem; font-weight: 800; margin: 0; }
+.live-card-body .time       { font-size: 0.82rem; font-weight: 800; margin: 0 0 8px; }
+
+.live-card__btn {
+  align-self: flex-start;
+  cursor: pointer; border: none;
+  background: #fff; color: #13899b; font-size: 11px; font-weight: 700;
+  border-radius: 9px; padding: 7px 14px;
+}
+.live-card__btn:hover { background: #eef8f9; }
 
 /* ── CALENDAR ── */
 .calendar {

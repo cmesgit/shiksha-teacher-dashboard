@@ -1,4 +1,8 @@
-export default function LiveSessionCard({ subject, topic, startsIn, timing }) {
+import { useNavigate } from "react-router-dom";
+
+export default function LiveSessionCard({ id, subject, topic, startsIn, timing, live }) {
+  const navigate = useNavigate();
+
   return (
     <div className="live-card">
       <div className="live-card-body">
@@ -8,6 +12,15 @@ export default function LiveSessionCard({ subject, topic, startsIn, timing }) {
         <p className="live-card-spacer"></p>
         <p className="starts-in">{startsIn}</p>
         <p className="time">{timing}</p>
+        {id && (
+          <button
+            type="button"
+            className="live-card__btn"
+            onClick={() => navigate(`/teacher/live/${id}`)}
+          >
+            {live ? "Rejoin" : "Start class"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -48,6 +48,7 @@ import CalendarWidget   from "../components/CalendarWidget";
 import AssignmentItem   from "../components/AssignmentItem";
 import ActivityItem     from "../components/ActivityItem";
 import AcademyRejectionBanner from "../components/AcademyRejectionBanner";
+import BatchProgressSummary from "../components/BatchProgressSummary";
 
 import api from "../api/apiClient";
 import useNotificationSocket from "../hooks/useNotificationSocket";
@@ -70,6 +71,14 @@ const NOTIF_FILTERS = [
 
 // WS events that mean "your academy slices changed".
 const REFRESH_TYPES = new Set(["ASSIGNMENT", "QUIZ", "SESSION", "SUBMISSION"]);
+
+const SCHEDULE_TYPE_FILTERS = [
+  { value: "all",             label: "All" },
+  { value: "assignment",      label: "Assign" },
+  { value: "live-session",    label: "Live" },
+  { value: "private-session", label: "Private" },
+  { value: "quiz",            label: "Quiz" },
+];
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -410,6 +419,8 @@ export default function TeacherDashboard() {
   const renderSessionCard = (s) => (
     <LiveSessionCard
       key={s.id}
+      id={s.id}
+      live={s.live}
       subject={s.subject}
       topic={s.topic}
       startsIn={startsInLabel(s.dateTime, nowForLabels)}
@@ -650,15 +661,15 @@ export default function TeacherDashboard() {
               </span>
             )}
           </h4>
-          <select className="dash-filter" value={scheduleTypeFilter}
-            aria-label="Filter schedule"
-            onChange={(e) => setScheduleTypeFilter(e.target.value)}>
-            <option value="all">All</option>
-            <option value="assignment">Assignment</option>
-            <option value="live-session">Live Session</option>
-            <option value="private-session">Private Session</option>
-            <option value="quiz">Quiz</option>
-          </select>
+          <div className="dash-pills">
+            {SCHEDULE_TYPE_FILTERS.map((f) => (
+              <button type="button" key={f.value}
+                className={`dash-pill pill-due ${scheduleTypeFilter === f.value ? "pill-active" : ""}`}
+                onClick={() => setScheduleTypeFilter(f.value)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="dash-card-body">
           {filteredSchedule.length === 0 && <p>No schedule</p>}
@@ -674,6 +685,8 @@ export default function TeacherDashboard() {
           ))}
         </div>
       </div>
+
+      <BatchProgressSummary />
 
       </div>{/* /dash-col--rail */}
       </div>{/* /dash-grid */}
