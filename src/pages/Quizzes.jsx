@@ -164,6 +164,15 @@ export default function Quizzes() {
                 </span>
               </div>
 
+              {quiz.total_attempts > 0 && (
+                <div className="quiz-detail">
+                  <span className="quiz-label">Class performance:</span>
+                  <span className="quiz-value" title={`${quiz.total_attempts} attempt(s) · ${quiz.submission_rate?.toFixed(0)}% of the class submitted`}>
+                    Avg {quiz.average_score?.toFixed(1)} (range {quiz.lowest_score?.toFixed(1)}–{quiz.highest_score?.toFixed(1)}) · {quiz.submission_rate?.toFixed(0)}% submitted
+                  </span>
+                </div>
+              )}
+
               <div className="quiz-actions">
                 <button
                   className="quiz-view-btn"

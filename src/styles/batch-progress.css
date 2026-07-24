@@ -132,6 +132,7 @@
 
 .bp-chapter-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .bp-chapter-title { font-size: 14px; color: #2c3c43; }
+.bp-covered-at { font-size: 11.5px; color: #8a94a3; font-weight: 400; }
 .bp-note-input {
   border: 1px solid #dbe7ea; border-radius: 8px; padding: 6px 9px;
   font-size: 12.5px; color: #37474f; background: #fbfdfd; width: 100%; box-sizing: border-box;

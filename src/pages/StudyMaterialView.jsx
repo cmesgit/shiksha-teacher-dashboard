@@ -123,6 +123,7 @@ export default function StudyMaterialView() {
                         <div className="smv-file-info">
                           <span className="smv-file-name">{file.file_name}</span>
                           <span className="smv-file-ext" style={{ color }}>{ext}</span>
+                          {file.file_size && <span className="smv-file-size">{file.file_size}</span>}
                         </div>
                       </a>
                       <button

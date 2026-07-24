@@ -108,6 +108,23 @@ export default function AssignmentView() {
             </div>
           )}
 
+          {assignment.files?.map((f) => (
+            <div className="av-file-card" key={f.id}>
+              <div className="av-file-icon-box">
+                <FaRegFolder className="av-file-icon" />
+              </div>
+
+              <a
+                href={f.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="av-file-name"
+              >
+                {f.original_filename}
+              </a>
+            </div>
+          ))}
+
           <div className="av-actions">
             <button
               className="av-view-submission-btn"

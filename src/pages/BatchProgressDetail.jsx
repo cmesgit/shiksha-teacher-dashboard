@@ -204,7 +204,14 @@ export default function BatchProgressDetail() {
                             </button>
 
                             <div className="bp-chapter-body">
-                              <span className="bp-chapter-title">{c.title}</span>
+                              <span className="bp-chapter-title">
+                                {c.title}
+                                {c.is_covered && c.covered_at && (
+                                  <span className="bp-covered-at">
+                                    {" "}· covered {new Date(c.covered_at).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </span>
                               {editable ? (
                                 <input
                                   className="bp-note-input"

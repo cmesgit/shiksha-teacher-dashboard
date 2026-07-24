@@ -775,6 +775,8 @@ function SessionDetailsDialog({
       teacherId: i.teacherId,
       status: i.status,
       isHost: false,
+      declineCount: i.declineCount || 0,
+      joinedAt: i.joinedAt,
     })),
   ];
 
@@ -843,6 +845,12 @@ function SessionDetailsDialog({
               </span>
               {p.isHost && <span style={styles.hostLabel}>HOST</span>}
               {!p.isHost && p.status === "declined" && <span style={styles.declinedLabel}>DECLINED</span>}
+              {!p.isHost && p.status === "accepted" && p.joinedAt && <span style={styles.joinedLabel}>JOINED</span>}
+              {!p.isHost && p.declineCount > 0 && (
+                <span style={styles.reinvitedLabel} title="Number of times this invite was declined and resent">
+                  RE-INVITED ×{p.declineCount}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -1705,6 +1713,22 @@ const styles = {
   declinedLabel: {
     background: "#fee2e2",
     color: "#b91c1c",
+    borderRadius: 4,
+    padding: "3px 8px",
+    fontSize: 10,
+    fontWeight: 800,
+  },
+  joinedLabel: {
+    background: "#d1fae5",
+    color: "#065f46",
+    borderRadius: 4,
+    padding: "3px 8px",
+    fontSize: 10,
+    fontWeight: 800,
+  },
+  reinvitedLabel: {
+    background: "#fef3c7",
+    color: "#92400e",
     borderRadius: 4,
     padding: "3px 8px",
     fontSize: 10,
