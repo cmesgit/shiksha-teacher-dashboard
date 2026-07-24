@@ -327,6 +327,7 @@ export default function ClassroomUI({
           role={role}
           activePanel={activePanel}
           onTogglePanel={togglePanel}
+          sessionId={sessionId}
         />
       </div>
 

@@ -26,7 +26,7 @@ export default function Header({ onMenuClick, isExpertPage }) {
       </button>
       <div style={{ flex: 1 }} />
       <TrackSwitcher />
-      <MessageIcon />
+      <MessageIcon to={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
       <NotificationBell />
       <ProfileSwitcher
         teacherSignupUrl={`${HOME_URL}/signup?role=teacher`}

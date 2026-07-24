@@ -5,24 +5,14 @@ import { MdCancel } from "react-icons/md";
 import api from "../api/apiClient";
 import "../styles/live-sessions.css";
 import sessionBanner from "../assets/live-session-banner.png";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, EmptyState, ErrorState } from "../components/StateViews";
 
-/* =====================================
-   🔥 COUNTDOWN FUNCTION
-===================================== */
-function getCountdown(startTime) {
-  const now = new Date();
-  const start = new Date(startTime);
-
-  const diff = start - now;
-
-  if (diff <= 0) return "🔴 LIVE";
-
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-
-  if (minutes > 0) return `Starts in ${minutes} min`;
-  return `Starts in ${seconds}s`;
+function getLiveDuration(startTime) {
+  const diffMinutes = Math.floor((Date.now() - new Date(startTime).getTime()) / 60000);
+  if (diffMinutes < 60) return `${diffMinutes} min live`;
+  const hours = Math.floor(diffMinutes / 60);
+  const mins = diffMinutes % 60;
+  return `${hours}h ${mins}m live`;
 }
 
 export default function LiveSessions() {
@@ -58,14 +48,10 @@ export default function LiveSessions() {
     return () => clearInterval(interval);
   }, [fetchSessions]);
 
-  /* =====================================
-     🔥 COUNTDOWN AUTO UPDATE
-  ===================================== */
+  // Forces a re-render every minute so live-duration badges stay current.
+  const [, setTick] = useState(0);
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSessions((prev) => [...prev]);
-    }, 1000);
-
+    const interval = setInterval(() => setTick((t) => t + 1), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -197,28 +183,51 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
           </p>
 
           <div className="session-card-time">
-            {startDate.toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
-            {" - "}
-            {endDate.toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
+            {session.computed_status === "LIVE" ? (
+              <span className="live-duration">🔴 {getLiveDuration(session.start_time)}</span>
+            ) : (
+              <>
+                {startDate.toLocaleTimeString("en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+                {" - "}
+                {endDate.toLocaleTimeString("en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </>
+            )}
           </div>
+
+          {["SCHEDULED", "WAITING_FOR_TEACHER"].includes(
+            session.computed_status
+          ) && (
+            <button
+              type="button"
+              className="session-cancel-btn"
+              onClick={(e) => handleCancel(e, session.id)}
+            >
+              <MdCancel /> Cancel session
+            </button>
+          )}
+          {["LIVE", "PAUSED", "RECONNECTING"].includes(
+            session.computed_status
+          ) && (
+            <button
+              type="button"
+              className="session-cancel-btn"
+              onClick={(e) => handleEnd(e, session.id)}
+            >
+              <MdCancel /> End session
+            </button>
+          )}
         </div>
       </div>
     );
   };
-
-  const renderEmpty = (message) => (
-    <div className="live-sessions-empty">
-      <p style={{ margin: 0, fontSize: 13, color: "rgba(11,42,42,.4)" }}>{message}</p>
-    </div>
-  );
 
   return (
     <div className="live-sessions-page">
@@ -250,17 +259,29 @@ const sortedSessions = [...todaysSessions].sort((a, b) => {
         )}
 
         {loading && <LoadingState plain label="Loading sessions" />}
-        {error && (
-          <p className="live-sessions-empty" style={{ color: "#b91c1c" }}>
-            {error}
-          </p>
-        )}
+        {error && <ErrorState plain message={error} onRetry={fetchSessions} />}
 
         {!loading && !error && (
           <div className="today-sessions-grid">
-            {sortedSessions.length > 0
-              ? sortedSessions.map(renderCard)
-              : renderEmpty("No live sessions scheduled today")}
+            {sortedSessions.length > 0 ? (
+              sortedSessions.map(renderCard)
+            ) : (
+              <EmptyState
+                plain
+                icon="video"
+                title="No live sessions today"
+                message={
+                  subjectId
+                    ? "Schedule a live session for this class to see it here."
+                    : "You have no live sessions scheduled for today."
+                }
+                action={
+                  subjectId
+                    ? { label: "Schedule a live session", to: `/teacher/classes/${subjectId}/live-sessions/create` }
+                    : undefined
+                }
+              />
+            )}
           </div>
         )}
       </div>

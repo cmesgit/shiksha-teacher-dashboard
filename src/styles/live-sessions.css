@@ -152,6 +152,10 @@
   color: white;
 }
 
+.live-duration {
+  color: #ff6b6b;
+}
+
 .session-countdown {
   text-align: center;
   font-size: 11px;

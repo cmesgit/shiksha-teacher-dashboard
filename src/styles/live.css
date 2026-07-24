@@ -138,6 +138,7 @@
 }
 
 .cb-btn:hover { transform: translateY(-2px); }
+.cb-btn--active { color: #005f6f; }
 
 .cb-icon {
   width: 26px;
@@ -196,6 +197,35 @@
 .cb-side-btn--active span {
   font-weight: 700;
 }
+
+/* Other popup */
+.cb-other-wrap { position: relative; }
+.cb-other-menu {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  width: 185px;
+  background: #1f232b;
+  border: 2px solid #874dff;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  color: #e5e7eb;
+  z-index: 120;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cb-other-session { padding: 5px 2px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.cb-other-label { display: block; color: #c7cbd3; font-size: 12px; margin-bottom: 4px; }
+.cb-other-code-row { display: flex; align-items: center; gap: 8px; }
+.cb-other-code-row strong { flex: 1; min-width: 0; color: #e5e7eb; font-size: 12px; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-other-code-row button { width: 26px; height: 26px; border: none; background: transparent; color: #9ca3af; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.cb-other-code-row button:hover { color: #ffffff; }
+.cb-other-item { min-height: 34px; border: none; background: transparent; color: #d1d5db; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 2px; cursor: pointer; font-family: inherit; font-size: 13px; text-align: left; }
+.cb-other-item:hover:not(:disabled) { color: #ffffff; }
+.cb-other-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.cb-other-check { width: 20px; height: 20px; border: 1.5px solid #525a66; border-radius: 2px; }
 
 .chat-raise-hand-wrap {
   position: absolute;

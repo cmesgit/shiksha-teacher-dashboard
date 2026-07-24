@@ -296,6 +296,7 @@ export default function TeacherPrivateSessionUI({
           role={role}
           activePanel={activePanel}
           onTogglePanel={togglePanel}
+          sessionId={sessionId}
         />
       </div>
 
