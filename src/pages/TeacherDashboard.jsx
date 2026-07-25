@@ -129,6 +129,24 @@ function timeAgo(dateStr) {
   return days === 1 ? "yesterday" : `${days}d ago`;
 }
 
+// `live` is the backend's authoritative signal (LiveSession.status, or the
+// scheduled window as a fallback — see DashboardSessionSerializer.get_live)
+// — the same field LiveSessionCard trusts for its Rejoin/Start-class label.
+// Deriving "is this live" from clock math here too would let this chip
+// disagree with LiveSessionCard for a session that's overdue but never
+// actually started.
+function heroStatus(session) {
+  if (session.live) return { chip: "LIVE NOW", relative: "In progress" };
+  const start = new Date(session.dateTime);
+  if (Number.isNaN(start.getTime())) return { chip: "UP NEXT", relative: "" };
+  const diffMins = Math.round((start - new Date()) / 60000);
+  if (diffMins <= 0) return { chip: "UP NEXT", relative: "Starting soon" };
+  if (diffMins <= 30) return { chip: "STARTING SOON", relative: `Starts in ${diffMins}m` };
+  if (diffMins < 60) return { chip: "UP NEXT", relative: `Starts in ${diffMins}m` };
+  const hours = Math.floor(diffMins / 60);
+  return { chip: "UP NEXT", relative: hours < 24 ? `Starts in ${hours}h` : `Starts in ${Math.floor(hours / 24)}d` };
+}
+
 function startsInLabel(dateStr, now) {
   const t = new Date(dateStr);
   if (Number.isNaN(t.getTime())) return "";
@@ -261,6 +279,21 @@ export default function TeacherDashboard() {
   const sessions        = data?.sessions         ?? [];
   const allSessions     = data?.all_sessions     ?? sessions;
   const assignments     = data?.assignments      ?? [];
+
+  // Hero "next class" — the soonest upcoming/live session today. `sessions`
+  // is only filtered server-side to "not before today", so it can still
+  // contain an already-finished same-day class — exclude anything that's
+  // neither live nor still ahead of its end_time before picking the
+  // earliest, or a finished morning class would win the sort and get shown
+  // as the hero with a dead rejoin link.
+  const heroSession = useMemo(() => {
+    const now = new Date();
+    const candidates = sessions.filter(
+      (s) => s.live || !s.end_time || new Date(s.end_time) > now
+    );
+    if (!candidates.length) return null;
+    return [...candidates].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0];
+  }, [sessions]);
   const quizzes         = data?.quizzes          ?? [];
   const privateSessions = data?.private_sessions ?? [];
   const gradingQueue    = data?.grading_queue    ?? [];
@@ -517,6 +550,28 @@ export default function TeacherDashboard() {
           </div>
         ))}
       </div>
+
+      {heroSession && (() => {
+        const { chip, relative } = heroStatus(heroSession);
+        return (
+          <section className="dashHero">
+            <div className="dashHero__main">
+              <span className={`dashHero__chip dashHero__chip--${chip === "LIVE NOW" ? "live" : chip === "STARTING SOON" ? "soon" : "next"}`}>
+                {chip}
+              </span>
+              <span className="dashHero__relative">{relative}</span>
+              <h3 className="dashHero__topic">{heroSession.subject} — {heroSession.topic}</h3>
+            </div>
+            <button
+              type="button"
+              className="dashHero__cta"
+              onClick={() => navigate(`/teacher/live/${heroSession.id}`)}
+            >
+              {chip === "LIVE NOW" ? "Rejoin" : "Start class"}
+            </button>
+          </section>
+        );
+      })()}
 
       <div className="dash-grid">
       <div className="dash-col dash-col--main">
