@@ -1,0 +1,134 @@
+.reviewModal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: reviewOverlayIn 0.2s ease;
+}
+
+.reviewModal__panel {
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 30px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+  animation: reviewPopIn 0.22s ease both;
+}
+
+@keyframes reviewOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes reviewPopIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.reviewModal__title {
+  margin: 0;
+  font-family: "Montserrat", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1a2c33;
+}
+
+.reviewModal__sub {
+  margin: 6px 0 16px;
+  font-size: 12.5px;
+  color: #6b7c83;
+  line-height: 1.4;
+}
+
+.reviewModal__stars {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.reviewModal__star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 30px;
+  line-height: 1;
+  padding: 2px;
+  color: #cfdbe6;
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.reviewModal__star.is-filled {
+  color: #f5a623;
+}
+
+.reviewModal__star:hover {
+  transform: scale(1.08);
+}
+
+.reviewModal__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e5eaed;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a2c33;
+  resize: vertical;
+  outline: none;
+}
+
+.reviewModal__textarea:focus {
+  border-color: #cfdbe6;
+}
+
+.reviewModal__textarea::placeholder {
+  color: #9ca3af;
+}
+
+.reviewModal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.reviewModal__btn {
+  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 9px;
+  padding: 9px 18px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.reviewModal__btn--outline {
+  background: #fff;
+  color: #6b7c83;
+  border-color: #e5eaed;
+}
+
+.reviewModal__btn--outline:hover {
+  background: #f5f7f9;
+}
+
+.reviewModal__btn--primary {
+  background: #425f7f;
+  color: #fff;
+}
+
+.reviewModal__btn--primary:hover:not(:disabled) {
+  background: #2d4560;
+}
+
+.reviewModal__btn--primary:disabled {
+  background: #eef1f2;
+  color: #9ca3af;
+  cursor: default;
+}

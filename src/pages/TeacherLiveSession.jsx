@@ -4,6 +4,7 @@ import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import api from "../api/apiClient";
 import ClassroomUI from "../components/live/ClassroomUI";
 import ReconnectingBanner from "../components/live/ReconnectingBanner";
+import ReviewModal from "../components/live/ReviewModal";
 
 const cacheKey = (id) => `livekit_session_${id}`;
 
@@ -59,6 +60,7 @@ export default function TeacherLiveSession() {
   const [sessionData, setSessionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showReview, setShowReview] = useState(false);
   const joiningRef = useRef(false);
 
   useEffect(() => {
@@ -96,6 +98,11 @@ export default function TeacherLiveSession() {
     sessionStorage.removeItem(cacheKey(id));
     navigate(-1);
   };
+
+  // Show the review prompt first — it calls handleLeave itself once
+  // submitted or skipped (spec section 10: live/private sessions show a
+  // review modal on leave, group sessions never do).
+  const handleControlBarLeave = () => setShowReview(true);
 
   if (loading) {
     return (
@@ -150,10 +157,11 @@ export default function TeacherLiveSession() {
         <ClassroomUI
           role={sessionData.role}
           sessionId={id}
-          onLeave={handleLeave}
+          onLeave={handleControlBarLeave}
         />
         <RoomAudioRenderer />
       </LiveKitRoom>
+      {showReview && <ReviewModal sessionId={id} onDone={handleLeave} />}
     </div>
   );
 }

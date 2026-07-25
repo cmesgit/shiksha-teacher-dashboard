@@ -4,6 +4,7 @@ import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import privateSessionService from "../api/privateSessionService";
 import TeacherPrivateClassroomUI from "../components/live/TeacherPrivateClassroomUI";
 import ReconnectingBanner from "../components/live/ReconnectingBanner";
+import ReviewModal from "../components/live/ReviewModal";
 import "../styles/privateSessions.css";
 
 /* ── Same fullscreen wrapper as TeacherLiveSession ── */
@@ -45,6 +46,7 @@ export default function PrivateSessionLive() {
   const [livekitData, setLivekitData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pendingLeave, setPendingLeave] = useState(null); // "leave" | "end" | null
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +93,17 @@ export default function PrivateSessionLive() {
       console.error("Failed to end session:", err);
     }
     navigate("/teacher/private-sessions");
+  };
+
+  // Both the plain Leave and the explicit End Session show the review
+  // prompt first (spec: live/private sessions show a review modal on leave,
+  // group sessions never do) — the modal's onDone runs the real action.
+  const handleControlBarLeave = () => setPendingLeave("leave");
+  const handleControlBarEndSession = () => setPendingLeave("end");
+  const runPendingLeave = () => {
+    const action = pendingLeave === "end" ? handleEndSession : handleLeave;
+    setPendingLeave(null);
+    action();
   };
 
   if (loading) {
@@ -162,17 +175,18 @@ export default function PrivateSessionLive() {
         video={true}
         audio={true}
         style={liveKitWrap}
-        onDisconnected={() => navigate("/teacher/private-sessions")}
+        onDisconnected={handleControlBarLeave}
       >
         <ReconnectingBanner />
         <TeacherPrivateClassroomUI
           role="PRESENTER"
           sessionId={id}
-          onLeave={handleLeave}
-          onEndSession={handleEndSession}
+          onLeave={handleControlBarLeave}
+          onEndSession={handleControlBarEndSession}
         />
         <RoomAudioRenderer />
       </LiveKitRoom>
+      {pendingLeave && <ReviewModal sessionId={id} onDone={runPendingLeave} sessionType="private" />}
     </div>
   );
 }

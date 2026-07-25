@@ -12,6 +12,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import privateSessionService from "../api/privateSessionService";
 import "../styles/privateSessions.css";
 import { LoadingState } from "../components/StateViews";
+import NotesViewModal from "../components/live/NotesViewModal";
 
 /* ── Normalize fields — handles both mock + real API shapes ── */
 function norm(s) {
@@ -105,6 +106,7 @@ export default function PrivateSessionDetail() {
   const [error, setError] = useState(null);
 
   const [modal, setModal] = useState(null);
+  const [showNotes, setShowNotes] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [declineReason, setDeclineReason] = useState("");
   const [resTime, setResTime] = useState("");
@@ -176,6 +178,7 @@ export default function PrivateSessionDetail() {
   const isProposed = s.status === "proposed_changes" || s.status === "needs_reconfirmation";
   const isApproved = s.status === "approved";
   const isOngoing = s.status === "ongoing";
+  const isCompleted = s.status === "completed";
   const startable = isApproved;
   const mins = minsUntilStart(s._date, s._time);
 
@@ -240,6 +243,9 @@ export default function PrivateSessionDetail() {
               <button className="tps__abtn tps__abtn--primary" onClick={() => setModal("accept")}>Accept</button>
               <button className="tps__abtn tps__abtn--outline" onClick={() => setModal("decline")}>Decline</button>
             </>
+          )}
+          {isCompleted && (
+            <button className="tps__abtn tps__abtn--outline" onClick={() => setShowNotes(true)}>My Notes</button>
           )}
         </div>
       </div>
@@ -465,6 +471,10 @@ export default function PrivateSessionDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {showNotes && (
+        <NotesViewModal sessionId={s.id} sessionType="private" onClose={() => setShowNotes(false)} />
       )}
     </div>
   );

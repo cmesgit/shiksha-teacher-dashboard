@@ -1,7 +1,7 @@
 import { useTracks, VideoTrack, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import LiveChatPanel from "./LiveChatPanel";
-import TeacherControls from "./TeacherControls";
+import NotesPanel from "./NotesPanel";
 import ControlBar from "./ControlBar";
 import React, { useState, useRef, useEffect } from "react";
 import "../../styles/live.css";
@@ -307,10 +307,6 @@ export default function ClassroomUI({
             </div>
           )}
 
-          {isPresenter && (
-            <TeacherControls sessionId={sessionId} onLeave={onLeave} />
-          )}
-
           <button
             className="video-fs-btn"
             onClick={toggleFullscreen}
@@ -342,6 +338,8 @@ export default function ClassroomUI({
               participants={peopleList}
             />
           )}
+
+          {activePanel === "notes" && <NotesPanel sessionId={sessionId} />}
 
           {activePanel === "people" && (
             <div className="ppl-panel">

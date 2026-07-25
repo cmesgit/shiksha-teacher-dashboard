@@ -23,6 +23,7 @@
 import { useTracks, VideoTrack, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import TeacherGroupSessionChatPanel from "./TeacherGroupSessionChatPanel";
+import NotesPanel from "./NotesPanel";
 import TeacherGroupSessionControlBar from "./TeacherGroupSessionControlBar";
 import React, { useState, useRef, useEffect } from "react";
 import "../../styles/teacherGroupSessionLive.css";
@@ -546,6 +547,8 @@ export default function GroupSessionClassroomUI({
               onSendMessage={sendMessage}
             />
           )}
+
+          {activePanel === "notes" && <NotesPanel sessionId={session?.id} sessionType="group" />}
 
           {activePanel === "people" && (
             <div className="tgs-ppl-panel">

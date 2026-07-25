@@ -1,0 +1,39 @@
+.np-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--cp-surface);
+  padding: 12px;
+  gap: 8px;
+}
+
+.np-textarea {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cp-text-dark);
+  line-height: 1.5;
+  outline: none;
+}
+
+.np-textarea:focus {
+  border-color: var(--cp-teal);
+}
+
+.np-textarea::placeholder {
+  color: var(--cp-text-empty);
+}
+
+.np-status {
+  flex-shrink: 0;
+  height: 14px;
+  font-size: 10.5px;
+  color: var(--cp-text-muted);
+  text-align: right;
+}

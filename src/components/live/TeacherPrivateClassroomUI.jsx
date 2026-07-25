@@ -5,7 +5,7 @@ import {
 } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import LiveChatPanel from "./LiveChatPanel";
-import TeacherControls from "./TeacherControls";
+import NotesPanel from "./NotesPanel";
 import ControlBar from "./ControlBar";
 import React, { useState, useRef, useEffect } from "react";
 import useLiveSessionChat from "../../hooks/useLiveSessionChat";
@@ -277,8 +277,6 @@ export default function TeacherPrivateSessionUI({
             </div>
           )}
 
-          <TeacherControls sessionId={sessionId} onLeave={onLeave} />
-
           <button
             className="video-fs-btn"
             onClick={toggleFullscreen}
@@ -313,6 +311,9 @@ export default function TeacherPrivateSessionUI({
               participants={peopleList}
             />
           )}
+
+          {/* NOTES PANEL */}
+          {activePanel === "notes" && <NotesPanel sessionId={sessionId} sessionType="private" />}
 
           {/* PEOPLE PANEL */}
           {activePanel === "people" && (
