@@ -129,24 +129,6 @@ function timeAgo(dateStr) {
   return days === 1 ? "yesterday" : `${days}d ago`;
 }
 
-// `live` is the backend's authoritative signal (LiveSession.status, or the
-// scheduled window as a fallback — see DashboardSessionSerializer.get_live)
-// — the same field LiveSessionCard trusts for its Rejoin/Start-class label.
-// Deriving "is this live" from clock math here too would let this chip
-// disagree with LiveSessionCard for a session that's overdue but never
-// actually started.
-function heroStatus(session) {
-  if (session.live) return { chip: "LIVE NOW", relative: "In progress" };
-  const start = new Date(session.dateTime);
-  if (Number.isNaN(start.getTime())) return { chip: "UP NEXT", relative: "" };
-  const diffMins = Math.round((start - new Date()) / 60000);
-  if (diffMins <= 0) return { chip: "UP NEXT", relative: "Starting soon" };
-  if (diffMins <= 30) return { chip: "STARTING SOON", relative: `Starts in ${diffMins}m` };
-  if (diffMins < 60) return { chip: "UP NEXT", relative: `Starts in ${diffMins}m` };
-  const hours = Math.floor(diffMins / 60);
-  return { chip: "UP NEXT", relative: hours < 24 ? `Starts in ${hours}h` : `Starts in ${Math.floor(hours / 24)}d` };
-}
-
 function startsInLabel(dateStr, now) {
   const t = new Date(dateStr);
   if (Number.isNaN(t.getTime())) return "";
@@ -217,6 +199,8 @@ export default function TeacherDashboard() {
   const [activityFilter, setActivityFilter]         = useState("all");
   const [selectedDate, setSelectedDate]             = useState(null);
   const [scheduleTypeFilter, setScheduleTypeFilter] = useState("all");
+  const [listTab, setListTab]                       = useState("assignments"); // merged Assignments/Quizzes card
+  const [batchStats, setBatchStats]                 = useState(null);
 
   // Singleton, server-isolated notification store (bell shares it).
   const { notifications, markOneRead, onEvent } = useNotificationSocket();
@@ -276,28 +260,33 @@ export default function TeacherDashboard() {
     return () => mq.removeEventListener?.("change", onChange);
   }, []);
 
+  // Stat row's "Active batches" / "Students taught" — the dashboard payload
+  // doesn't carry batch stats, so this fetches the same endpoint
+  // BatchProgressSummary already calls independently for its own widget
+  // (see src/components/BatchProgressSummary.jsx). Duplicate network call,
+  // same precedent already established on this page.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/courses/teacher/my-batches/");
+        if (!cancelled) setBatchStats(res.data?.stats || null);
+      } catch (err) {
+        console.error("Failed to load batch stats", err);
+        if (!cancelled) setBatchStats(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const sessions        = data?.sessions         ?? [];
   const allSessions     = data?.all_sessions     ?? sessions;
   const assignments     = data?.assignments      ?? [];
-
-  // Hero "next class" — the soonest upcoming/live session today. `sessions`
-  // is only filtered server-side to "not before today", so it can still
-  // contain an already-finished same-day class — exclude anything that's
-  // neither live nor still ahead of its end_time before picking the
-  // earliest, or a finished morning class would win the sort and get shown
-  // as the hero with a dead rejoin link.
-  const heroSession = useMemo(() => {
-    const now = new Date();
-    const candidates = sessions.filter(
-      (s) => s.live || !s.end_time || new Date(s.end_time) > now
-    );
-    if (!candidates.length) return null;
-    return [...candidates].sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0];
-  }, [sessions]);
   const quizzes         = data?.quizzes          ?? [];
   const privateSessions = data?.private_sessions ?? [];
   const gradingQueue    = data?.grading_queue    ?? [];
   const gradingCount    = data?.grading_count    ?? gradingQueue.length;
+  const recentActivity  = data?.schedule         ?? [];
 
   // ── calendar events ────────────────────────────────────────────────
   const calendarEvents = useMemo(() => {
@@ -409,19 +398,15 @@ export default function TeacherDashboard() {
     const d = new Date(s.dateTime);
     return !Number.isNaN(d.getTime()) && isSameDay(d, nowStat);
   }).length;
-  const pendingAssignments = assignments.filter((a) => {
-    const d = a.due ? new Date(a.due) : null;
-    return !d || Number.isNaN(d.getTime()) || d >= nowStat;
-  }).length;
-  const pendingQuizzes = quizzes.filter((q) => {
-    const d = q.due ? new Date(q.due) : null;
-    return !d || Number.isNaN(d.getTime()) || d >= nowStat;
-  }).length;
+  // Uncapped count straight from the API (see dashboard/views.py
+  // _teacher_grading_count) — defensive ?? 0 covers a transitional deploy
+  // where an older backend hasn't shipped the field yet.
+  const submissionsToGradeCount = data?.grading_count ?? 0;
   const statCards = [
-    { icon: "video", iconBg: "#e6f4f6", iconColor: "#13899b", value: todaySessionsCount, label: "Sessions today" },
-    { icon: "cal",   iconBg: "#e8edfb", iconColor: "#1d4ed8", value: sessions.length,    label: "This week" },
-    { icon: "file",  iconBg: "#ecf8ee", iconColor: "#2f9d42", value: pendingAssignments, label: "Assignments due" },
-    { icon: "help",  iconBg: "#fff8f0", iconColor: "#d97706", value: pendingQuizzes,     label: "Quizzes due" },
+    { icon: "video",  iconBg: "#e6f4f6", iconColor: "#13899b", value: todaySessionsCount,          label: "Sessions today" },
+    { icon: "check",  iconBg: "#fef9ec", iconColor: "#b45309", value: submissionsToGradeCount,     label: "Submissions to grade" },
+    { icon: "layers", iconBg: "#e6edee", iconColor: "#425f7f", value: batchStats?.active_batches ?? 0, label: "Active batches" },
+    { icon: "users",  iconBg: "#e8edfb", iconColor: "#1d4ed8", value: batchStats?.students ?? 0,       label: "Students taught" },
   ];
 
   // ── gates before content ───────────────────────────────────────────
@@ -551,28 +536,6 @@ export default function TeacherDashboard() {
         ))}
       </div>
 
-      {heroSession && (() => {
-        const { chip, relative } = heroStatus(heroSession);
-        return (
-          <section className="dashHero">
-            <div className="dashHero__main">
-              <span className={`dashHero__chip dashHero__chip--${chip === "LIVE NOW" ? "live" : chip === "STARTING SOON" ? "soon" : "next"}`}>
-                {chip}
-              </span>
-              <span className="dashHero__relative">{relative}</span>
-              <h3 className="dashHero__topic">{heroSession.subject} — {heroSession.topic}</h3>
-            </div>
-            <button
-              type="button"
-              className="dashHero__cta"
-              onClick={() => navigate(`/teacher/live/${heroSession.id}`)}
-            >
-              {chip === "LIVE NOW" ? "Rejoin" : "Start class"}
-            </button>
-          </section>
-        );
-      })()}
-
       <div className="dash-grid">
       <div className="dash-col dash-col--main">
 
@@ -623,59 +586,96 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Assignments */}
-      <div className="dash-card">
-        <div className="dash-card-header">
-          <h4>Assignments</h4>
-          <div className="dash-pills">
-            <button type="button"
-              className={`dash-pill pill-due ${assignFilter === "due" ? "pill-active" : ""}`}
-              onClick={() => toggleFilter(assignFilter, "due", setAssignFilter)}>
-              Due
-            </button>
-            <button type="button"
-              className={`dash-pill pill-overdue ${assignFilter === "overdue" ? "pill-active" : ""}`}
-              onClick={() => toggleFilter(assignFilter, "overdue", setAssignFilter)}>
-              Overdue
-            </button>
-          </div>
-        </div>
-        <div className="dash-card-body">
-          {filteredAssignments.length === 0 && <p>No assignments</p>}
-          {filteredAssignments.map((a) => (
-            <AssignmentItem key={a.id} id={a.id} title={a.title}
-              subject={a.subject_name} dueDate={formatDate(a.due)}
-              subjectId={a.subject_id} />
-          ))}
-        </div>
-      </div>
+      {/* Assignments/Quizzes toggle + Recent Activity, side by side */}
+      <div className="dash-subgrid">
 
-      {/* Quizzes — now with the same Due/Overdue pills as assignments */}
-      <div className="dash-card">
-        <div className="dash-card-header">
-          <h4>Quizzes</h4>
-          <div className="dash-pills">
-            <button type="button"
-              className={`dash-pill pill-due ${quizFilter === "due" ? "pill-active" : ""}`}
-              onClick={() => toggleFilter(quizFilter, "due", setQuizFilter)}>
-              Due
-            </button>
-            <button type="button"
-              className={`dash-pill pill-overdue ${quizFilter === "overdue" ? "pill-active" : ""}`}
-              onClick={() => toggleFilter(quizFilter, "overdue", setQuizFilter)}>
-              Overdue
-            </button>
+        {/* Assignments/Quizzes — merged tabbed card */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-pills" role="tablist" aria-label="Assignments or quizzes">
+              <button type="button" role="tab" aria-selected={listTab === "assignments"}
+                className={`dash-pill ${listTab === "assignments" ? "pill-active" : ""}`}
+                onClick={() => setListTab("assignments")}>
+                Assignments
+              </button>
+              <button type="button" role="tab" aria-selected={listTab === "quizzes"}
+                className={`dash-pill ${listTab === "quizzes" ? "pill-active" : ""}`}
+                onClick={() => setListTab("quizzes")}>
+                Quizzes
+              </button>
+            </div>
+            <div className="dash-pills">
+              <button type="button"
+                className={`dash-pill pill-due ${(listTab === "assignments" ? assignFilter : quizFilter) === "due" ? "pill-active" : ""}`}
+                onClick={() => listTab === "assignments"
+                  ? toggleFilter(assignFilter, "due", setAssignFilter)
+                  : toggleFilter(quizFilter, "due", setQuizFilter)}>
+                Due
+              </button>
+              <button type="button"
+                className={`dash-pill pill-overdue ${(listTab === "assignments" ? assignFilter : quizFilter) === "overdue" ? "pill-active" : ""}`}
+                onClick={() => listTab === "assignments"
+                  ? toggleFilter(assignFilter, "overdue", setAssignFilter)
+                  : toggleFilter(quizFilter, "overdue", setQuizFilter)}>
+                Overdue
+              </button>
+            </div>
+          </div>
+          <div className="dash-card-body">
+            {listTab === "assignments" ? (
+              <>
+                {filteredAssignments.length === 0 && <p>No assignments</p>}
+                {filteredAssignments.map((a) => (
+                  <AssignmentItem key={a.id} id={a.id} title={a.title}
+                    subject={a.subject_name} dueDate={formatDate(a.due)}
+                    subjectId={a.subject_id} />
+                ))}
+              </>
+            ) : (
+              <>
+                {filteredQuizzes.length === 0 && <p>No quizzes</p>}
+                {filteredQuizzes.map((q) => (
+                  <AssignmentItem key={q.id} id={q.id} title={q.title}
+                    subject={q.subject_name} dueDate={formatDate(q.due)}
+                    subjectId={q.subject_id} />
+                ))}
+              </>
+            )}
           </div>
         </div>
-        <div className="dash-card-body">
-          {filteredQuizzes.length === 0 && <p>No quizzes</p>}
-          {filteredQuizzes.map((q) => (
-            <AssignmentItem key={q.id} id={q.id} title={q.title}
-              subject={q.subject_name} dueDate={formatDate(q.due)}
-              subjectId={q.subject_id} />
-          ))}
+
+        {/* Recent Activity — raw Activity feed (data.schedule), distinct
+            from the client-built `scheduleItems` the rail's Schedule card
+            uses; this reads the API's due-date-ordered Activity slice
+            directly and renders it as a recency feed instead. */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <h4>Recent Activity</h4>
+          </div>
+          <div className="dash-card-body">
+            {recentActivity.length === 0 && <p>No recent activity</p>}
+            {recentActivity.map((item) => (
+              <div key={item.id} className="activity-row">
+                <div className="activity-row__icon">
+                  <NavIcon
+                    name={item.raw_type === "SESSION" ? "video" : item.raw_type === "QUIZ" ? "help" : "file"}
+                    size={14} color="#6b7c83"
+                  />
+                </div>
+                <div className="activity-row__body">
+                  <div className="activity-row__title">
+                    {item.unread && <span className="activity-row__dot" aria-hidden />}
+                    {item.title}
+                  </div>
+                  {item.subject && <div className="activity-row__meta">{item.subject}</div>}
+                </div>
+                <div className="activity-row__time">{timeAgo(item.created_at)}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+
+      </div>{/* /dash-subgrid */}
 
       </div>{/* /dash-col--main */}
 

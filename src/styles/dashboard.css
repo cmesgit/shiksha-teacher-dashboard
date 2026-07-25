@@ -34,83 +34,6 @@
   margin-bottom: 16px;
 }
 
-/* =========================
-   HERO — next class card
-========================= */
-.dashHero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 16px;
-  padding: 20px 22px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #425f7f 0%, #2d4560 100%);
-  box-shadow: 0 6px 18px rgba(45, 69, 96, 0.25);
-  color: #fff;
-}
-.dashHero__main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.dashHero__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  width: fit-content;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 9.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  background: rgba(255, 255, 255, 0.16);
-}
-.dashHero__chip--live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #fff;
-  animation: dashHeroLivePulse 1.4s ease-in-out infinite;
-}
-.dashHero__chip--soon { background: rgba(255, 200, 87, 0.28); }
-.dashHero__chip--next { background: rgba(147, 197, 253, 0.28); }
-@keyframes dashHeroLivePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-.dashHero__relative {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.72);
-  margin-top: 2px;
-}
-.dashHero__topic {
-  margin: 6px 0 0;
-  font-family: Montserrat, sans-serif;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: #fff;
-}
-.dashHero__cta {
-  flex-shrink: 0;
-  background: #fff;
-  color: #2d4560;
-  border: none;
-  border-radius: 10px;
-  padding: 12px 22px;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.dashHero__cta:hover { background: #f1f5f9; }
-@media (max-width: 620px) {
-  .dashHero { flex-direction: column; align-items: flex-start; }
-  .dashHero__cta { width: 100%; }
-}
 .dash-stat {
   background: #fff;
   border: 1px solid #e5eaed;
@@ -363,6 +286,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
   margin-bottom: 10px;
   flex-shrink: 0;
 }
@@ -405,12 +330,63 @@
   padding: 6px 12px;
   border-radius: 10px;
   cursor: pointer;
+  color: #6b7c83;
 }
+
+/* Generic active state — covers plain tab pills (e.g. the Assignments/
+   Quizzes switcher) in addition to the .pill-due/.pill-overdue filters
+   below, which keep their own rules for specificity/back-compat. */
+.dash-pill.pill-active { background: #425f7f; color: white; }
 
 .pill-due         { color: #6b7c83; }
 .pill-due.pill-active     { background: #425f7f; color: white; }
 .pill-overdue     { color: #6b7c83; }
 .pill-overdue.pill-active { background: #425f7f; color: white; }
+
+/* ── Assignments/Quizzes ⟷ Recent Activity subgrid ── */
+.dash-subgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .dash-subgrid { grid-template-columns: 1fr; }
+}
+
+/* ── Recent Activity rows ── */
+.activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #eef1f2;
+}
+.activity-row:last-child { border-bottom: none; }
+.activity-row__icon {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: #eef1f2;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.activity-row__body { flex: 1; min-width: 0; }
+.activity-row__title {
+  font-size: 12.5px; font-weight: 600; color: #1a2c33;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.activity-row__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #dc2626; flex-shrink: 0;
+}
+.activity-row__meta {
+  font-size: 10.5px; color: #6b7c83; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.activity-row__time {
+  font-size: 10.5px; color: #6b7c83; flex-shrink: 0; white-space: nowrap;
+}
 
 .dash-empty {
   font-size: 11px;

@@ -1,26 +1,22 @@
 // PLACEMENT: src/pages/BatchProgress.jsx
 //
-// Lists the batches this teacher can record progress for, grouped by course.
-// Tapping a batch opens the per-batch chapter checklist (BatchProgressDetail).
+// Lists every batch this teacher can record progress for as one flat list
+// (no per-course grouping), plus a stat-cards summary row.
+// Tapping a batch opens the per-batch chapter checklist (BatchProgressDetail) —
+// that screen is the only place chapters get marked as covered, which is how
+// every percentage shown here gets produced in the first place.
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IoChevronBack } from "react-icons/io5";
 import api from "../api/apiClient";
+import NavIcon from "../components/NavIcon";
 import "../styles/batch-progress.css";
 import { LoadingState } from "../components/StateViews";
-
-function Bar({ percent }) {
-  return (
-    <div className="bp-bar" aria-hidden>
-      <div className="bp-bar__fill" style={{ width: `${Math.min(100, percent || 0)}%` }} />
-    </div>
-  );
-}
 
 export default function BatchProgress() {
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,10 +24,17 @@ export default function BatchProgress() {
     (async () => {
       try {
         const res = await api.get("/courses/teacher/my-batches/");
-        if (!cancel) setGroups(Array.isArray(res.data) ? res.data : []);
+        const payload = res.data || {};
+        if (!cancel) {
+          setGroups(Array.isArray(payload.groups) ? payload.groups : []);
+          setStats(payload.stats || null);
+        }
       } catch (err) {
         console.error("Failed to load batches", err);
-        if (!cancel) setGroups([]);
+        if (!cancel) {
+          setGroups([]);
+          setStats(null);
+        }
       } finally {
         if (!cancel) setLoading(false);
       }
@@ -39,22 +42,60 @@ export default function BatchProgress() {
     return () => { cancel = true; };
   }, []);
 
-  const totalBatches = groups.reduce((n, g) => n + (g.batches?.length || 0), 0);
+  const flatBatches = groups.flatMap((g) =>
+    (g.batches || []).map((b) => ({ ...b, courseTitle: g.course_title }))
+  );
+
+  const safeStats = stats || {};
+  const avgSyllabus = safeStats.avg_syllabus_completion;
+  const avgQuiz = safeStats.avg_quiz_score;
+
+  const statCards = [
+    {
+      icon: "layers", iconBg: "#e6edee", iconColor: "#425f7f",
+      value: safeStats.active_batches ?? 0, label: "Active batches",
+    },
+    {
+      icon: "chart", iconBg: "#e6f4f6", iconColor: "#13899b",
+      value: avgSyllabus == null ? "—" : `${avgSyllabus}%`, label: "Avg syllabus completion",
+    },
+    {
+      icon: "users", iconBg: "#e8edfb", iconColor: "#1d4ed8",
+      value: safeStats.students ?? 0, label: "Students",
+    },
+    {
+      icon: "trend", iconBg: "#ecf8ee", iconColor: "#2f9d42",
+      value: avgQuiz == null ? "—" : `${avgQuiz}%`, label: "Avg quiz score",
+    },
+  ];
 
   return (
-    <div className="bp-wrapper">
-      <button className="bp-back-btn" onClick={() => navigate("/teacher/dashboard")}>
-        <IoChevronBack /> Back
-      </button>
+    <div className="bp-page">
+      <div className="bp-page-head">
+        <h1>Batch Progress</h1>
+        <p>Syllabus completion across your batches.</p>
+      </div>
 
-      <div className="bp-container">
-        <div className="bp-top">
-          <h2>Batch Progress</h2>
-        </div>
+      <div className="bp-stats">
+        {statCards.map((st) => (
+          <div className="bp-stat" key={st.label}>
+            <div className="bp-stat__icon" style={{ background: st.iconBg, color: st.iconColor }}>
+              <NavIcon name={st.icon} size={18} color={st.iconColor} />
+            </div>
+            <div>
+              <div className="bp-stat__value">{st.value}</div>
+              <div className="bp-stat__label">{st.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bp-panel">
+        <h3>Batch Completion</h3>
 
         {loading ? (
           <LoadingState plain label="Loading your batches" />
-        ) : totalBatches === 0 ? (
+        ) : flatBatches.length === 0 ? (
           <div className="bp-empty">
             <p className="bp-empty-title">No batches to track yet.</p>
             <p className="bp-muted">
@@ -64,51 +105,36 @@ export default function BatchProgress() {
             </p>
           </div>
         ) : (
-          groups.map((g) => (
-            <section className="bp-course" key={g.course_id}>
-              <div className="bp-course-head">
-                <h3>{g.course_title}</h3>
-                {g.board && <span className="bp-course-board">{g.board}</span>}
-              </div>
-
-              {(!g.batches || g.batches.length === 0) ? (
-                <p className="bp-muted bp-muted--indent">No batches in this course yet.</p>
-              ) : (
-                <div className="bp-grid">
-                  {g.batches.map((b) => (
-                    <button
-                      className="bp-card"
-                      key={b.id}
-                      onClick={() =>
-                        navigate(`/teacher/batch-progress/${b.id}`, {
-                          state: { batchName: b.name, batchCode: b.code, courseTitle: g.course_title },
-                        })
-                      }
-                    >
-                      <div className="bp-card-top">
-                        <span className="bp-card-name">{b.name}</span>
-                        <span className="bp-code">{b.code}</span>
-                      </div>
-                      <div className="bp-card-meta">
-                        {b.year ? <span>{b.year}</span> : null}
-                        <span>
-                          {b.seats_taken}
-                          {b.capacity != null ? ` / ${b.capacity}` : ""} students
-                        </span>
-                        {!b.is_active && <span className="bp-closed">Closed</span>}
-                      </div>
-                      <div className="bp-card-progress">
-                        <Bar percent={b.percent} />
-                        <span className="bp-card-pct">
-                          {b.chapters_done}/{b.chapters_total} · {b.percent}%
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+          <div className="bp-list">
+            {flatBatches.map((b) => (
+              <button
+                type="button"
+                className="bp-row"
+                key={b.id}
+                onClick={() =>
+                  navigate(`/teacher/batch-progress/${b.id}`, {
+                    state: { batchName: b.name, batchCode: b.code, courseTitle: b.courseTitle },
+                  })
+                }
+              >
+                <div className="bp-row-top">
+                  <span className="bp-row-name">{b.name} · {b.seats_taken} students</span>
+                  <span className="bp-row-pct">{b.percent ?? 0}%</span>
                 </div>
-              )}
-            </section>
-          ))
+                <div className="bp-row-bar" aria-hidden>
+                  <div className="bp-row-bar__fill" style={{ width: `${Math.min(100, b.percent || 0)}%` }} />
+                </div>
+                <div className="bp-row-meta">
+                  {[
+                    b.courseTitle,
+                    b.year,
+                    `Ch ${b.chapters_done ?? 0} of ${b.chapters_total ?? 0} covered`,
+                  ].filter(Boolean).join(" · ")}
+                  {!b.is_active && <span className="bp-row-closed"> · Closed</span>}
+                </div>
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

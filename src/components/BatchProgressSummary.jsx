@@ -31,7 +31,7 @@ export default function BatchProgressSummary() {
     (async () => {
       try {
         const res = await api.get("/courses/teacher/my-batches/");
-        const groups = Array.isArray(res.data) ? res.data : [];
+        const groups = Array.isArray(res.data?.groups) ? res.data.groups : [];
         const flat = groups.flatMap((g) => g.batches || []);
         if (!cancel) setBatches(flat);
       } catch (err) {
