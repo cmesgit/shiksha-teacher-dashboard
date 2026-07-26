@@ -1,312 +1,75 @@
-.study-materials-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: 100%;
+/* ═══════════════════════════════════════════════════════════════════════
+   study-materials.css — the teacher's flat Study Materials list.
+
+   Almost everything this screen needs now lives in academyScreens.css (the
+   shared Academy vocabulary transcribed from Academy Dashboard.dc.html):
+   .ac-screen / .ac-head / .ac-filterBar / .ac-pills / .ac-listCard--flush /
+   .ac-row--flush / .ac-fileBadge / .ac-btn / .ac-menu. What is left here is
+   only what the design's Study Materials screen has and the shared file
+   doesn't.
+
+   The old rules (.sm-*, a bespoke card + table header + inline delete
+   confirm) are gone with the markup that used them. Note the prefix change:
+   shared/SettingsModal.css also defines global .sm-title / .sm-badge /
+   .sm-row-actions, so this file's leftovers use .stm-* to make a future
+   collision impossible.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── "NEW" flag on a recently uploaded material ────────────────────────── */
+/* Not in the design's static rows, which have no notion of recency; kept
+   from the previous screen (and matching the student app's .sm-newTag) so a
+   teacher can spot what just landed in a long list. */
+.stm-topic {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Loading */
-.sm-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  font-size: 15px;
-  color: #888;
-}
-
-/* Back button */
-.sm-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #425f7f;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  width: fit-content;
-  flex-shrink: 0;
-  transition: background 0.2s ease, transform 0.1s ease;
-}
-.sm-back-btn:hover  { background: #354d67; }
-.sm-back-btn:active { transform: scale(0.97); }
-
-/* Header */
-.sm-title-container {
-  background: #fff;
-  border: 1px solid #e5eaed;
-  border-radius: 12px;
-  padding: 20px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.sm-title-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sm-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1f2d3d;
-  margin: 0;
-}
-
-.sm-count-badge {
-  background: #425f7f;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 20px;
-  line-height: 1.6;
-}
-
-/* Search */
-.sm-search { position: relative; }
-
-.sm-search input {
-  padding: 6px 32px 6px 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 13px;
-  outline: none;
-  width: 180px;
-  background: #fff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.sm-search input:focus {
-  border-color: #425f7f;
-  box-shadow: 0 0 0 3px rgba(75, 167, 181, 0.12);
-}
-
-.sm-search-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 14px;
-}
-
-/* List container */
-.sm-list-container {
-  background: #fff;
-  border: 1px solid #e5eaed;
-  border-radius: 12px;
-  padding: 28px 32px;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.sm-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
-}
-
-.sm-add-btn {
-  background: #425f7f;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
-}
-.sm-add-btn:hover {
-  background: #354d67;
-  box-shadow: 0 4px 12px rgba(75, 167, 181, 0.3);
-  transform: translateY(-1px);
-}
-.sm-add-btn:active { transform: scale(0.97); }
-
-/* Table header */
-.sm-table-header {
-  display: flex;
-  align-items: center;
-  padding: 0 24px 12px;
-  border-bottom: 1px solid #e0e8ec;
-  margin-bottom: 10px;
-}
-
-.sm-table-header .sm-col-name,
-.sm-table-header .sm-col-date,
-.sm-table-header .sm-col-files {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2d3d;
-}
-
-/* Columns */
-.sm-col-name {
-  flex: 1.2;
-  font-size: 14px;
-  color: #1f2d3d;
-  font-weight: 500;
-}
-
-.sm-col-date {
-  flex: 1;
-  font-size: 14px;
-  color: #1f2d3d;
-}
-
-.sm-col-files { flex: 0.8; }
-
-.sm-files-badge {
+.stm-newTag {
   display: inline-block;
-  background: #eef6f8;
-  color: #425f7f;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 20px;
+  margin-left: 6px;
+  vertical-align: middle;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--fs-tag);
+  font-weight: 700;
+  letter-spacing: .3px;
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
 }
 
-.sm-col-actions {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
+/* ── "Upload to…" class chooser under the head button ──────────────────── */
+/* The design's head button goes straight to the upload form because its
+   prototype is scoped to one class. Here the screen spans every class, so
+   when no subject pill narrows it down the button opens the same dropdown
+   shape the rows use — .ac-menu, widened, because subject names do not fit
+   its 158px row width. */
+.stm-menu--subjects {
+  width: 232px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.stm-menu__label {
+  margin: 2px 0 4px;
+  padding: 0 10px;
+  font-size: var(--fs-tag);
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
-/* List */
-.sm-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+/* academyScreens.css already wraps .ac-row--flush and stacks the head below
+   768px. Below 560px the two 64px meta columns push the buttons onto a third
+   line for no gain — the date matters more than the file size, so drop the
+   size column and let the row breathe.
 
-.sm-row {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.2s ease, transform 0.15s ease;
-}
-.sm-row:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
-  transform: translateY(-2px);
-}
-
-/* View button */
-.sm-view-btn {
-  background: #425f7f;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 7px 22px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
-}
-.sm-view-btn:hover  { background: #354d67; }
-.sm-view-btn:active { transform: scale(0.97); }
-
-/* Delete button */
-.sm-delete-btn {
-  background: #e74c3c;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 7px 14px;
-  font-size: 15px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  transition: background 0.2s ease, transform 0.1s ease;
-}
-.sm-delete-btn:hover  { background: #c0392b; }
-.sm-delete-btn:active { transform: scale(0.97); }
-
-/* Inline delete confirm */
-.sm-confirm-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  animation: sm-fade-in 0.15s ease;
-}
-
-@keyframes sm-fade-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.sm-confirm-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #e74c3c;
-}
-
-.sm-confirm-yes {
-  background: #e74c3c;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.sm-confirm-yes:hover    { background: #c0392b; }
-.sm-confirm-yes:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.sm-confirm-no {
-  background: #eee;
-  color: #555;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.sm-confirm-no:hover { background: #ddd; }
-
-/* Empty */
-.sm-empty {
-  text-align: center;
-  color: #6b7b8d;
-  font-size: 14px;
-  padding: 40px 0;
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-  .sm-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 12px;
-    padding: 12px 14px;
-  }
-
-  .sm-col-name  { flex: 1 1 100%; font-weight: 600; }
-  .sm-col-date,
-  .sm-col-files { flex: 0 0 auto; }
-
-  .sm-col-actions {
-    width: 100%;
-    justify-content: flex-start;
-    gap: 8px;
-    margin-top: 4px;
-  }
+   Scoped under .stm-page: this file is a plain global stylesheet, so an
+   unscoped `.ac-row--flush` rule here would follow the user to every other
+   screen that adopts the shared row. */
+@media (max-width: 560px) {
+  .stm-page .ac-row--flush .ac-row__col:first-of-type { display: none; }
+  .stm-page .ac-row--flush .ac-row__body { flex-basis: 100%; }
+  .stm-page .stm-menu--subjects { width: 200px; }
 }

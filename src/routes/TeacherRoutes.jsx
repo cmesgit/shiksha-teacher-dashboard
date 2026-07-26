@@ -56,9 +56,6 @@ import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 import BatchProgress from "../pages/BatchProgress";
 import BatchProgressDetail from "../pages/BatchProgressDetail";
-import AssignmentsLanding from "../pages/AssignmentsLanding";
-import StudyMaterialsLanding from "../pages/StudyMaterialsLanding";
-import RecordingsLanding from "../pages/RecordingsLanding";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
@@ -158,13 +155,19 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/assignments/:assignmentId" element={<AssignmentView />} />
         <Route path="classes/:subjectId/assignments/:assignmentId/submissions" element={<SubmissionView />} />
 
-        {/* CONTENT top-level landings (class pickers) — close the loose
-            ends where the sidebar promotes per-class screens to nav items. */}
-        <Route path="assignments" element={<AssignmentsLanding />} />
-        <Route path="study-materials" element={<StudyMaterialsLanding />} />
-        <Route path="recordings" element={<RecordingsLanding />} />
+        {/* CONTENT nav items are flat, subject-filtered lists (design screens
+            11/12/13) — the class-picker step is gone. The classes/:subjectId
+            variants above and below still resolve so existing deep links work;
+            they render the same screen with that subject's pill preselected. */}
+        <Route path="assignments" element={<Assignments />} />
+        <Route path="study-materials" element={<StudyMaterials />} />
+        <Route path="recordings" element={<SessionRecordings />} />
+        <Route path="quizzes" element={<Quizzes />} />
 
-        {/* Quizzes */}
+        {/* Quizzes. NOTE: quiz-bank is the QUESTION BANK, a different screen —
+            the sidebar's "Quizzes" item used to point here, which is why the
+            real quiz list was only reachable via Classes. It now points at
+            /teacher/quizzes; the bank stays routable. */}
         <Route path="quiz-bank" element={<QuizBank />} />
         <Route path="classes/:subjectId/quizzes" element={<Quizzes />} />
         <Route path="classes/:subjectId/quizzes/create" element={<CreateQuiz />} />

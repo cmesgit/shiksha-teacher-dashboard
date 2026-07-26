@@ -1,16 +1,260 @@
-/* academySidebar.css — responsive behavior for the mockup-matched Academy
-   sidebar (inline-styled aside.acad-side). Desktop: static 240px flex column.
-   Mobile: fixed off-canvas drawer toggled by .acad-side--open. */
-.acad-side { position: relative; z-index: 110; }
+/* ──────────────────────────────────────────────────────────────────────────
+   academySidebar.css — the Academy sidebar chrome.
+
+   Transcribed from design_handoff_academy_dashboard/Academy Dashboard.dc.html
+   lines 560–595 (the <aside>). Every value here is the design's value; the
+   colours resolve through shared/tokens.css so the teacher app gets the same
+   geometry in maroon by defining a different --side-bg.
+
+   This replaces the inline styles the aside used to carry — inline styles
+   can't express the :hover states the design specifies (the nav items were
+   faking hover with onMouseEnter/onMouseLeave handlers).
+   ────────────────────────────────────────────────────────────────────────── */
+
+.acad-side {
+  height: 100%;
+  background: var(--side-bg);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  position: relative;
+  z-index: 110;
+}
+
+/* ── Brand ──────────────────────────────────────────────────────────────── */
+.acad-side__brand {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--side-sep);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.acad-side__mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--side-tile);
+  border: 2px solid var(--side-tile-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.acad-side__wordmark { flex: 1; min-width: 0; }
+.acad-side__name {
+  color: var(--side-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -.3px;
+  line-height: 1.15;
+}
+.acad-side__eyebrow {
+  color: var(--side-ink-3);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Mobile drawer close button — hidden on desktop, shown in the drawer. */
+.acad-side__close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--side-ink-5);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 0;
+}
+
+/* ── Active-course selector well ───────────────────────────────────────── */
+.acad-side__selector { padding: 12px 10px 4px; }
+
+.acad-side__well {
+  width: 100%;
+  background: var(--side-well);
+  border: 1px solid var(--side-well-border);
+  border-radius: var(--r-md);
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  transition: background .15s;
+}
+.acad-side__well--interactive { cursor: pointer; }
+.acad-side__well--interactive:hover { background: var(--side-well-hover); }
+.acad-side__well:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.acad-side__wellLabel {
+  display: block;
+  color: var(--side-ink-5);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+.acad-side__wellValue {
+  display: block;
+  color: var(--side-ink);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acad-side__wellText { display: block; min-width: 0; }
+.acad-side__wellCaret { flex-shrink: 0; }
+
+/* ── Course dropdown ───────────────────────────────────────────────────── */
+.acad-side__menu {
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-dropdown);
+  padding: 5px;
+  overflow: hidden;
+}
+.acad-side__menuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  color: var(--ink);
+  transition: background .15s;
+}
+.acad-side__menuItem:hover { background: var(--surface-hover); }
+.acad-side__menuItem.is-active {
+  background: var(--acc-soft, var(--academy-soft));
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ── Nav ───────────────────────────────────────────────────────────────── */
+.acad-side__nav {
+  flex: 1;
+  padding: 6px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.acad-side__section {
+  font-size: var(--fs-nav-section);
+  font-weight: 700;
+  color: var(--side-ink-4);
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  padding: 13px 8px 5px;
+}
+.acad-side__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  font-size: var(--fs-body);
+  text-decoration: none;
+  border: none;
+  border-radius: var(--r-sm);
+  margin-bottom: 1px;
+  transition: background .15s;
+  background: transparent;
+  color: var(--side-ink-2);
+  font-weight: 500;
+}
+.acad-side__item:hover { background: var(--side-item-hover); color: var(--side-ink); }
+.acad-side__item.active {
+  background: var(--side-item-on);
+  color: var(--side-ink);
+  font-weight: 700;
+}
+.acad-side__item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.acad-side__item svg { flex-shrink: 0; }
+
+/* ── User footer ───────────────────────────────────────────────────────── */
+.acad-side__user {
+  padding: 12px;
+  border-top: 1px solid var(--side-sep);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.acad-side__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--side-accent);
+  color: var(--side-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.acad-side__userText { min-width: 0; flex: 1; }
+.acad-side__userName {
+  color: var(--side-ink);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acad-side__userRole { color: var(--side-ink-5); font-size: 10px; }
+
+/* ── Return to homepage ────────────────────────────────────────────────── */
+/* Not in the design (which is a closed prototype), but a real affordance this
+   product needs — styled to recede so it reads as chrome, not navigation. */
+.acad-side__home { padding: 10px; border-top: 1px solid var(--side-sep); }
+.acad-side__homeLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, .42);
+  font-size: var(--fs-meta);
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 255, 255, .1);
+  transition: background .15s, color .15s;
+}
+.acad-side__homeLink:hover {
+  background: var(--side-item-hover);
+  color: var(--side-ink-2);
+}
+
+/* ── Mobile drawer ─────────────────────────────────────────────────────── */
+/* The design is desktop-only (min-width 1240px). Below that we keep the
+   existing off-canvas drawer rather than regress mobile navigation. Unlike the
+   student app — where a wrapper element slides — here the <aside> itself is the
+   drawer, toggled by .acad-side--open. */
+.acad-side {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+}
 
 @media (max-width: 768px) {
   .acad-side {
-    position: fixed; top: 0; left: 0; height: 100dvh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100dvh;
     transform: translateX(-100%);
     transition: transform .3s ease;
     box-shadow: 0 18px 40px rgba(0, 0, 0, .28);
-    z-index: 110;
   }
-  .acad-side.acad-side--open { transform: translateX(0); }
-  .acad-side .sidebar-close-btn { display: flex !important; }
+  .acad-side--open { transform: translateX(0); }
+  .acad-side__close { display: block; }
 }

@@ -1,8 +1,19 @@
 /* header.css — unified header bg across both tracks (var(--page-bg)).
    The Faculty/Expert bg split has been merged; .header--expert is now a no-op. */
-.header { height:60px; display:flex; justify-content:flex-end; align-items:center; padding:0 24px;
-  background:#ffffff; position:relative; z-index:100; gap:14px; flex-shrink:0; border-bottom:1px solid #e5eaed; }
-.hamburgerBtn { display:none; border:none; background:transparent; padding:0; margin-right:auto; cursor:pointer; color:#1f2d3d; line-height:1; }
+/* Academy Dashboard.dc.html line 598: 60px tall, white, 1px #e5eaed bottom
+   border, 0 24px padding, contents pushed to the two ends. */
+.header { height:var(--header-h); display:flex; justify-content:space-between; align-items:center; padding:0 24px;
+  background:var(--surface); position:relative; z-index:100; gap:14px; flex-shrink:0; border-bottom:1px solid var(--border); }
+
+.header__left { min-width:0; }
+/* Page title — Montserrat 800 15px (design line 600). */
+.header__title { font-family:var(--font-display); font-size:var(--fs-header); font-weight:800; color:var(--ink);
+  line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Today's date — 10.5px #6b7c83 (design line 601). */
+.header__subtitle { font-size:var(--fs-small); color:var(--ink-muted); line-height:1.3; }
+.header__right { display:flex; align-items:center; gap:14px; margin-left:auto; }
+
+.hamburgerBtn { display:none; border:none; background:transparent; padding:0; cursor:pointer; color:#1f2d3d; line-height:1; }
 .hamburgerBtn svg { font-size:30px; } .hamburgerBtn:hover { color:#000; }
 .notif-bell-wrap { position:relative; display:flex; align-items:center; }
 .notif-bell-btn { position:relative; background:none; border:none; cursor:pointer; padding:6px; display:flex; align-items:center; color:#374151; border-radius:8px; transition:background .15s; }
@@ -20,5 +31,11 @@
 .notif-bell-icon { font-size:18px; flex-shrink:0; margin-top:2px; }
 .notif-bell-title { font-size:13px; color:#111827; margin:0 0 4px; line-height:1.4; }
 .notif-bell-time { font-size:11px; color:#9ca3af; margin:0; }
-@media (max-width:768px){ .header{justify-content:space-between;padding:0 16px} .hamburgerBtn{display:flex;align-items:center;justify-content:center} }
+@media (max-width:768px){
+  .header{padding:0 16px;gap:12px}
+  .hamburgerBtn{display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  /* The date sub-line is the first thing to go when space is tight. */
+  .header__subtitle{display:none}
+  .header__right{gap:10px}
+}
 @media (min-width:769px){ .hamburgerBtn{display:none} }

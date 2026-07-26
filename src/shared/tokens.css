@@ -1,143 +1,299 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   shared/tokens.css — ShikshaCom design tokens (single source of truth)
+   shared/tokens.css — ShikshaCom Academy design tokens (TEACHER app)
    ═══════════════════════════════════════════════════════════════════════
-   Extracted from the approved mockups:
-     Learner_Academy_Dashboard.html · Learner_Skill_Dev_Dashboard.html ·
-     Expert_Teacher_Skill_Dev_Dashboard.html · Teacher_Review.html
+   Source of truth: design_handoff_academy_dashboard/Academy Dashboard.dc.html
+   (the prototype markup — NOT the README prose, which lags the source on a
+   few values: the header is 60px not 64px, nav items have an 8px radius not
+   0, and the header pill group sits on #eef1f2 at 999px, not #e4e9eb/9px).
 
-   Import ONCE per app (index.css / main.jsx) in all four frontends:
-     @import "./shared/tokens.css";
-   …then replace hex literals with var(--…) as screens are touched. New
-   components must not introduce raw hex values.
+   This file is deliberately NOT synced by shared/sync.mjs — each app paints
+   its own role chrome. The teacher sidebar is maroon (#5c1515) with a
+   #7a1c1c action colour; the student app's copy sets teal (#0f6b78) with a
+   #425f7f action. Everything between the "Role chrome" block and the
+   [data-track="skill"] block is identical between the two copies — keep
+   them in step.
 
-   TRACK IDENTITY DECISION (resolves the doc-vs-mockup conflict):
-   the sidebar chrome stays constant slate across tracks — what changes per
-   track is the ACCENT. Academy = teal/blue accents, Skill Dev = orange.
-   Apply by putting data-track="academy" | "skill" on the app root; the
-   overrides at the bottom of this file do the rest.
+   New components must not introduce raw hex values — use var(--…).
    ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Chrome (constant across tracks) ────────────────────────────────── */
-  --nav-bg:        #425f7f;   /* sidebar */
-  --nav-ink:       #ffffff;
-  --nav-sep:       rgba(255, 255, 255, .12);
-  --nav-item-on:   rgba(255, 255, 255, .14);   /* active nav pill */
-  --header-bg:     #ffffff;
-  --page-bg:       #eef1f2;
-  --card-bg:       #ffffff;
-  --card-border:   #e5eaed;
-  --card-radius:   12px;
-  --card-shadow:   0 1px 3px rgba(26, 44, 51, .06);
+  /* ── Role chrome — THE PER-APP BLOCK (teacher) ─────────────────────── */
+  --side-bg:      #5c1515;   /* sidebar background */
+  --side-accent:  #c0392b;   /* avatar fill, unread dot */
+  --action:       #7a1c1c;   /* primary action button */
+  --action-hover: #6b1818;
 
-  /* ── Ink (text) ─────────────────────────────────────────────────────── */
-  --ink:           #1a2c33;   /* headings, primary text */
-  --ink-2:         #374151;   /* body */
-  --ink-3:         #6b7c83;   /* secondary / labels */
-  --ink-4:         #9ca3af;   /* placeholders, disabled */
+  /* Sidebar internals — alpha-on-role so they read on either hue */
+  --side-ink:         #ffffff;
+  --side-ink-2:       rgba(255, 255, 255, .62);  /* inactive nav item */
+  --side-ink-3:       rgba(255, 255, 255, .55);  /* wordmark subtitle */
+  --side-ink-4:       rgba(255, 255, 255, .32);  /* section heading */
+  --side-ink-5:       rgba(255, 255, 255, .50);  /* selector eyebrow, footer sub */
+  --side-sep:         rgba(255, 255, 255, .12);
+  --side-item-on:     rgba(255, 255, 255, .16);  /* active nav item */
+  --side-item-hover:  rgba(255, 255, 255, .10);
+  --side-well:        rgba(255, 255, 255, .09);  /* course selector fill */
+  --side-well-border: rgba(255, 255, 255, .14);
+  --side-well-hover:  rgba(255, 255, 255, .14);
+  --side-tile:        rgba(255, 255, 255, .12);  /* brand logo tile */
+  --side-tile-border: rgba(255, 255, 255, .22);
 
-  /* ── Track accents ──────────────────────────────────────────────────── */
-  --academy:       #425f7f;
-  --academy-soft:  #e6edee;
-  --skill:         #ff8f01;   /* fills, badges, active slots — NOT small text */
-  --skill-ink:     #d97706;   /* orange for text/links (WCAG-passing on white) */
-  --skill-soft:    #fff8f0;
-  --skill-border:  #f3d9bd;
+  /* ── Surfaces & structure ──────────────────────────────────────────── */
+  --page-bg:       #eef1f2;   /* app canvas */
+  --surface:       #ffffff;   /* cards, header, modals */
+  --surface-muted: #f9fafb;   /* input fills, dropzone */
+  --surface-hover: #f8fafb;   /* list-row hover */
+  --surface-alt:   #f5f7f9;   /* outline-button hover, incoming bubbles */
+  --border:        #e5eaed;   /* default card/input border */
+  --border-strong: #cfdbe6;   /* hover border, dashed dropzone */
+  --divider:       #f1f4f6;   /* list-row separators */
+  --toggle-track:  #e4e9eb;   /* pill-group background */
 
-  /* ── Semantic status ────────────────────────────────────────────────── */
-  --live:          #13899b;   /* live / in-session teal */
+  /* ── Ink ───────────────────────────────────────────────────────────── */
+  --ink:       #1a2c33;   /* primary text, toasts */
+  --ink-2:     #374151;   /* body */
+  --ink-muted: #6b7c83;   /* secondary text */
+  --ink-faint: #9ca3af;   /* tertiary text, placeholders */
+  --dot-idle:  #c4cad0;   /* not-submitted dot */
+
+  /* ── Brand ─────────────────────────────────────────────────────────── */
+  --primary:      #425f7f;
+  --primary-dark: #2d4560;
+
+  /* Both role themes, so cross-role UI (a teacher's chip inside a student
+     view) can reach either without redefining it. */
+  --student-side:         #0f6b78;
+  --student-accent:       #13899b;
+  --teacher-side:         #5c1515;
+  --teacher-accent:       #c0392b;
+  --teacher-action:       #7a1c1c;
+  --teacher-action-hover: #6b1818;
+
+  /* ── Semantic ──────────────────────────────────────────────────────── */
   --success:       #2f9d42;
   --success-soft:  #ecf8ee;
-  --success-border:#bfe6c8;
-  --warning:       #f59e0b;
-  --warning-ink:   #b45309;
-  --warning-soft:  #fef9ec;
+  --info:          #1d4ed8;
+  --info-soft:     #e8edfb;
+  --warning:       #c2701c;
+  --warning-soft:  #fef3ec;
+  --warning-hover: #a85f15;
   --danger:        #dc2626;
   --danger-soft:   #fef2f2;
-  --danger-border: #fca5a5;
-  --info:          #1d4ed8;
+  --danger-border: #fecaca;
+  --danger-hover:  #b91c1c;
+  --teal:          #13899b;
+  --teal-soft:     #e6f4f6;
+  --maroon:        #7a1c1c;
+  --maroon-soft:   #f4e6e6;
+  --chip-neutral:      #6b7c83;
+  --chip-neutral-soft: #f3f4f6;
 
-  /* Booking / session lifecycle chips (one vocabulary on both dashboards) */
-  --st-requested:      var(--skill-ink);
-  --st-requested-bg:   var(--skill-soft);
-  --st-confirmed:      var(--live);
-  --st-confirmed-bg:   #e6f4f6;
-  --st-completed:      var(--success);
-  --st-completed-bg:   var(--success-soft);
-  --st-cancelled:      var(--danger);
-  --st-cancelled-bg:   var(--danger-soft);
+  /* ── Subject chip palette ──────────────────────────────────────────── */
+  /* One fixed {bg, ink} pair per subject, reused everywhere that subject
+     appears. utils/subjectChips.js hashes a subject name into these six —
+     six slots in ONE palette, so the same subject keeps its colour on every
+     screen. (There used to be a 4-slot class variant and a 4-tone variant
+     alongside this, which is why a subject could change colour between
+     screens; both now resolve here.) */
+  --subj-1-bg: #e6f4f6;  --subj-1-ink: #13899b;  /* teal   — e.g. Physics   */
+  --subj-2-bg: #e8edfb;  --subj-2-ink: #1d4ed8;  /* blue   — e.g. Maths     */
+  --subj-3-bg: #fef3ec;  --subj-3-ink: #c2701c;  /* amber  — e.g. Chemistry */
+  --subj-4-bg: #ecf8ee;  --subj-4-ink: #2f9d42;  /* green  — e.g. Biology   */
+  --subj-5-bg: #f4e6e6;  --subj-5-ink: #7a1c1c;  /* maroon                  */
+  --subj-6-bg: #f1e9fb;  --subj-6-ink: #7c3aed;  /* violet                  */
 
-  /* ── Type ───────────────────────────────────────────────────────────── */
-  --font-display:  "Montserrat", system-ui, sans-serif;  /* stat numbers, page titles */
-  --font-body:     "Poppins", "Segoe UI", system-ui, sans-serif;
-  --fs-title:      18px;
-  --fs-body:       13px;
-  --fs-label:      11.5px;
-  --fs-micro:      10.5px;
+  /* ── Type ──────────────────────────────────────────────────────────── */
+  --font-display: "Montserrat", system-ui, sans-serif;
+  --font-body:    "Poppins", "Segoe UI", system-ui, sans-serif;
 
-  /* ── Layout ─────────────────────────────────────────────────────────── */
-  --sidebar-w:     240px;
-  --header-h:      60px;
-  --gap:           14px;
-  --pad-card:      16px;
-  --radius-pill:   999px;
-  --radius-btn:    10px;
+  --fs-page-title:  22px;    /* Montserrat 800, letter-spacing -.4px */
+  --fs-hero-title:  19px;    /* Montserrat 800, letter-spacing -.3px */
+  --fs-stat:        19px;    /* Montserrat 800, line-height 1 */
+  --fs-header:      15px;    /* Montserrat 800 — header + modal title */
+  --fs-card-title:  13.5px;  /* Montserrat 700 */
+  --fs-body:        12.5px;
+  --fs-meta:        11.5px;
+  --fs-small:       10.5px;
+  --fs-chip:        9px;     /* subject chip — 9px/.4px/3px 8px */
+  --fs-tag:         9.5px;   /* status + tag chip */
+  --fs-nav-section: 9px;
 
-  /* ── Focus (keyboard) ───────────────────────────────────────────────── */
-  --focus-ring:    0 0 0 3px rgba(66, 95, 127, .35);
+  /* ── Radius ────────────────────────────────────────────────────────── */
+  --r-xs:   7px;    /* calendar cells, pill-group inner buttons */
+  --r-sm:   8px;    /* small buttons, icon buttons, nav items */
+  --r-md:   10px;   /* buttons, inputs, bordered rows */
+  --r-lg:   12px;   /* cards, dropzones */
+  --r-xl:   14px;   /* hero card, form cards */
+  --r-2xl:  16px;   /* modal panels */
+  --r-pill: 999px;  /* chips, filter pills, progress bars */
+
+  /* ── Shadow ────────────────────────────────────────────────────────── */
+  --sh-card:     0 1px 3px rgba(26, 44, 51, .06);
+  --sh-hero:     0 6px 18px rgba(45, 69, 96, .25);
+  --sh-dropdown: 0 8px 24px rgba(26, 44, 51, .14);
+  --sh-modal:    0 20px 60px rgba(0, 0, 0, .22);
+
+  /* ── Gradient ──────────────────────────────────────────────────────── */
+  --grad-hero: linear-gradient(135deg, #425f7f 0%, #2d4560 100%);
+
+  /* ── Layout ────────────────────────────────────────────────────────── */
+  --sidebar-w:   240px;
+  --header-h:    60px;
+  --app-min-w:   1240px;
+  --rail-w:      348px;  /* dashboard right rail */
+  --rail-w-alt:  320px;  /* detail-page right rail */
+  --msg-pane-w:  300px;  /* Messages conversation list */
+  --form-max:    640px;  /* upload / create-assignment card */
+  --builder-max: 760px;  /* quiz builder, quiz results */
+  --hit-min:     44px;   /* minimum hit target */
+  --gap:         14px;
+  --gap-lg:      16px;
+  --pad-card:    16px;
+
+  /* ── Focus ─────────────────────────────────────────────────────────── */
+  --focus-ring: 0 0 0 3px rgba(66, 95, 127, .35);
+
+  /* ═════════════════════════════════════════════════════════════════════
+     Legacy aliases — the ~87 stylesheets written against the previous token
+     names keep resolving. Prefer the names above in new code.
+     ═════════════════════════════════════════════════════════════════════ */
+  --nav-bg:      var(--side-bg);
+  --nav-ink:     var(--side-ink);
+  --nav-sep:     var(--side-sep);
+  --nav-item-on: var(--side-item-on);
+  --header-bg:   var(--surface);
+  --card-bg:     var(--surface);
+  --card-border: var(--border);
+  --card-radius: var(--r-lg);
+  --card-shadow: var(--sh-card);
+  --ink-3:       var(--ink-muted);
+  --ink-4:       var(--ink-faint);
+  --academy:      #425f7f;
+  --academy-soft: #e6edee;
+  --skill:        #ff8f01;
+  --skill-ink:    #d97706;
+  --skill-soft:   #fff8f0;
+  --skill-border: #f3d9bd;
+  --live:           var(--teal);
+  --success-border: #bfe6c8;
+  --warning-ink:    var(--warning-hover);
+  --fs-title:    18px;
+  --fs-label:    var(--fs-meta);
+  --fs-micro:    var(--fs-small);
+  --radius-pill: var(--r-pill);
+  --radius-btn:  var(--r-md);
+
+  /* Booking / session lifecycle chips (one vocabulary across dashboards) */
+  --st-requested:    var(--warning);
+  --st-requested-bg: var(--warning-soft);
+  --st-confirmed:    var(--success);
+  --st-confirmed-bg: var(--success-soft);
+  --st-completed:    var(--success);
+  --st-completed-bg: var(--success-soft);
+  --st-cancelled:    var(--danger);
+  --st-cancelled-bg: var(--danger-soft);
 }
 
 /* ── Per-track accent switch ──────────────────────────────────────────── */
-/* Put data-track on the layout root (TeacherLayout / student App shell).  */
+/* data-track lives on the layout root (StudentLayout / TeacherLayout). */
 [data-track="academy"] {
-  --acc:        var(--academy);
-  --acc-ink:    var(--academy);
+  --acc:        var(--primary);
+  --acc-ink:    var(--primary);
   --acc-soft:   var(--academy-soft);
-  --acc-border: #cfdbe6;
+  --acc-border: var(--border-strong);
 }
-/* Teacher app: the Expert (Skill-Dev) track's accent is teal, not the learner
-   orange. (--skill / --skill-ink stay orange — they still drive the shared
-   "requested" booking chips.) Only the --acc family is remapped here. */
 [data-track="skill"] {
+  /* Teacher app: the Expert (Skill-Dev) track's accent is teal, not the
+     learner orange. --skill / --skill-ink stay orange — they still drive the
+     shared "requested" booking chips. Only the --acc family is remapped. */
   --acc:        #13899b;   /* teal — Expert teacher accent */
   --acc-ink:    #0a808a;   /* darker teal for text/links on white */
   --acc-soft:   #e6f4f6;
   --acc-border: #cfe0e3;
 }
 
+/* ── Motion ───────────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(19, 137, 155, .45); }
+  70%  { box-shadow: 0 0 0 9px rgba(19, 137, 155, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(19, 137, 155, 0); }
+}
+
 /* ── Base primitives components can adopt immediately ─────────────────── */
 .tk-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
   padding: var(--pad-card);
 }
 
 .tk-chip {
   display: inline-flex; align-items: center; gap: 5px;
-  font: 700 var(--fs-micro)/1 var(--font-body);
-  letter-spacing: .3px; text-transform: uppercase;
-  padding: 4px 9px; border-radius: var(--radius-pill);
+  font: 700 var(--fs-chip)/1 var(--font-body);
+  letter-spacing: .35px; text-transform: uppercase;
+  padding: 4px 9px; border-radius: var(--r-pill);
 }
 .tk-chip--requested { color: var(--st-requested); background: var(--st-requested-bg); }
 .tk-chip--confirmed { color: var(--st-confirmed); background: var(--st-confirmed-bg); }
 .tk-chip--completed { color: var(--st-completed); background: var(--st-completed-bg); }
 .tk-chip--cancelled { color: var(--st-cancelled); background: var(--st-cancelled-bg); }
-.tk-chip--live      { color: #fff; background: var(--live); }
+.tk-chip--live      { color: #fff; background: var(--teal); }
 .tk-chip--free      { color: var(--success); background: var(--success-soft); }
+
+/* ── Subject chip ─────────────────────────────────────────────────────── */
+/* THE canonical subject-chip colour slots. utils/subjectChips.js hashes a
+   subject name to 0..5; the design requires that colour be stable for a given
+   subject on every screen it appears on, so the slots are declared exactly
+   once — here — and every chip class name resolves to them. */
+.subj-chip {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-body);
+  font-size: var(--fs-chip);
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+.subj-chip--0 { background: var(--subj-1-bg); color: var(--subj-1-ink); }
+.subj-chip--1 { background: var(--subj-2-bg); color: var(--subj-2-ink); }
+.subj-chip--2 { background: var(--subj-3-bg); color: var(--subj-3-ink); }
+.subj-chip--3 { background: var(--subj-4-bg); color: var(--subj-4-ink); }
+.subj-chip--4 { background: var(--subj-5-bg); color: var(--subj-5-ink); }
+.subj-chip--5 { background: var(--subj-6-bg); color: var(--subj-6-ink); }
 
 .tk-btn {
   font: 700 var(--fs-body)/1 var(--font-body);
-  border: none; border-radius: var(--radius-btn);
+  border: none; border-radius: var(--r-md);
   padding: 11px 16px; cursor: pointer;
-  background: var(--acc, var(--academy)); color: #fff;
+  background: var(--action); color: #fff;
 }
-.tk-btn:disabled { background: var(--ink-4); cursor: not-allowed; }
+.tk-btn:hover { background: var(--action-hover); }
+.tk-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
 .tk-btn--ghost {
-  background: #fff; color: var(--acc-ink, var(--ink));
-  border: 1px solid var(--acc-border, var(--card-border));
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border);
 }
+.tk-btn--ghost:hover { background: var(--surface-alt); }
 .tk-btn:focus-visible, .tk-chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 @media (prefers-reduced-motion: reduce) {
