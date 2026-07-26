@@ -2,72 +2,38 @@
 // TEACHER — src/pages/TeacherDashboard.jsx  (FULL REPLACEMENT)
 // ============================================================
 //
-// WHAT CHANGED vs the previous version
-// ────────────────────────────────────
-// 1. TRACK GATE. The academy dashboard now checks
-//    teacherInfo.tracks.academy BEFORE rendering (locked / pending /
-//    rejected each get a proper state card with the admin's rejection
-//    reason and a re-apply CTA) and honors the new backend responses:
-//      409 wrong_dashboard      → route to /teacher/expert (skill side)
-//      403 academy_not_approved → gate card
-//    A skill-only expert deep-linking to /teacher/dashboard no longer
-//    sees an empty academy shell — the "which teacher am I?" confusion
-//    is answered on-screen.
-// 2. ONE NOTIFICATION SOURCE. The old page merged data.notifications
-//    (REST) with the WS list using JSON.stringify dedupe keys —
-//    guaranteed duplicates, un-markable ghosts. The singleton
-//    useNotificationSocket store (already profile/context-isolated
-//    server-side) is now the only source; the merge is gone.
-// 3. CANONICAL TYPES. Filters, labels and colors all use the UPPERCASE
-//    vocabulary the normalized hook emits — the notification type
-//    filter matches real data for the first time.
-// 4. LIVE REVALIDATION. A SUBMISSION / ASSIGNMENT / QUIZ / SESSION push
-//    while the page is open triggers a debounced silent refetch, so
-//    "X Remaining" and the lists stay true without a reload.
-// 5. ERROR ≠ EMPTY. Fetch failure renders a retry card instead of a
-//    silent empty dashboard; loading uses a skeleton line, not a
-//    dead-end "Loading...".
-// 6. startsIn is computed client-side (the API never sent one — the
-//    desktop cards were rendering `undefined`), quizzes get the same
-//    Due/Overdue pills as assignments (design parity), the resize
-//    listener is a matchMedia subscription, and unused `isBoth` is gone
-//    (the header TrackSwitcher owns track UI).
+// Rebuilt to match Academy Dashboard.dc.html's Teacher view exactly
+// (verified against screenshots/teacher-01-dashboard.png): greeting + stat
+// row (unchanged from the 2026-07-25 pass), then Today's Sessions (was the
+// old teal "Upcoming Live Sessions" card carousel), Grading Queue, a
+// 360px-tall Assignments/Quizzes ⟷ Recent Activity subgrid, and a rail of
+// Calendar → Schedule → Batch Progress. The standalone "Notifications" rail
+// card is gone — the design has no such card, and Recent Activity in the
+// main column already surfaces the same feed.
 //
-// Layout, class names and child components are unchanged — this is a
-// rewiring, not a redesign.
-
+// Row/tag/button/chip classes (.ac-row, .ac-tag--*, .ac-seg, .ac-btn,
+// .subj-chip--N) come from styles/academyScreens.css, the shared vocabulary
+// already used by every other converted screen — this page reuses it rather
+// than inventing its own row shape.
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
+import "../styles/academyScreens.css";
 import "../styles/dashboard.css";
 import { useAuth } from "../contexts/AuthContext";
 import { HOME_URL } from "../config/urls";
 
 import NavIcon from "../components/NavIcon";
-import LiveSessionCard  from "../components/LiveSessionCard";
-import CalendarWidget   from "../components/CalendarWidget";
-import AssignmentItem   from "../components/AssignmentItem";
-import ActivityItem     from "../components/ActivityItem";
+import CalendarWidget from "../components/CalendarWidget";
 import AcademyRejectionBanner from "../components/AcademyRejectionBanner";
 import BatchProgressSummary from "../components/BatchProgressSummary";
+import { subjectChipSlot } from "../utils/subjectChips";
+import { fmtClockTime, dayLabel, startsInText } from "../utils/sessionTime";
 
 import api from "../api/apiClient";
 import useNotificationSocket from "../hooks/useNotificationSocket";
 import { LoadingState } from "../components/StateViews";
 
 const DATE_FORMAT = { day: "2-digit", month: "short", year: "numeric" };
-const DATETIME_FORMAT = {
-  day: "2-digit", month: "short", year: "numeric",
-  hour: "2-digit", minute: "2-digit", hour12: true,
-};
-
-// Canonical (UPPERCASE) — matches the normalized hook + new serializers.
-const NOTIF_FILTERS = [
-  { value: "all",        label: "All" },
-  { value: "ASSIGNMENT", label: "Assignment" },
-  { value: "SESSION",    label: "Live Session" },
-  { value: "QUIZ",       label: "Quiz" },
-  { value: "SUBMISSION", label: "Submissions" },
-];
 
 // WS events that mean "your academy slices changed".
 const REFRESH_TYPES = new Set(["ASSIGNMENT", "QUIZ", "SESSION", "SUBMISSION"]);
@@ -80,20 +46,28 @@ const SCHEDULE_TYPE_FILTERS = [
   { value: "quiz",            label: "Quiz" },
 ];
 
+// One vocabulary for calendar dots, schedule-row chips and activity icons —
+// declared once so the three stay in step.
+const TYPE_META = {
+  "live-session":    { label: "Live",     chipBg: "#e6f4f6", chipColor: "#13899b" },
+  "assignment":      { label: "Assign",   chipBg: "#ecf8ee", chipColor: "#2f9d42" },
+  "quiz":            { label: "Quiz",     chipBg: "#f1e9fb", chipColor: "#7c3aed" },
+  "private-session": { label: "Private",  chipBg: "#fef3ec", chipColor: "#c2701c" },
+};
+const OVERDUE_CHIP = { bg: "#fef2f2", color: "#dc2626" };
+
+const ACTIVITY_ICON = {
+  SESSION:    { icon: "video", bg: "#e6f4f6", color: "#13899b" },
+  QUIZ:       { icon: "help",  bg: "#f1e9fb", color: "#7c3aed" },
+  ASSIGNMENT: { icon: "file",  bg: "#e8edfb", color: "#1d4ed8" },
+  SUBMISSION: { icon: "check", bg: "#fef9ec", color: "#b45309" },
+};
+const DEFAULT_ACTIVITY_ICON = { icon: "bell", bg: "#eef1f2", color: "#6b7c83" };
+
 function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  return Number.isNaN(d.getTime())
-    ? ""
-    : d.toLocaleDateString("en-GB", DATE_FORMAT);
-}
-
-function formatDateTime(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return Number.isNaN(d.getTime())
-    ? ""
-    : d.toLocaleString("en-GB", DATETIME_FORMAT);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB", DATE_FORMAT);
 }
 
 function toDateKey(dateStr) {
@@ -129,13 +103,22 @@ function timeAgo(dateStr) {
   return days === 1 ? "yesterday" : `${days}d ago`;
 }
 
-function startsInLabel(dateStr, now) {
-  const t = new Date(dateStr);
-  if (Number.isNaN(t.getTime())) return "";
-  const diffMins = Math.round((t - now) / 60000);
-  if (diffMins < 0)  return "In progress";
-  if (diffMins < 60) return `Starts in ${diffMins} min`;
-  return `Starts in ${Math.floor(diffMins / 60)}h`;
+// A session can really be cancelled/completed/live — the design's static
+// prototype only ever shows a "Remind me" button (no such backend feature
+// exists), so this keeps the row shape but wires the REAL action: start/
+// join the session, same rule the dedicated Live Sessions page uses.
+function sessionCanJoin(s) {
+  if (s.status === "CANCELLED") return false;
+  if (s.teacher_left_at) {
+    const mins = (Date.now() - new Date(s.teacher_left_at).getTime()) / 60000;
+    if (mins > 60) return false;
+  }
+  return true;
+}
+function sessionActionLabel(s) {
+  if (s.status === "CANCELLED") return "Cancelled";
+  if (s.status === "COMPLETED") return "Ended";
+  return s.live ? "Join" : "Start";
 }
 
 // ── Track gate card (pending / rejected / locked academy) ──────────
@@ -178,10 +161,107 @@ function AcademyGate({ status, reason }) {
   );
 }
 
+// ── Shared row renderers (desktop + mobile both use these) ─────────
+function SessionRow({ s, onAction }) {
+  const start = new Date(s.dateTime);
+  const slot = subjectChipSlot(s.subject);
+  const batchLine = s.batch_name
+    ? `${s.batch_name}${s.batch_student_count != null ? ` · ${s.batch_student_count} students` : ""}`
+    : "";
+  const canJoin = sessionCanJoin(s);
+  const label = sessionActionLabel(s);
+
+  return (
+    <div className="ac-row">
+      <div className="ac-row__when">
+        <div className="ac-row__time">{fmtClockTime(start)}</div>
+        <div className="ac-row__day">{dayLabel(start).toUpperCase()}</div>
+      </div>
+      <div className="ac-row__divider" />
+      <div className="ac-row__body">
+        <div className="ac-row__meta">
+          <span className={`subj-chip subj-chip--${slot}`}>{s.subject}</span>
+          <span className="dash-when">· starts {startsInText(start)}</span>
+        </div>
+        <div className="ac-row__topic">{s.topic}</div>
+        {batchLine && <div className="ac-row__sub">{batchLine}</div>}
+      </div>
+      <div className="ac-row__actions">
+        <button
+          type="button"
+          className="dash-sessBtn"
+          disabled={!canJoin || label === "Ended"}
+          onClick={() => onAction(s)}
+        >
+          {label}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WorkRow({ item, kind, onOpen }) {
+  const overdue = item.due && new Date(item.due) < new Date();
+  const slot = subjectChipSlot(item.subject_name);
+  return (
+    <div className="ac-row" onClick={onOpen} style={{ cursor: "pointer" }}>
+      <div className="ac-row__body">
+        <div className="dash-workRow__top">
+          <span className={`subj-chip subj-chip--${slot}`}>{item.subject_name || kind}</span>
+          <span className={`ac-tag ${overdue ? "ac-tag--danger" : "ac-tag--success"}`}>
+            {overdue ? "Overdue" : `Due ${formatDate(item.due)}`}
+          </span>
+        </div>
+        <div className="ac-row__topic">{item.title}</div>
+        <div className="ac-row__sub">{kind === "quizzes" ? "Quiz" : "Assignment"}</div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityRow({ item, onRead }) {
+  const meta = ACTIVITY_ICON[item.raw_type] || DEFAULT_ACTIVITY_ICON;
+  return (
+    <div className="dash-actRow" onClick={() => onRead?.(item.id)}>
+      <div className="dash-actRow__icon" style={{ background: meta.bg, color: meta.color }}>
+        <NavIcon name={meta.icon} size={14} color={meta.color} />
+      </div>
+      <div className="dash-actRow__body">
+        <div className="dash-actRow__title">{item.title}</div>
+        {item.subject && <div className="dash-actRow__meta">{item.subject}</div>}
+        <div className="dash-actRow__time">{timeAgo(item.created_at)}</div>
+      </div>
+      {item.unread && <span className="dash-actRow__dot" />}
+    </div>
+  );
+}
+
+function ScheduleRow({ item, onClick }) {
+  const d = new Date(item.date);
+  const meta = TYPE_META[item.type] || TYPE_META.assignment;
+  const overdue = new Date(item.date) < new Date() && (item.type === "assignment" || item.type === "quiz");
+  const chip = overdue ? OVERDUE_CHIP : { bg: meta.chipBg, color: meta.chipColor };
+  return (
+    <button type="button" className="dash-schedRow" onClick={onClick}>
+      <div className="dash-schedRow__when">
+        <div className="dash-schedRow__day">{d.getDate()}</div>
+        <div className="dash-schedRow__mon">{d.toLocaleDateString("en-GB", { month: "short" })}</div>
+      </div>
+      <div className="dash-schedRow__body">
+        <div className="dash-schedRow__title">{item.title}</div>
+        <div className="dash-schedRow__sub">{formatDate(item.date)}</div>
+      </div>
+      <span className="dash-schedRow__chip" style={{ background: chip.bg, color: chip.color }}>
+        {overdue ? "Overdue" : meta.label}
+      </span>
+    </button>
+  );
+}
+
 export default function TeacherDashboard() {
   const outletContext = useOutletContext();
   const active        = outletContext?.active || "sessions";
-  const navigate      = useNavigate();
+  const navigate       = useNavigate();
   const { teacherInfo, user } = useAuth();
 
   const academyStatus = teacherInfo?.tracks?.academy ?? "approved"; // older /me/ shapes: assume approved
@@ -194,9 +274,6 @@ export default function TeacherDashboard() {
     () => window.matchMedia("(max-width: 768px)").matches
   );
 
-  const [assignFilter, setAssignFilter]             = useState(null);
-  const [quizFilter, setQuizFilter]                 = useState(null);
-  const [activityFilter, setActivityFilter]         = useState("all");
   const [selectedDate, setSelectedDate]             = useState(null);
   const [scheduleTypeFilter, setScheduleTypeFilter] = useState("all");
   const [listTab, setListTab]                       = useState("assignments"); // merged Assignments/Quizzes card
@@ -288,6 +365,13 @@ export default function TeacherDashboard() {
   const gradingCount    = data?.grading_count    ?? gradingQueue.length;
   const recentActivity  = data?.schedule         ?? [];
 
+  const nowStat = new Date();
+  const todaySessions = useMemo(
+    () => allSessions.filter((s) => isSameDay(new Date(s.dateTime), nowStat)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allSessions]
+  );
+
   // ── calendar events ────────────────────────────────────────────────
   const calendarEvents = useMemo(() => {
     const map = {};
@@ -309,68 +393,42 @@ export default function TeacherDashboard() {
 
   // ── unified schedule ───────────────────────────────────────────────
   const scheduleItems = useMemo(() => {
-    const now = new Date();
     const items = [];
     allSessions.forEach((s) =>
       items.push({
-        id:         `session-${s.id}`,
-        type:       "live-session",
-        title:      `${s.subject} - ${s.topic}`,
-        date:       s.dateTime,
-        labelColor: "yellow",
-        link:       `/teacher/live/${s.id}`,
+        id:    `session-${s.id}`,
+        type:  "live-session",
+        title: `${s.subject} - ${s.topic}`,
+        date:  s.dateTime,
+        link:  `/teacher/live/${s.id}`,
       }));
     assignments.forEach((a) =>
       items.push({
-        id:         `assignment-${a.id}`,
-        type:       "assignment",
-        title:      a.title,
-        date:       a.due,
-        labelColor: new Date(a.due) < now ? "red" : "green",
-        link:       a.subject_id ? `/teacher/classes/${a.subject_id}/assignments` : null,
+        id:    `assignment-${a.id}`,
+        type:  "assignment",
+        title: a.title,
+        date:  a.due,
+        link:  a.subject_id ? `/teacher/classes/${a.subject_id}/assignments` : null,
       }));
     quizzes.forEach((q) =>
       items.push({
-        id:         `quiz-${q.id}`,
-        type:       "quiz",
-        title:      q.title,
-        date:       q.due,
-        labelColor: new Date(q.due) < now ? "red" : "purple",
-        link:       q.subject_id ? `/teacher/classes/${q.subject_id}/quizzes` : null,
+        id:    `quiz-${q.id}`,
+        type:  "quiz",
+        title: q.title,
+        date:  q.due,
+        link:  q.subject_id ? `/teacher/classes/${q.subject_id}/quizzes` : null,
       }));
     privateSessions.forEach((ps) =>
       items.push({
-        id:         `private-${ps.id}`,
-        type:       "private-session",
-        title:      `${ps.subject} (${ps.student})`,
-        date:       ps.date,
-        labelColor: "orange",
-        link:       `/teacher/private-sessions/scheduled/${ps.id}`,
+        id:    `private-${ps.id}`,
+        type:  "private-session",
+        title: `${ps.subject} (${ps.student})`,
+        date:  ps.date,
+        link:  `/teacher/private-sessions/scheduled/${ps.id}`,
       }));
     items.sort((a, b) => new Date(a.date) - new Date(b.date));
     return items;
   }, [allSessions, assignments, quizzes, privateSessions]);
-
-  // ── filters ────────────────────────────────────────────────────────
-  const toggleFilter = (current, value, setter) =>
-    setter(current === value ? null : value);
-
-  const byDueFilter = (list, filter) => {
-    if (!filter) return list;
-    const now = new Date();
-    return list.filter((x) => {
-      const due = x.due ? new Date(x.due) : null;
-      if (!due || Number.isNaN(due.getTime())) return filter === "due";
-      return filter === "overdue" ? due < now : due >= now;
-    });
-  };
-
-  const filteredAssignments = byDueFilter(assignments, assignFilter);
-  const filteredQuizzes     = byDueFilter(quizzes, quizFilter);
-
-  const filteredActivities = notifications.filter(
-    (item) => activityFilter === "all" || item.type === activityFilter
-  );
 
   const filteredSchedule = scheduleItems.filter((item) => {
     if (selectedDate && !isSameDay(new Date(item.date), selectedDate)) return false;
@@ -390,18 +448,8 @@ export default function TeacherDashboard() {
     user?.name || user?.full_name || user?.username ||
     (user?.email ? user.email.split("@")[0] : "") || "Teacher"
   ).trim().split(/\s+/)[0];
-  const todayLong = new Date().toLocaleDateString("en-GB", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
-  const nowStat = new Date();
-  const todaySessionsCount = allSessions.filter((s) => {
-    const d = new Date(s.dateTime);
-    return !Number.isNaN(d.getTime()) && isSameDay(d, nowStat);
-  }).length;
-  // Uncapped count straight from the API (see dashboard/views.py
-  // _teacher_grading_count) — defensive ?? 0 covers a transitional deploy
-  // where an older backend hasn't shipped the field yet.
-  const submissionsToGradeCount = data?.grading_count ?? 0;
+  const todaySessionsCount = todaySessions.length;
+  const submissionsToGradeCount = gradingCount;
   const statCards = [
     { icon: "video",  iconBg: "#e6f4f6", iconColor: "#13899b", value: todaySessionsCount,          label: "Sessions today" },
     { icon: "check",  iconBg: "#fef9ec", iconColor: "#b45309", value: submissionsToGradeCount,     label: "Submissions to grade" },
@@ -432,69 +480,57 @@ export default function TeacherDashboard() {
     );
   }
 
-  const nowForLabels = new Date();
+  const goToSession = (s) => navigate(`/teacher/live/${s.id}`);
 
-  const renderSessionCard = (s) => (
-    <LiveSessionCard
-      key={s.id}
-      id={s.id}
-      live={s.live}
-      subject={s.subject}
-      topic={s.topic}
-      startsIn={startsInLabel(s.dateTime, nowForLabels)}
-      timing={formatDateTime(s.dateTime)}
-    />
-  );
-
-  const notificationList = (list) => (
-    <>
-      {list.length === 0 && <p>No notifications</p>}
-      {list.map((item) => (
-        <ActivityItem key={item.id} notification={item} onRead={markOneRead} />
-      ))}
-    </>
-  );
-
-  // ── MOBILE ────────────────────────────────────────────────────────
+  // ── MOBILE (design is a 1240px-desktop-only prototype — silent on
+  // mobile, so this keeps the existing lightweight tabbed fallback, just
+  // rendered with the same row components as desktop) ──────────────────
   if (isMobile) {
     return (
       <div className="dashboard">
         {active === "sessions" && (
           <div className="dash-card">
             <h4>Upcoming Live Sessions</h4>
-            {sessions.length === 0 && <p>No sessions this week</p>}
-            {sessions.map(renderSessionCard)}
+            <div className="dash-list">
+              {sessions.length === 0 && <p>No sessions this week</p>}
+              {sessions.map((s) => <SessionRow key={s.id} s={s} onAction={goToSession} />)}
+            </div>
           </div>
         )}
 
         {active === "assignments" && (
           <div className="dash-card">
             <h4>Assignments</h4>
-            {filteredAssignments.length === 0 && <p>No assignments</p>}
-            {filteredAssignments.map((a) => (
-              <AssignmentItem key={a.id} id={a.id} title={a.title}
-                subject={a.subject_name} dueDate={formatDate(a.due)}
-                subjectId={a.subject_id} />
-            ))}
+            <div className="dash-list">
+              {assignments.length === 0 && <p>No assignments</p>}
+              {assignments.map((a) => (
+                <WorkRow key={a.id} item={a} kind="assignments"
+                  onOpen={() => a.subject_id && navigate(`/teacher/classes/${a.subject_id}/assignments`)} />
+              ))}
+            </div>
           </div>
         )}
 
         {active === "quizzes" && (
           <div className="dash-card">
             <h4>Quizzes</h4>
-            {filteredQuizzes.length === 0 && <p>No quizzes</p>}
-            {filteredQuizzes.map((q) => (
-              <AssignmentItem key={q.id} id={q.id} title={q.title}
-                subject={q.subject_name} dueDate={formatDate(q.due)}
-                subjectId={q.subject_id} />
-            ))}
+            <div className="dash-list">
+              {quizzes.length === 0 && <p>No quizzes</p>}
+              {quizzes.map((q) => (
+                <WorkRow key={q.id} item={q} kind="quizzes"
+                  onOpen={() => q.subject_id && navigate(`/teacher/classes/${q.subject_id}/quizzes`)} />
+              ))}
+            </div>
           </div>
         )}
 
         {active === "notifications" && (
           <div className="dash-card">
             <h4>Notifications</h4>
-            {notificationList(filteredActivities)}
+            <div className="dash-list">
+              {notifications.length === 0 && <p>No notifications</p>}
+              {notifications.map((item) => <ActivityRow key={item.id} item={item} onRead={markOneRead} />)}
+            </div>
           </div>
         )}
 
@@ -510,6 +546,10 @@ export default function TeacherDashboard() {
   }
 
   // ── DESKTOP ───────────────────────────────────────────────────────
+  const todayShort = nowStat
+    .toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
+    .replace(",", "");
+
   return (
     <div className="dashboard">
 
@@ -517,8 +557,11 @@ export default function TeacherDashboard() {
 
       {/* Greeting */}
       <div className="dash-greeting">
-        <h1>{greeting}, {firstName} 👋</h1>
-        <p>{todayLong}</p>
+        <h1>{greeting}, {firstName}</h1>
+        <p>
+          You have <strong className="dash-greeting__hi">{todaySessionsCount} sessions today</strong> and{" "}
+          <strong className="dash-greeting__amber">{gradingCount} submissions</strong> waiting for review.
+        </p>
       </div>
 
       {/* Stat row */}
@@ -541,15 +584,15 @@ export default function TeacherDashboard() {
 
       {/* Faculty ⟷ Expert switch lives in the shared header (TrackSwitcher). */}
 
-      {/* Row 1: Live Sessions */}
-      <div className="dash-live-section">
-        <div className="dash-live-header">
-          <h3 className="dash-section-title">Upcoming Live Sessions</h3>
-          <div className="dash-remaining">{sessions.length} Remaining</div>
+      {/* Today's Sessions */}
+      <div className="dash-card">
+        <div className="dash-card-header">
+          <h3 className="dash-section-title">Today's Sessions</h3>
+          <span className="dash-remaining">{todayShort}</span>
         </div>
-        <div className="dash-live-row">
-          {sessions.length === 0 && <p>No sessions this week</p>}
-          {sessions.map(renderSessionCard)}
+        <div className="dash-list">
+          {todaySessions.length === 0 && <p>No sessions today</p>}
+          {todaySessions.map((s) => <SessionRow key={s.id} s={s} onAction={goToSession} />)}
         </div>
       </div>
 
@@ -557,19 +600,20 @@ export default function TeacherDashboard() {
       <div className="dash-card">
         <div className="dash-card-header">
           <h4>Grading Queue</h4>
-          <span className="dash-remaining">{gradingCount} pending</span>
+          <span className="dash-pendingPill">{gradingCount} pending</span>
         </div>
         <div className="dash-card-body">
           {gradingQueue.length === 0 && <p>All caught up 🎉</p>}
           {gradingQueue.map((g) => (
-            <div key={g.id} className="grade-item">
+            <div key={g.id} className="grade-item" style={{ marginBottom: 8 }}>
               <div className="grade-item__avatar">{initialsOf(g.student)}</div>
               <div className="grade-item__body">
                 <div className="grade-item__student">
                   {g.student} <span className="grade-item__batch">· {g.subject}</span>
                 </div>
-                <div className="grade-item__meta">{g.title} · {timeAgo(g.submitted_at)}</div>
+                <div className="grade-item__meta">{g.title}</div>
               </div>
+              <span className="grade-item__time">{timeAgo(g.submitted_at)}</span>
               <button
                 type="button"
                 className="grade-item__btn"
@@ -590,57 +634,41 @@ export default function TeacherDashboard() {
       <div className="dash-subgrid">
 
         {/* Assignments/Quizzes — merged tabbed card */}
-        <div className="dash-card">
-          <div className="dash-card-header">
-            <div className="dash-pills" role="tablist" aria-label="Assignments or quizzes">
+        <div className="dash-card dash-card--fixed360">
+          <div className="dash-card-header" style={{ marginBottom: 10 }}>
+            <div className="ac-seg" role="tablist" aria-label="Assignments or quizzes">
               <button type="button" role="tab" aria-selected={listTab === "assignments"}
-                className={`dash-pill ${listTab === "assignments" ? "pill-active" : ""}`}
+                className={`ac-seg__btn ${listTab === "assignments" ? "is-active" : ""}`}
                 onClick={() => setListTab("assignments")}>
                 Assignments
               </button>
               <button type="button" role="tab" aria-selected={listTab === "quizzes"}
-                className={`dash-pill ${listTab === "quizzes" ? "pill-active" : ""}`}
+                className={`ac-seg__btn ${listTab === "quizzes" ? "is-active" : ""}`}
                 onClick={() => setListTab("quizzes")}>
                 Quizzes
               </button>
             </div>
-            <div className="dash-pills">
-              <button type="button"
-                className={`dash-pill pill-due ${(listTab === "assignments" ? assignFilter : quizFilter) === "due" ? "pill-active" : ""}`}
-                onClick={() => listTab === "assignments"
-                  ? toggleFilter(assignFilter, "due", setAssignFilter)
-                  : toggleFilter(quizFilter, "due", setQuizFilter)}>
-                Due
-              </button>
-              <button type="button"
-                className={`dash-pill pill-overdue ${(listTab === "assignments" ? assignFilter : quizFilter) === "overdue" ? "pill-active" : ""}`}
-                onClick={() => listTab === "assignments"
-                  ? toggleFilter(assignFilter, "overdue", setAssignFilter)
-                  : toggleFilter(quizFilter, "overdue", setQuizFilter)}>
-                Overdue
-              </button>
-            </div>
           </div>
           <div className="dash-card-body">
-            {listTab === "assignments" ? (
-              <>
-                {filteredAssignments.length === 0 && <p>No assignments</p>}
-                {filteredAssignments.map((a) => (
-                  <AssignmentItem key={a.id} id={a.id} title={a.title}
-                    subject={a.subject_name} dueDate={formatDate(a.due)}
-                    subjectId={a.subject_id} />
-                ))}
-              </>
-            ) : (
-              <>
-                {filteredQuizzes.length === 0 && <p>No quizzes</p>}
-                {filteredQuizzes.map((q) => (
-                  <AssignmentItem key={q.id} id={q.id} title={q.title}
-                    subject={q.subject_name} dueDate={formatDate(q.due)}
-                    subjectId={q.subject_id} />
-                ))}
-              </>
-            )}
+            <div className="dash-list">
+              {listTab === "assignments" ? (
+                <>
+                  {assignments.length === 0 && <p>No assignments</p>}
+                  {assignments.map((a) => (
+                    <WorkRow key={a.id} item={a} kind="assignments"
+                      onOpen={() => a.subject_id && navigate(`/teacher/classes/${a.subject_id}/assignments`)} />
+                  ))}
+                </>
+              ) : (
+                <>
+                  {quizzes.length === 0 && <p>No quizzes</p>}
+                  {quizzes.map((q) => (
+                    <WorkRow key={q.id} item={q} kind="quizzes"
+                      onOpen={() => q.subject_id && navigate(`/teacher/classes/${q.subject_id}/quizzes`)} />
+                  ))}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -648,30 +676,13 @@ export default function TeacherDashboard() {
             from the client-built `scheduleItems` the rail's Schedule card
             uses; this reads the API's due-date-ordered Activity slice
             directly and renders it as a recency feed instead. */}
-        <div className="dash-card">
+        <div className="dash-card dash-card--fixed360">
           <div className="dash-card-header">
             <h4>Recent Activity</h4>
           </div>
           <div className="dash-card-body">
             {recentActivity.length === 0 && <p>No recent activity</p>}
-            {recentActivity.map((item) => (
-              <div key={item.id} className="activity-row">
-                <div className="activity-row__icon">
-                  <NavIcon
-                    name={item.raw_type === "SESSION" ? "video" : item.raw_type === "QUIZ" ? "help" : "file"}
-                    size={14} color="#6b7c83"
-                  />
-                </div>
-                <div className="activity-row__body">
-                  <div className="activity-row__title">
-                    {item.unread && <span className="activity-row__dot" aria-hidden />}
-                    {item.title}
-                  </div>
-                  {item.subject && <div className="activity-row__meta">{item.subject}</div>}
-                </div>
-                <div className="activity-row__time">{timeAgo(item.created_at)}</div>
-              </div>
-            ))}
+            {recentActivity.map((item) => <ActivityRow key={item.id} item={item} />)}
           </div>
         </div>
 
@@ -688,56 +699,34 @@ export default function TeacherDashboard() {
         onDateSelect={handleDateSelect}
       />
 
-      {/* Notifications — single, server-isolated source */}
-      <div className="dash-card">
-        <div className="dash-card-header">
-          <h4>Notifications</h4>
-          <select className="dash-filter" value={activityFilter}
-            aria-label="Filter notifications"
-            onChange={(e) => setActivityFilter(e.target.value)}>
-            {NOTIF_FILTERS.map((f) => (
-              <option key={f.value} value={f.value}>{f.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="dash-card-body">
-          {notificationList(filteredActivities)}
-        </div>
-      </div>
-
       {/* Schedule */}
       <div className="dash-card">
         <div className="dash-card-header">
           <h4>
             Schedule
             {selectedDate && (
-              <span style={{ fontWeight: 400, fontSize: "0.8rem", marginLeft: 8 }}>
-                — {selectedDate.toLocaleDateString("en-GB", DATE_FORMAT)}
+              <span style={{ fontWeight: 500, fontSize: 10.5, marginLeft: 6, color: "var(--ink-muted)" }}>
+                {selectedDate.toLocaleDateString("en-GB", DATE_FORMAT)}
               </span>
             )}
           </h4>
-          <div className="dash-pills">
-            {SCHEDULE_TYPE_FILTERS.map((f) => (
-              <button type="button" key={f.value}
-                className={`dash-pill pill-due ${scheduleTypeFilter === f.value ? "pill-active" : ""}`}
-                onClick={() => setScheduleTypeFilter(f.value)}>
-                {f.label}
-              </button>
-            ))}
-          </div>
+        </div>
+        <div className="dash-schedChips">
+          {SCHEDULE_TYPE_FILTERS.map((f) => (
+            <button type="button" key={f.value}
+              className={`ac-pill ac-pill--sm ${scheduleTypeFilter === f.value ? "is-active" : ""}`}
+              onClick={() => setScheduleTypeFilter(f.value)}>
+              {f.label}
+            </button>
+          ))}
         </div>
         <div className="dash-card-body">
-          {filteredSchedule.length === 0 && <p>No schedule</p>}
-          {filteredSchedule.map((item) => (
-            <ActivityItem
-              key={item.id}
-              date={formatDate(item.date)}
-              label={item.type}
-              labelColor={item.labelColor}
-              lines={[item.title]}
-              onClick={() => { if (item.link) navigate(item.link); }}
-            />
-          ))}
+          <div className="dash-list">
+            {filteredSchedule.length === 0 && <p>Nothing scheduled</p>}
+            {filteredSchedule.map((item) => (
+              <ScheduleRow key={item.id} item={item} onClick={() => { if (item.link) navigate(item.link); }} />
+            ))}
+          </div>
         </div>
       </div>
 
