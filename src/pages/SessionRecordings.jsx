@@ -33,6 +33,7 @@ import api from "../api/apiClient";
 import { fetchBatchedOrFanOut, fanOutPerSubject } from "../api/batchedList";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { subjectChipSlot } from "../utils/subjectChips";
 import "../styles/academyScreens.css";
 import "../styles/session-recordings.css";
@@ -84,7 +85,7 @@ export default function SessionRecordings() {
   const [subjectFilter, setSubjectFilter] = useState(subjectId ? String(subjectId) : "");
 
   const [deletingId, setDeletingId] = useState(null); // which card is mid-delete
-  const [confirmId, setConfirmId] = useState(null);   // which card has confirm open
+  const [confirmDlg, setConfirmDlg] = useState(null);  // ConfirmDialog state
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const uploadMenuRef = useRef(null);
 
@@ -270,9 +271,18 @@ export default function SessionRecordings() {
       toast.error(err?.response?.data?.detail || "Delete failed.");
     } finally {
       setDeletingId(null);
-      setConfirmId(null);
+      setConfirmDlg(null);
     }
   };
+
+  const askDelete = (rec) =>
+    setConfirmDlg({
+      title: "Delete recording?",
+      message: `“${rec.title}” will be removed for every student. This can't be undone.`,
+      confirmLabel: "Delete recording",
+      danger: true,
+      onConfirm: () => handleDeleteConfirm(rec.id),
+    });
 
   // ── States ──────────────────────────────────────────────────────────────
   if (classesLoading || loading) {
@@ -379,7 +389,6 @@ export default function SessionRecordings() {
                 // failed transcode is finished, and is exactly the one a
                 // teacher needs to clear away.
                 const canDelete = ready || failed;
-                const confirming = confirmId === rec.id;
                 const deleting = deletingId === rec.id;
                 const duration = fmtDuration(rec.duration_seconds);
                 const thumb =
@@ -441,65 +450,40 @@ export default function SessionRecordings() {
                       </div>
 
                       <div className="recCard__footer">
-                        {confirming ? (
-                          <>
-                            <span className="recCard__confirm">Delete this recording?</span>
-                            <div className="recCard__actions">
-                              <button
-                                type="button"
-                                className="recCard__btn"
-                                disabled={deleting}
-                                onClick={(e) => { e.stopPropagation(); setConfirmId(null); }}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                className="recCard__btn recCard__btn--dangerSolid"
-                                disabled={deleting}
-                                onClick={(e) => { e.stopPropagation(); handleDeleteConfirm(rec.id); }}
-                              >
-                                {deleting ? "Deleting…" : "Delete"}
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="recCard__progressWrap">
-                              <div className="recCard__progressBar">
-                                <div
-                                  className={`recCard__progressFill${failed ? " recCard__progressFill--error" : ""}`}
-                                  style={{ width: `${STATUS_PROGRESS[rec.status] ?? 0}%` }}
-                                />
-                              </div>
-                              <span className="recCard__progressLabel">
-                                {STATUS_LABELS[rec.status] || "Unknown"}
-                              </span>
-                            </div>
+                        <div className="recCard__progressWrap">
+                          <div className="recCard__progressBar">
+                            <div
+                              className={`recCard__progressFill${failed ? " recCard__progressFill--error" : ""}`}
+                              style={{ width: `${STATUS_PROGRESS[rec.status] ?? 0}%` }}
+                            />
+                          </div>
+                          <span className="recCard__progressLabel">
+                            {STATUS_LABELS[rec.status] || "Unknown"}
+                          </span>
+                        </div>
 
-                            <div className="recCard__actions">
-                              {canDelete && (
-                                <button
-                                  type="button"
-                                  className="recCard__btn recCard__btn--danger"
-                                  aria-label={`Delete ${rec.title}`}
-                                  onClick={(e) => { e.stopPropagation(); setConfirmId(rec.id); }}
-                                >
-                                  <FiTrash2 aria-hidden="true" />
-                                  Delete
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="recCard__btn"
-                                disabled={!ready}
-                                onClick={(e) => { e.stopPropagation(); openPlayer(rec); }}
-                              >
-                                {ready ? "Watch" : "Pending"}
-                              </button>
-                            </div>
-                          </>
-                        )}
+                        <div className="recCard__actions">
+                          {canDelete && (
+                            <button
+                              type="button"
+                              className="recCard__btn recCard__btn--danger"
+                              aria-label={`Delete ${rec.title}`}
+                              disabled={deleting}
+                              onClick={(e) => { e.stopPropagation(); askDelete(rec); }}
+                            >
+                              <FiTrash2 aria-hidden="true" />
+                              Delete
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="recCard__btn"
+                            disabled={!ready}
+                            onClick={(e) => { e.stopPropagation(); openPlayer(rec); }}
+                          >
+                            {ready ? "Watch" : "Pending"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -509,6 +493,10 @@ export default function SessionRecordings() {
           )}
         </>
       )}
+      <ConfirmDialog
+        dialog={confirmDlg && { ...confirmDlg, busy: deletingId != null }}
+        onClose={() => setConfirmDlg(null)}
+      />
     </div>
   );
 }

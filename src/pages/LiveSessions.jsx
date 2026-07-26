@@ -1,7 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { IoChevronBack } from "react-icons/io5";
+import { FiMoreHorizontal } from "react-icons/fi";
 import api from "../api/apiClient";
+import "../styles/academyScreens.css";
 import "../styles/liveSessions.css";
 import { LoadingState, EmptyState, ErrorState } from "../components/StateViews";
 import { subjectChipPalette } from "../utils/subjectChips";
@@ -56,7 +58,7 @@ const STATUS_CONFIG = {
   CANCELLED: { label: "Cancelled", color: "#dc2626", bg: "#fef2f2" },
 };
 
-function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, onCancel, onEnd }) {
+function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, onCancel, onEnd, menuOpen, onToggleMenu }) {
   void tick;
 
   const status = session.computed_status;
@@ -107,34 +109,19 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
         <div className="liveSessionRow__teacher">{batchLine}</div>
       </div>
 
+      {/* The design's row carries ONE visible action (dc.html's Live Sessions
+          row template). Cancel/End/Notes sit behind the overflow menu,
+          reusing the same .ac-menuWrap "Manage" pattern Assignments already
+          uses for the same reason. */}
       <div className="liveSessionRow__actions">
-        {canManage && (
+        {status === "COMPLETED" ? (
           <button
             type="button"
-            className="liveSessionRow__btn liveSessionRow__btn--outline liveSessionRow__btn--danger"
-            onClick={() => (isLive ? onEnd(session.id) : onCancel(session.id))}
+            className="liveSessionRow__btn liveSessionRow__btn--outline"
+            onClick={() => onOpenRecording(session)}
           >
-            {isLive ? "End" : "Cancel"}
+            Recording
           </button>
-        )}
-
-        {status === "COMPLETED" ? (
-          <>
-            <button
-              type="button"
-              className="liveSessionRow__btn liveSessionRow__btn--outline"
-              onClick={() => onOpenNotes(session)}
-            >
-              Notes
-            </button>
-            <button
-              type="button"
-              className="liveSessionRow__btn liveSessionRow__btn--outline"
-              onClick={() => onOpenRecording(session)}
-            >
-              Recording
-            </button>
-          </>
         ) : status === "CANCELLED" ? (
           <button type="button" className="liveSessionRow__btn liveSessionRow__btn--outline" disabled>
             Cancelled
@@ -148,6 +135,45 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
           >
             Start
           </button>
+        )}
+
+        {(canManage || status === "COMPLETED") && (
+          <div className="ac-menuWrap">
+            <button
+              type="button"
+              className="ac-btn ac-btn--icon"
+              aria-label="More actions"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => onToggleMenu(session.id)}
+            >
+              <FiMoreHorizontal size={13} aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <div className="ac-menu" role="menu">
+                {canManage && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="ac-menu__item ac-menu__item--danger"
+                    onClick={() => { onToggleMenu(null); (isLive ? onEnd(session.id) : onCancel(session.id)); }}
+                  >
+                    {isLive ? "End session" : "Cancel session"}
+                  </button>
+                )}
+                {status === "COMPLETED" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="ac-menu__item"
+                    onClick={() => { onToggleMenu(null); onOpenNotes(session); }}
+                  >
+                    Notes
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -167,7 +193,24 @@ export default function LiveSessions() {
   const [tick, setTick] = useState(0);
   const [showSchedule, setShowSchedule] = useState(false);
   const [notesSession, setNotesSession] = useState(null);
+  const [rowMenu, setRowMenu] = useState(null);
   const wsRefs = useRef([]);
+
+  const toggleRowMenu = (id) => setRowMenu((prev) => (id === null ? null : (prev === id ? null : id)));
+
+  // A row's overflow menu closes on outside click or Escape — same pattern
+  // Assignments.jsx uses for its own .ac-menuWrap.
+  useEffect(() => {
+    if (!rowMenu) return;
+    const onDown = (e) => { if (!e.target.closest?.(".ac-menuWrap")) setRowMenu(null); };
+    const onKey = (e) => { if (e.key === "Escape") setRowMenu(null); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [rowMenu]);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -422,6 +465,8 @@ export default function LiveSessions() {
                 onOpenNotes={handleOpenNotes}
                 onCancel={handleCancel}
                 onEnd={handleEnd}
+                menuOpen={rowMenu === s.id}
+                onToggleMenu={toggleRowMenu}
               />
             ))}
           </div>

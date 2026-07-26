@@ -49,9 +49,11 @@ const STATUS_META = {
 };
 
 // The design's two-option filter on the right margin (qtabALabel / qtabBLabel).
+// Teacher branch reads "Active"/"Past" — "Upcoming"/"Completed" is the
+// student-side wording (dc.html: qtabALabel/qtabBLabel differ by isStudent).
 const TABS = [
-  { value: "upcoming",  label: "Upcoming"  },
-  { value: "completed", label: "Completed" },
+  { value: "active", label: "Active" },
+  { value: "past",   label: "Past"   },
 ];
 
 const fmtDate = (d) =>
@@ -83,7 +85,7 @@ export default function Quizzes() {
 
   // "" = all subjects. Seeded from the route so a deep link preselects.
   const [subjectFilter, setSubjectFilter] = useState(subjectId ? String(subjectId) : "");
-  const [tab, setTab] = useState("upcoming");
+  const [tab, setTab] = useState("active");
 
   const createRef = useRef(null);
 
@@ -281,16 +283,25 @@ export default function Quizzes() {
     return (quizzes || []).map((q) => {
       const due = q.due_date ? new Date(q.due_date).getTime() : null;
       const questions = q.questions_count ?? 0;
+      // Undated quizzes are still ahead of the teacher, so they read Active.
+      const tab = due != null && due < now ? "past" : "active";
       return {
         ...q,
         due,
-        // Undated quizzes are still ahead of the teacher, so they read Upcoming.
-        tab: due != null && due < now ? "completed" : "upcoming",
+        tab,
+        // Design's card subtitle is "{class} · avg {score}%" — this app has
+        // no batch on a Quiz (unlike Assignment/LiveSession), so course_title
+        // is the closest real substitute for "which class" a subtitle can
+        // show without fabricating a batch name.
         meta: [
+          q.course_title || null,
+          q.total_attempts > 0 ? `avg ${pct(q.average_score)}` : null,
           plural(questions, "question"),
-          q.due_date ? `Due ${fmtDate(q.due_date)}` : "No due date",
-          q.teacher_name || q.created_by_email || null,
         ].filter(Boolean).join(" · "),
+        // Design's footer text is just the due/held date (dc.html's q.footText).
+        stateLabel: q.due_date
+          ? `${tab === "past" ? "Held" : "Due"} ${fmtDate(q.due_date)}`
+          : "No due date",
         perf:
           q.total_attempts > 0
             ? `Avg ${num(q.average_score)} (range ${num(q.lowest_score)}–${num(q.highest_score)}) · ` +
@@ -312,7 +323,7 @@ export default function Quizzes() {
         .filter((q) => !subjectFilter || String(q.subjectId) === subjectFilter)
         .filter((q) => q.tab === tab)
         .sort((a, b) => {
-          if (tab === "completed") return (b.due ?? 0) - (a.due ?? 0); // most recent first
+          if (tab === "past") return (b.due ?? 0) - (a.due ?? 0); // most recent first
           if (a.due == null) return 1;                                 // undated last
           if (b.due == null) return -1;
           return a.due - b.due;                                        // soonest first
@@ -423,9 +434,9 @@ export default function Quizzes() {
             icon="quiz"
             title="Nothing here"
             message={
-              tab === "completed"
+              tab === "past"
                 ? "No quizzes have passed their due date yet."
-                : "No upcoming quizzes. Use “+ Create quiz” to set one."
+                : "No active quizzes. Use “+ Create quiz” to set one."
             }
           />
         </section>
@@ -482,16 +493,18 @@ export default function Quizzes() {
 
                 <div>
                   <div className="ac-card__title">{quiz.title}</div>
-                  <div className="ac-card__meta">{quiz.meta}</div>
+                  <div className="ac-card__meta" title={quiz.perf || ""}>{quiz.meta}</div>
                   {quiz.review_status === "rejected" && quiz.review_note && (
                     <div className="ac-card__meta qz-note">“{quiz.review_note}”</div>
                   )}
                 </div>
 
                 <div className="ac-card__foot">
-                  {/* The design's footer text is a coloured status line; class
-                      performance is what a teacher wants there. */}
-                  <span className="ac-card__footText">{quiz.perf || quiz.stateLabel || ""}</span>
+                  {/* Design's footer text is just the due/held date
+                      (dc.html's q.footText) — the fuller performance
+                      breakdown lives in the subtitle's hover title instead
+                      of crowding this single line. */}
+                  <span className="ac-card__footText">{quiz.stateLabel}</span>
                   <div className="ac-card__actions">
                     <div className="ac-menuWrap">
                       <button

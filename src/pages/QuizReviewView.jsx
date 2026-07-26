@@ -1,137 +1,116 @@
+// src/pages/QuizReviewView.jsx
+// ──────────────────────────────────────────────────────────────────────────
+// Academy "Quiz Review" (teacher) — one attempt's answer breakdown, reached
+// from QuizStudentAttemptsView's "Review" action.
+//
+// The design handoff (Academy Dashboard.dc.html, quizResShowDetail, lines
+// 318-346 / screenshots/teacher-10-quiz-answer-detail.png) shows this as a
+// compact 560px MODAL over the Results list — a WRONG/CORRECT pill per
+// question plus "Answered:"/"Correct:" text lines, no per-option radio rows
+// and no score-circle. This app reaches the same content via its own routed
+// page (deep-linkable by attemptId, used from a screen the design doesn't
+// have — see QuizStudentAttemptsView), so collapsing it into a true inline
+// modal would mean restructuring that screen's state/navigation for a purely
+// visual win. Instead this stays a page but is restyled to the modal's exact
+// visual language: same panel shape, same WRONG/CORRECT pill, same
+// Answered/Correct lines — the score-circle and radio-style option rows are
+// gone because the design has no equivalent for them.
+// ──────────────────────────────────────────────────────────────────────────
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
-import { IoCheckmarkCircle, IoCloseCircle } from "react-icons/io5";
 import api from "../api/apiClient";
+import "../styles/academyScreens.css";
 import "../styles/quiz-review-view.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 
 export default function QuizReviewView() {
   const navigate = useNavigate();
-const { attemptId, quizId, subjectId, studentId } = useParams();
+  const { attemptId } = useParams();
 
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchReview() {
+      setError(null);
       try {
         const res = await api.get(`/teacher/attempts/${attemptId}/`);
-        setData(res.data);
+        if (!cancelled) setData(res.data);
       } catch (err) {
         console.error("Failed to load review", err);
+        if (!cancelled) setError("Failed to load this attempt's review.");
       }
     }
     fetchReview();
+    return () => { cancelled = true; };
   }, [attemptId]);
+
+  // The only place this route is reached from today is QuizStudentAttemptsView's
+  // "Review" button, so browser-back always lands back where the teacher came
+  // from without needing studentId threaded through this URL.
+  const goBack = () => navigate(-1);
+
+  if (error) {
+    return (
+      <div className="ac-screen">
+        <button type="button" className="qrv-back-btn" onClick={goBack}>
+          <IoChevronBack size={14} /> Back
+        </button>
+        <ErrorState message={error} />
+      </div>
+    );
+  }
 
   if (!data) {
     return <LoadingState label="Loading review" />;
   }
 
-  const correct = data.questions.filter((q) => q.selected === q.correct).length;
-  const total = data.questions.length;
-  const pct = Math.round((correct / total) * 100);
+  const questions = data.questions || [];
 
   return (
-    <div className="qrv-page">
-      <button className="qrv-back-btn" onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes/${quizId}/student/${studentId}`)}>
-  <IoChevronBack /> Back
-</button>
+    <div className="ac-screen">
+      <button type="button" className="qrv-back-btn" onClick={goBack}>
+        <IoChevronBack size={14} /> Back
+      </button>
 
-      <div className="qrv-card">
-        <div className="qrv-header">
-          <h2 className="qrv-title">Quiz Review</h2>
+      <div className="qrv-panel">
+        <div className="qrv-panelHead">
+          <div className="qrv-name">{data.student_name}</div>
+          <div className="qrv-scoreLine">
+            Scored {data.score} / {data.total}
+            {data.submitted_at && <> · Submitted {new Date(data.submitted_at).toLocaleString()}</>}
+          </div>
         </div>
 
-        <div className="qrv-content">
-          <div className="qrv-meta-row">
-            <h3 className="qrv-student-name">{data.student_name}</h3>
-            <span className="qrv-date-text">
-              Submitted:{" "}
-              {data.submitted_at
-                ? new Date(data.submitted_at).toLocaleString()
-                : "-"}
-            </span>
-          </div>
-
-          <div className="qrv-score-banner">
-            <div className="qrv-score-circle">
-              <span className="qrv-score-pct">{pct}%</span>
-            </div>
-            <div className="qrv-score-details">
-              <span className="qrv-score-label">Final Score</span>
-              <span className="qrv-score-fraction">
-                {data.score} / {data.total} correct
-              </span>
-            </div>
-            <div className="qrv-score-bar-wrap">
-              <div
-                className="qrv-score-bar-fill"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="qrv-questions-list">
-            {data.questions.map((q, qIndex) => {
-              const isCorrect = q.selected === q.correct;
-
-              return (
-                <div
-                  className={`qrv-question-block ${isCorrect ? "qrv-correct" : "qrv-wrong"}`}
-                  key={qIndex}
-                >
-                  <div className="qrv-question-header">
-                    <div className="qrv-question-text">
-                      <span className="qrv-q-num">{qIndex + 1}.</span>
-                      {q.question}
-                    </div>
-                    <span className={`qrv-status-badge ${isCorrect ? "badge-correct" : "badge-wrong"}`}>
-                      {isCorrect ? (
-                        <><IoCheckmarkCircle /> Correct</>
-                      ) : (
-                        <><IoCloseCircle /> Wrong</>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="qrv-options-row">
-                    {q.options.map((opt, optIndex) => {
-                      const isSelected = opt === q.selected;
-                      const isAnswer = opt === q.correct;
-                      let optClass = "qrv-option";
-                      if (isSelected && isCorrect) optClass += " opt-selected-correct";
-                      else if (isSelected && !isCorrect) optClass += " opt-selected-wrong";
-                      else if (isAnswer && !isCorrect) optClass += " opt-correct-hint";
-
-                      return (
-                        <label className={optClass} key={optIndex}>
-                          <input
-                            type="radio"
-                            checked={isSelected}
-                            disabled
-                            readOnly
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  <div className="qrv-answer-row">
-                    <div className={`qrv-answer-pill ${isCorrect ? "pill-correct" : "pill-wrong"}`}>
-                      <IoCheckmarkCircle />
-                      <span>Correct answer: <strong>{q.correct}</strong></span>
-                    </div>
-                  </div>
+        <div className="qrv-answers">
+          {questions.map((q, qIndex) => {
+            const isCorrect = q.selected === q.correct;
+            return (
+              <div className="qrv-answerCard" key={qIndex}>
+                <div className="qrv-answerTop">
+                  <div className="qrv-qText">{qIndex + 1}. {q.question}</div>
+                  <span className={`qrv-markPill ${isCorrect ? "is-correct" : "is-wrong"}`}>
+                    {isCorrect ? "Correct" : "Wrong"}
+                  </span>
                 </div>
-              );
-            })}
+                <div className="qrv-answerLine">
+                  <span className="qrv-answerLabel">Answered:</span> {q.selected ?? "—"}
+                </div>
+                {!isCorrect && (
+                  <div className="qrv-answerLine qrv-answerLine--correct">
+                    <span className="qrv-answerLabel">Correct:</span> {q.correct}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
-            {data.questions.length === 0 && (
-              <p className="qrv-no-results">No questions to review.</p>
-            )}
-          </div>
+          {questions.length === 0 && (
+            <EmptyState plain icon="quiz" title="No questions to review" />
+          )}
         </div>
       </div>
     </div>

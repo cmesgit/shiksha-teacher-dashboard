@@ -110,15 +110,17 @@
 /* "· starts in 2h 15m" next to the subject chip. */
 .dash-when { white-space: nowrap; font-size: 10px; color: var(--ink-faint); }
 
-/* Row action button, role-coloured — same treatment as the dedicated Live
-   Sessions page's primary Start button (styles/liveSessions.css). */
+/* Row action button — design uses slate `--primary` for every row-level
+   action across Live/Group/Private sessions, reserving role-coloured
+   `--action` for head-level CTAs; same fix applied to
+   styles/liveSessions.css's own Start button, which had this backwards. */
 .dash-sessBtn {
   flex-shrink: 0; white-space: nowrap; cursor: pointer;
   font-family: var(--font-body); font-size: 11px; font-weight: 700;
   border-radius: 9px; padding: 8px 15px; border: none;
-  background: var(--action); color: #fff; transition: background .15s;
+  background: var(--primary); color: #fff; transition: background .15s;
 }
-.dash-sessBtn:hover:not(:disabled) { background: var(--action-hover); }
+.dash-sessBtn:hover:not(:disabled) { background: var(--primary-dark); }
 .dash-sessBtn:disabled { opacity: .5; cursor: default; }
 
 /* ── Assignments/Quizzes ⟷ Recent Activity subgrid ── */

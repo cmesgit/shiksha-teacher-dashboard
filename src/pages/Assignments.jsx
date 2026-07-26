@@ -338,16 +338,11 @@ export default function Assignments() {
       <section className="ac-listCard">
         <div className="ac-list">
           {rows.length === 0 ? (
-            <EmptyState
-              plain
-              icon="file"
-              title="Nothing here"
-              message={
-                batchFilter === ALL_BATCHES
-                  ? "No assignments yet. Create one and it'll show up here."
-                  : `No assignments for ${batchFilter}.`
-              }
-            />
+            <div className="ac-emptyRow">
+              {batchFilter === ALL_BATCHES
+                ? "No assignments yet. Create one and it'll show up here."
+                : `No assignments for ${batchFilter}.`}
+            </div>
           ) : (
             rows.map((a) => (
               <div key={a.id} className="ac-row ac-row--tall">

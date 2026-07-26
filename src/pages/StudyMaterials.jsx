@@ -273,7 +273,7 @@ export default function StudyMaterials() {
 
   if (classesLoading || loading) {
     return (
-      <div className="ac-screen">
+      <div className="ac-screen stm-page">
         <LoadingState label="Loading study materials" />
       </div>
     );
@@ -281,7 +281,7 @@ export default function StudyMaterials() {
 
   if (classesError) {
     return (
-      <div className="ac-screen">
+      <div className="ac-screen stm-page">
         <ErrorState message={classesError} onRetry={reload} />
       </div>
     );
@@ -289,7 +289,7 @@ export default function StudyMaterials() {
 
   if (error) {
     return (
-      <div className="ac-screen">
+      <div className="ac-screen stm-page">
         <ErrorState message="Couldn't load your study materials. Please try again in a moment." />
       </div>
     );
@@ -300,7 +300,7 @@ export default function StudyMaterials() {
     : `${materials.length} ${materials.length === 1 ? "material" : "materials"} across ${subjects.length} ${subjects.length === 1 ? "class" : "classes"}.`;
 
   return (
-    <div className="ac-screen">
+    <div className="ac-screen stm-page">
       <div className="ac-head">
         <div>
           <h1 className="ac-head__title">Study Materials</h1>

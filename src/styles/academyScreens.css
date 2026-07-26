@@ -544,7 +544,7 @@
   padding-top: 11px;
   margin-top: auto;
 }
-.ac-card__footText { font-size: 11px; font-weight: 600; }
+.ac-card__footText { font-size: 11px; font-weight: 600; color: var(--ink-muted); }
 .ac-card__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
 /* Card-scale action — smaller than the row-scale .ac-btn. */

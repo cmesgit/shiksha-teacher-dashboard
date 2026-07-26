@@ -1,120 +1,70 @@
-.qsav-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: 100%;
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   quiz-student-attempts-view.css — what the Student Attempts screen needs
+   BEYOND the shared vocabulary in academyScreens.css (.ac-listCard/.ac-list/
+   .ac-row/.ac-btn already cover the card, rows and action button).
+
+   This screen has no design-handoff equivalent (see the header comment in
+   QuizStudentAttemptsView.jsx for why it still exists) — head and score-pill
+   styling below are original but built entirely from shared/tokens.css, the
+   same discipline the design's own screens use.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .qsav-back-btn {
-  background: none;
-  border: none;
-  color: #2c7a7b;
-  font-weight: 500;
-  cursor: pointer;
-  width: fit-content;
-  flex-shrink: 0;
-  font-size: 13px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  transition: background 0.2s, color 0.2s;
-}
-.qsav-back-btn:hover {
-  background: #e6f4f4;
-  color: #1a5f5f;
-}
-
-.qsav-content-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 24px 28px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.qsav-title-row {
-  display: flex;
-  justify-content: space-between;
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 18px;
-}
-
-.qsav-title {
-  font-size: 20px;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12.5px;
   font-weight: 600;
-  color: #1f2d3d;
-  margin: 0;
-}
-
-.qsav-count {
-  font-size: 20px;
-  font-weight: 700;
-}
-.qsav-count-green { color: #2f855a; }
-
-/* ── Table ── */
-.qsav-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.qsav-table thead tr {
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.qsav-table th {
-  text-align: left;
-  padding: 10px 14px;
-  color: #555;
-  font-weight: 600;
-  font-size: 13px;
   cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-  transition: color 0.15s;
+  padding: 0;
+  margin-bottom: 16px;
 }
-.qsav-table th:hover { color: #4aa3a2; }
-.qsav-table th.sorted { color: #4aa3a2; }
+.qsav-back-btn:hover { color: var(--ink); }
 
-.qsav-table td {
-  padding: 13px 14px;
-  font-size: 13px;
-  color: #1f2d3d;
+.qsav-head { margin-bottom: 20px; }
+.qsav-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-page-title);
+  letter-spacing: -.4px;
+  color: var(--ink);
+}
+.qsav-sub {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--ink-faint);
 }
 
-.qsav-table tbody tr {
-  border-bottom: 1px solid #f0f0f0;
-  transition: background 0.15s;
+/* ── Attempt number badge (this screen's stand-in for a row avatar) ── */
+.qsav-attemptBadge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--academy-soft);
+  color: var(--primary);
 }
-.qsav-table tbody tr:hover { background: #f0fafa; }
 
-/* ── Score pill ── */
+/* ── Score pill — same tiers the legacy table used, remapped onto the
+   shared semantic tokens instead of one-off hexes. ── */
 .qsav-score-pill {
   display: inline-block;
+  flex-shrink: 0;
   padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-small);
+  font-weight: 700;
 }
-.qsav-score-high { background: #d4f5ec; color: #0f6e56; }
-.qsav-score-mid  { background: #faeeda; color: #854f0b; }
-.qsav-score-low  { background: #fcebeb; color: #a32d2d; }
-
-/* ── Review button ── */
-.qsav-review-btn {
-  background: #4aa3a2;
-  border: none;
-  padding: 6px 16px;
-  border-radius: 16px;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: background 0.2s, transform 0.15s;
-}
-.qsav-review-btn:hover {
-  background: #3c8b8a;
-  transform: translateY(-1px);
-}
-.qsav-review-btn:active { transform: translateY(0); }
+.qsav-score-pill--high { background: var(--success-soft); color: var(--success); }
+.qsav-score-pill--mid  { background: var(--warning-soft); color: var(--warning); }
+.qsav-score-pill--low  { background: var(--danger-soft);  color: var(--danger); }
+.qsav-score-pill--neutral { background: var(--chip-neutral-soft); color: var(--chip-neutral); }

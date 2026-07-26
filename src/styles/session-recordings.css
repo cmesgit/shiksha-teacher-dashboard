@@ -93,21 +93,6 @@
   justify-content: space-between;
   gap: 8px;
 }
-/* Colours come from the shared `.subj-chip--N` slots in academyCommon.css —
-   this class only carries the chip's shape. */
-.recCard__chip {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-body);
-  font-size: var(--fs-chip);
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: var(--r-pill);
-  white-space: nowrap;
-}
-
 .recCard__date {
   font-size: 9.5px;
   color: var(--ink-4, #9ca3af);
@@ -125,12 +110,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.recCard__teacher {
-  font-size: 10.5px;
-  color: var(--ink-3, #6b7c83);
-  margin-top: 2px;
-}
-
 .recCard__footer {
   display: flex;
   align-items: center;
@@ -199,23 +178,6 @@
   color: var(--danger);
 }
 .recCard__btn--danger:hover:not(:disabled) { background: var(--danger-soft); border-color: var(--danger); }
-
-/* Confirm step, once delete is armed. */
-.recCard__btn--dangerSolid {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #fff;
-}
-.recCard__btn--dangerSolid:hover:not(:disabled) { background: var(--danger-hover); border-color: var(--danger-hover); }
-
-.recCard__confirm {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-body);
-  font-size: var(--fs-small);
-  color: var(--ink-muted);
-}
 
 /* "Class 10-A · 32 students" under the topic — the teacher's row shows batch
    rather than the student's teacher name. */
