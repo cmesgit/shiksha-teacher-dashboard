@@ -83,10 +83,7 @@ function TicketThread({ ticket, onBack, onClosed }) {
         <button className="cc-icon-btn" onClick={onBack}><FiChevronLeft size={18} /></button>
         <span className="cc-thread-id-text">
           <span className="cc-thread-title">{ticket.subject}</span>
-          <span className="cc-thread-role">
-            {STATUS_LABEL[ticket.status]} · {ticket.category}
-            {ticket.assignee ? ` · Being handled by ${ticket.assignee}` : ""}
-          </span>
+          <span className="cc-thread-role">{STATUS_LABEL[ticket.status]} · {ticket.category}</span>
         </span>
         {ticket.status !== "CLOSED" && (
           <button className="cc-btn-secondary" onClick={close}><FiCheckCircle size={13} /> Close ticket</button>

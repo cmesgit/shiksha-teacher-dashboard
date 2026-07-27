@@ -18,28 +18,24 @@ export function initials(name) {
   );
 }
 
-// Small, deterministic hash -> one of 6 palette slots, so the same person
+// Small, deterministic hash -> one of a fixed palette, so the same person
 // always gets the same "no photo" avatar color instead of a random one
-// re-rolling on every render. The slot resolves to an actual color via the
-// `.cc-avatar-color-N` classes in ChatPanel.css, which is what lets the
-// palette itself repaint per `.cc-theme-*` instead of being a fixed inline
-// hex baked into every render.
-const AV_COLOR_SLOTS = 6;
-export function avatarColorSlot(seed) {
+// re-rolling on every render.
+const AV_COLORS = ["#b3402e", "#1dcaab", "#ff8f01", "#6b2410", "#2c6e8f", "#7a4fb5"];
+export function avatarColor(seed) {
   let h = 0;
   for (let i = 0; i < (seed || "").length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return h % AV_COLOR_SLOTS;
+  return AV_COLORS[h % AV_COLORS.length];
 }
 
 export function Avatar({ src, name, identity, size = 36, online }) {
   const dim = { width: size, height: size, fontSize: Math.max(10, size * 0.38) };
-  const slot = avatarColorSlot(identity || name || "?");
   return (
     <span className="cc-avatar-wrap" style={{ width: size, height: size }}>
       {src ? (
         <img className="cc-avatar" style={dim} src={src} alt="" />
       ) : (
-        <span className={`cc-avatar cc-avatar-fallback cc-avatar-color-${slot}`} style={dim}>
+        <span className="cc-avatar cc-avatar-fallback" style={{ ...dim, background: avatarColor(identity || name || "?") }}>
           {initials(name)}
         </span>
       )}

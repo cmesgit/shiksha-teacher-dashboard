@@ -41,7 +41,7 @@ import {
 } from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
-import SettingsModal from "./SettingsModal";
+import SettingsModal, { settingsSectionFromUrl } from "./SettingsModal";
 
 const DEFAULT_EMOJI = "📚";
 const initials = (name) =>
@@ -203,11 +203,20 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   const [pinTarget, setPinTarget] = useState(null);
   const [forgotTarget, setForgotTarget] = useState(null);  // reset-PIN-via-password
   const [showPwModal, setShowPwModal] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState("profile");
-  const [settingsFocusTeacher, setSettingsFocusTeacher] = useState(false);
-  const openSettings = (t, focusTeacher = false) => {
-    setOpen(false); setSettingsTab(t); setSettingsFocusTeacher(focusTeacher); setSettingsOpen(true);
+  // Deep link: land on /anything?settings=billing and Settings opens there.
+  // Read during the FIRST RENDER, not in an effect: SettingsModal is a child,
+  // and child effects run before the parent's, so its "clear the param while
+  // closed" effect would wipe `?settings` before a mount effect here could see
+  // it. A lazy useState initialiser runs earlier than any effect.
+  const [settingsOpen, setSettingsOpen] = useState(() => !!settingsSectionFromUrl());
+  // Which Settings section to land on. The redesigned SettingsModal is a
+  // sidebar of routable-by-name sections, so the dropdown deep-links straight
+  // to the relevant one instead of the old two-tab guess.
+  const [settingsSection, setSettingsSection] = useState(
+    () => settingsSectionFromUrl() || "profiles",
+  );
+  const openSettings = (sectionKey = "profiles") => {
+    setOpen(false); setSettingsSection(sectionKey); setSettingsOpen(true);
   };
   const [modalError, setModalError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
@@ -462,7 +471,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
                 <p className="ps-empty-tracks__body">
                   Teach academic classes as <b>Faculty</b> or run skill sessions as an <b>Expert</b> — all under this account.
                 </p>
-                <button className="ps-empty-tracks__cta" onClick={() => openSettings("profile", true)}>
+                <button className="ps-empty-tracks__cta" onClick={() => openSettings("teacher")}>
                   <RiAddLine /> Become a teacher
                 </button>
               </div>
@@ -483,11 +492,11 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
             )}
 
             <div className="ps-prof-menu">
-              <button className="ps-mi" onClick={() => openSettings("profile")} role="menuitem">
+              <button className="ps-mi" onClick={() => openSettings("profiles")} role="menuitem">
                 <RiGroupLine /> Manage profiles
               </button>
-              <button className="ps-mi" onClick={() => openSettings("account")} role="menuitem">
-                <RiSettings3Line /> Global settings
+              <button className="ps-mi" onClick={() => openSettings("security")} role="menuitem">
+                <RiSettings3Line /> Account settings
               </button>
               <button className="ps-mi ps-mi--logout" onClick={() => logout()} role="menuitem">
                 <RiLogoutBoxRLine /> Log out
@@ -518,7 +527,8 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           loading={modalLoading} error={modalError} />
       )}
 
-      <SettingsModal open={settingsOpen} tab={settingsTab} focusTeacher={settingsFocusTeacher} onClose={() => setSettingsOpen(false)}
+      <SettingsModal open={settingsOpen} section={settingsSection}
+        onClose={() => setSettingsOpen(false)}
         teacherSignupUrl={teacherSignupUrl} teachUrl={teachUrl}
         onManageTrack={(track, dest) => { setSettingsOpen(false); goToTrack(track, dest); }} />
     </>

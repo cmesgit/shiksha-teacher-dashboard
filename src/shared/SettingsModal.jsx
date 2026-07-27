@@ -6,934 +6,601 @@
  * │  propagate. `npm run check:shared` fails if an app's copy has drifted.       │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
- * SettingsModal.jsx · src/shared/SettingsModal.jsx
- * ──────────────────────────────────────────────────────────────────
- * One Settings surface, byte-identical across landing / student / teacher.
- * No cross-domain redirects — each domain manages everything in-app.
+ * SettingsModal — the Settings shell, byte-identical across landing / student /
+ * teacher. Sidebar + search + content pane + save strip, per the ShikshaCom
+ * "Account Dropdown & Settings Redesign" handoff.
  *
  * Terminology (keep consistent — no "mode" / "context" in labels):
  *   Account · Profile · Track · Faculty (Academy) · Expert (Skill-Dev).
  *
- * Tabs
- * ────
- * Manage profiles
- *   · Learner profiles  — add / edit / remove, photo, display name, bio,
- *                         PIN set/change/remove, per-profile notifications
- *                         & privacy.
- *   · Teacher identity  — shown whenever teacherInfo is present.
- *                         Track cards (Academy/Faculty + Skill Dev/Expert)
- *                         with their status (approved / pending review /
- *                         locked) and an "Apply" button for locked tracks.
+ * LAYOUT
+ * ──────
+ * A modal, not a route. The handoff preferred routes for deep-linkability, but
+ * the three host apps have three unrelated route trees (flat landing routes,
+ * StudentLayout children, three TeacherRoutes layout branches) and Settings is
+ * opened from a header dropdown present on all of them. One modal in the synced
+ * shared/ set stays one implementation; three route trees would be three. Deep
+ * links are preserved instead via `?settings=<section>`, which the shell reads
+ * on open and keeps in sync as the user navigates — so back/forward and a pasted
+ * URL both work without owning a route.
  *
- * Global settings
- *   · Email, username (read-only), change password, account prefs, log out.
+ * SECTIONS
+ * ────────
+ * Profile   · Profiles, Personal, Academic, Parent/guardian   (editing → save strip)
+ * Security  · Security & PIN, Sessions & devices
+ * Prefs     · Notifications, Learning goals
+ * Account   · Billing & payments, Teacher identity, Privacy & data
  *
- * Server endpoints
- * ────────────────
- *   PATCH  /accounts/profiles/{id}/     display name + photo
- *   POST   /accounts/profiles/          add profile
- *   DELETE /accounts/profiles/{id}/     remove profile
- *   POST   /accounts/profiles/pin/      set / clear PIN
- *   POST   /accounts/change-password/
+ * The four editing sections all edit ONE LearnerProfile through one form state
+ * and one PATCH; see settings/ProfileSections.jsx for the edit-scope rule. The
+ * rest commit their own actions immediately and have no save strip.
  *
- * Sticky local prefs (bio, notification & privacy toggles) kept in
- * localStorage until a backend prefs endpoint exists.
- * Class & board shown read-only to protect coded fields.
+ * ENDPOINTS
+ * ─────────
+ *   GET|POST   /accounts/profiles/            list / add a profile
+ *   GET|PATCH|DELETE /accounts/profiles/{id}/ read / save / remove
+ *   POST       /accounts/profiles/pin/        set / clear a profile PIN
+ *   POST       /accounts/change-password/
+ *   GET        /accounts/choices/             select options (never hardcoded)
+ *   GET        /accounts/sessions/ …          Sessions & devices
+ *   GET|PATCH  /accounts/learning-goals/      Learning goals + streak
+ *   GET        /accounts/billing/             real access & payment history
+ *   POST       /accounts/data-export/         download my data
+ *   POST       /accounts/delete-account/      close my account
+ *   GET|PUT    /notifications/preferences/    channels, categories, language
+ *
+ * Nothing is stored in localStorage any more. The previous version kept bio and
+ * every notification toggle per-device under `shk_prefs_v1` / `shiksha_prefs_*`,
+ * so a user's settings silently reverted on any other browser.
  */
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  RiSearchLine, RiCloseLine, RiUserLine, RiIdCardLine, RiGraduationCapLine,
+  RiParentLine, RiShieldKeyholeLine, RiDeviceLine, RiNotification3Line,
+  RiFocus2Line, RiBankCardLine, RiTeamLine, RiLockUnlockLine,
+} from "react-icons/ri";
+
 import { useAuth } from "../contexts/AuthContext";
+import {
+  EditScopeStrip, ProfilesSection, PersonalSection, AcademicSection, GuardianSection,
+} from "./settings/ProfileSections";
+import {
+  SecuritySection, SessionsSection, NotificationsSection, GoalsSection,
+  BillingSection, TeacherIdentitySection, PrivacySection,
+} from "./settings/AccountSections";
+import { Notice, errText, initials } from "./settings/primitives";
 import "./SettingsModal.css";
 
-/* ── helpers ── */
-const initials = (n) =>
-  (n || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-const classBoard = (p) =>
-  [p?.current_class ? `Class ${p.current_class}` : "", p?.board].filter(Boolean).join(" · ");
+/* ── Section registry ───────────────────────────────────────────────────────
+ * Single source of truth for the sidebar, the search index and the save strip.
+ * `keywords` reproduces the handoff's search index so synonyms match ("dob"
+ * finds Personal, "sign out" finds Sessions). */
+const SECTIONS = [
+  { key: "profiles", group: "Profile", label: "Profiles", icon: RiUserLine,
+    editing: true, hint: "Changes apply to the selected profile",
+    keywords: "profile child dependent add learner avatar display name photo bio" },
+  { key: "personal", group: "Profile", label: "Personal details", icon: RiIdCardLine,
+    editing: true, hint: "Reused by the faculty application",
+    keywords: "personal first last name phone address gender date of birth dob birthday pincode state district" },
+  { key: "academic", group: "Profile", label: "Academic", icon: RiGraduationCapLine,
+    editing: true, hint: "Personalises courses & syllabus",
+    keywords: "academic class grade board cbse icse mbse nios stream school syllabus academic year" },
+  { key: "guardian", group: "Profile", label: "Parent / guardian", icon: RiParentLine,
+    editing: true, hint: "Contact for child profiles",
+    keywords: "parent guardian father mother contact family email" },
 
-const prefsKey = (email) => `shiksha_prefs_${email || "anon"}`;
-const loadPrefs = (email) => {
-  try { return JSON.parse(localStorage.getItem(prefsKey(email)) || "{}"); } catch { return {}; }
-};
-const savePrefs = (email, p) => {
-  try { localStorage.setItem(prefsKey(email), JSON.stringify(p)); } catch { /* ignore */ }
-};
+  { key: "security", group: "Security", label: "Security & PIN", icon: RiShieldKeyholeLine,
+    keywords: "security pin password change password login authentication" },
+  { key: "sessions", group: "Security", label: "Sessions & devices", icon: RiDeviceLine,
+    keywords: "session device logout log out sign out revoke everywhere browser phone" },
 
-/* Cross-domain destinations (faculty form, expert editor, add-track) are
-   derived from the teacherSignupUrl / teachUrl props the host app passes in —
-   see the main component — so they're correct on every domain. */
+  { key: "notifications", group: "Preferences", label: "Notifications", icon: RiNotification3Line,
+    keywords: "notification email sms whatsapp push alerts language reminders messages mute" },
+  { key: "goals", group: "Preferences", label: "Learning goals", icon: RiFocus2Line,
+    keywords: "goal streak reminder daily target habit study minutes days" },
 
-/* ── Toggle ── */
-function Toggle({ on, onChange }) {
-  return (
-    <button type="button" className={`sm-toggle ${on ? "on" : ""}`}
-      role="switch" aria-checked={on} onClick={() => onChange(!on)}>
-      <span className="sm-toggle__dot" />
-    </button>
-  );
-}
-
-/* ── Track status badge ── */
-function TrackBadge({ status }) {
-  const map = {
-    approved: { label: "Approved",     cls: "sm-badge--green"  },
-    pending:  { label: "Under review",  cls: "sm-badge--yellow" },
-    locked:   { label: "Not applied",   cls: "sm-badge--gray"   },
-  };
-  const { label, cls } = map[status] || map.locked;
-  return <span className={`sm-badge ${cls}`}>{label}</span>;
-}
-
-
-/* ── Notifications & language (design parity) ──────────────────────────────
-   The Claude design lists these toggles under Skill Dev / Global settings.
-   The backend has no preference columns yet, so they're stored per-device
-   (localStorage) and labelled honestly as such. */
-const PREFS_KEY = "shk_prefs_v1";
-const PREF_DEFS = [
-  { k: "session_reminders",     label: "Session reminders" },
-  { k: "booking_confirmations", label: "Booking confirmations" },
-  { k: "new_messages",          label: "New messages" },
-  { k: "review_prompts",        label: "Review prompts" },
-  { k: "promo_emails",          label: "Promotional emails" },
+  { key: "billing", group: "Account", label: "Billing & payments", icon: RiBankCardLine,
+    keywords: "billing payment invoice receipt upi card pay course access subscription price free" },
+  { key: "teacher", group: "Account", label: "Teacher identity", icon: RiTeamLine,
+    keywords: "teacher faculty academy expert skill skill-dev track apply teaching identity" },
+  { key: "privacy", group: "Account", label: "Privacy & data", icon: RiLockUnlockLine,
+    keywords: "privacy data export download delete delete account close account" },
 ];
-const LANGS = ["English", "Hindi", "Telugu", "Tamil", "Kannada", "Bengali", "Marathi"];
 
-/* LearnerProfile academic/choice options — mirror accounts.models.LearnerProfile. */
-const CLASS_OPTS   = [["", "—"], ["8", "Class 8"], ["9", "Class 9"], ["10", "Class 10"], ["11", "Class 11"], ["12", "Class 12"]];
-const STREAM_OPTS  = [["", "—"], ["science", "Science"], ["commerce", "Commerce"], ["arts", "Arts"]];
-const BOARD_OPTS   = [["", "—"], ["cbse", "CBSE"], ["icse", "ICSE"], ["mbse", "Mizoram Board (MBSE)"], ["nios", "NIOS"], ["other", "Other State Board"]];
-const STUDYING_OPTS = [["", "—"], ["yes", "Yes"], ["no", "No"]];
-const HIGHED_OPTS  = [["", "—"], ["below_8", "Below Class 8"], ["8", "Class 8"], ["9", "Class 9"], ["10", "Class 10"], ["11", "Class 11"], ["12", "Class 12"]];
+const GROUP_ORDER = ["Profile", "Security", "Preferences", "Account"];
+const EDITING_KEYS = SECTIONS.filter((s) => s.editing).map((s) => s.key);
+const SECTION_KEYS = SECTIONS.map((s) => s.key);
 
-function loadShkPrefs() {
-  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
+const SUGGESTIONS = [
+  { label: "Password", key: "security" },
+  { label: "Billing", key: "billing" },
+  { label: "Notifications", key: "notifications" },
+  { label: "Sign-in devices", key: "sessions" },
+];
+
+/** The section named by `?settings=<key>`, or null. Exported so the host header
+ *  (ProfileSwitcher) can open Settings on the right section for a pasted deep
+ *  link — the modal can't do it alone, since it isn't mounted-open on load. */
+export function settingsSectionFromUrl() {
+  if (typeof window === "undefined") return null;
+  const key = new URLSearchParams(window.location.search).get("settings");
+  return key && SECTION_KEYS.includes(key) ? key : null;
 }
 
-function PrefsSection() {
-  const [prefs, setPrefs] = useState(loadShkPrefs);
-  const save = (next) => { setPrefs(next); try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* ignore */ } };
-  const flip = (k) => save({ ...prefs, [k]: !(prefs[k] ?? true) });
+/* Every field the editing sections own, in the shape the profile PATCH takes.
+ * Kept as one flat object so dirty-tracking is a single comparison. */
+const BLANK_FORM = {
+  display_name: "", bio: "",
+  first_name: "", last_name: "", phone: "", gender: "", date_of_birth: "",
+  state: "", district: "", city_town: "", pin_code: "",
+  currently_studying: "", current_class: "", stream: "", board: "",
+  board_other: "", school_name: "", academic_year: "",
+  highest_education: "", reason_not_studying: "",
+  father_name: "", father_phone: "", mother_name: "", mother_phone: "",
+  guardian_name: "", guardian_phone: "", parent_guardian_email: "",
+};
 
-  return (
-    <>
-      <div className="sm-sec">Notifications</div>
-      <div className="sm-teacher-note">Saved on this device.</div>
-      {PREF_DEFS.map(({ k, label }) => (
-        <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 2px", borderBottom: "1px solid #f2f0ea" }}>
-          <span style={{ fontSize: 13.5 }}>{label}</span>
-          <Toggle on={prefs[k] ?? true} onChange={() => flip(k)} />
-        </div>
-      ))}
+const formFrom = (row) => {
+  const out = { ...BLANK_FORM };
+  for (const k of Object.keys(BLANK_FORM)) out[k] = row?.[k] ?? "";
+  return out;
+};
 
-      <div className="sm-sec" style={{ marginTop: 18 }}>Language preference</div>
-      <select className="sm-input" style={{ maxWidth: 260 }}
-        value={prefs.language || "English"}
-        onChange={(e) => save({ ...prefs, language: e.target.value })}>
-        {LANGS.map((l) => <option key={l} value={l}>{l}</option>)}
-      </select>
-    </>
-  );
-}
-
-/* ── Teacher identity section ── */
-function TeacherSection({ teacherInfo, mkAddTrack, facultyFormUrl, expertProfileUrl, onManageTrack }) {
-  // teacherInfo is null for an account that has never held any teaching
-  // track (backend's serialize_teacher() returns None) — that's exactly the
-  // audience "Become a teacher" targets, so render both tracks as locked
-  // instead of bailing out and showing nothing.
-  const tracks = teacherInfo?.tracks || {};
-
-  // Academy destinations depend on status: while PENDING the useful surface is
-  // still the application form (finish/fix documents); once APPROVED it's the
-  // unified faculty-profile editor in the teacher app (/teacher/profile).
-  const academyApproved = tracks.academy === "approved";
-  const facultyEditUrl = expertProfileUrl
-    ? expertProfileUrl.replace(/\/teacher\/expert\/profile\/?$/, "/teacher/profile")
-    : "";
-  const TRACK_DEFS = [
-    { key: "academy", label: "Faculty",          sub: "Academic teaching (Academy)", icon: "🎓",
-      manageUrl:   academyApproved ? facultyEditUrl : facultyFormUrl,
-      manageLabel: academyApproved ? "Edit profile" : "Application form",
-      manageDest:  academyApproved ? "/teacher/profile" : "/teacher/dashboard" },
-    { key: "skill",   label: "Expert (Skill-Dev)", sub: "Skill-development sessions",  icon: "⚡",
-      manageUrl: expertProfileUrl, manageLabel: "Edit profile",
-      manageDest: "/teacher/expert/profile" },
-  ];
-
-  return (
-    <>
-      <div className="sm-sec sm-sec--teacher">Teacher identity</div>
-      <div className="sm-teacher-note">
-        Your teaching tracks. Skill-Dev lists once your expert profile is complete;
-        Academy requires admin approval. Use the links to fill in or edit each
-        track's details — the advertised expert profile and the faculty
-        application both live behind these.
-      </div>
-      <div className="sm-track-list">
-        {TRACK_DEFS.map(({ key, label, sub, icon, manageUrl, manageLabel, manageDest }) => {
-          const st = tracks[key] || "locked";
-          // Asymmetric Faculty/Guest rule: you may add Faculty (academy) any
-          // time it's not held, but you may add Skill ONLY if you've never
-          // held Faculty. So a faculty account never gets a Skill "Apply".
-          const academyHeld  = ["pending", "approved"].includes(tracks.academy);
-          const canApply     = st === "locked" && (key === "academy" || !academyHeld);
-          const skillBlocked = key === "skill" && st === "locked" && academyHeld;
-          const held         = st === "pending" || st === "approved";
-          return (
-            <div key={key} className={`sm-track-card sm-track-card--${st}`}>
-              <span className="sm-track-icon">{icon}</span>
-              <div className="sm-track-info">
-                <div className="sm-track-name">{label}</div>
-                <div className="sm-track-sub">
-                  {skillBlocked ? "Not available on faculty accounts" : sub}
-                </div>
-              </div>
-              <div className="sm-track-right">
-                <TrackBadge status={st} />
-                {canApply && (
-                  <a className="sm-mini sm-track-apply" href={mkAddTrack(key)}>
-                    Apply
-                  </a>
-                )}
-                {held && (
-                  onManageTrack ? (
-                    /* From learner context the teacher app needs a password
-                       unlock first — route through the switcher's flow instead
-                       of a raw link that bounces to login. */
-                    <button type="button" className="sm-mini"
-                      onClick={() => onManageTrack(key, manageDest)}>
-                      {manageLabel} 🔒
-                    </button>
-                  ) : (manageUrl && <a className="sm-mini" href={manageUrl}>{manageLabel}</a>)
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-}
-
-/* ══════════════════════════════════ main ══════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════ */
 export default function SettingsModal({
-  open, tab: initialTab = "profile", focusTeacher = false, onClose,
-  teacherSignupUrl = "/signup?role=teacher", teachUrl = "", onManageTrack,}) {
-  const { user, profiles, activeProfile, teacherInfo, api, bootstrap, logout } = useAuth();
+  open,
+  section: initialSection = "profiles",
+  onClose,
+  teacherSignupUrl = "/signup?role=teacher",
+  teachUrl = "",
+  onManageTrack,
+}) {
+  const { user, profiles, activeProfile, teacherInfo, isTeacherContext, api, bootstrap } = useAuth();
 
-  /* Cross-domain destinations, derived from the host app's props so they're
-     right on every domain. homeBase is "" on the marketing app (same origin). */
-  const homeBase = (teacherSignupUrl || "").split("/signup")[0];
-  const mkAddTrack = (track) =>
-    `${homeBase}/signup?role=teacher&add_track=${encodeURIComponent(track)}`;
-  const facultyFormUrl   = `${homeBase}/form-fillup`;
-  const expertProfileUrl = teachUrl
-    ? `${teachUrl.replace(/\/teacher\/dashboard\/?$/, "")}/teacher/expert/profile`
-    : "";
-
-  const [tab, setTab]             = useState(initialTab);
-  const [rows, setRows]           = useState([]);
-  const [editId, setEditId]       = useState(null);
-  const [form, setForm]           = useState({
-    display_name: "", bio: "",
-    first_name: "", last_name: "", phone: "", gender: "", date_of_birth: "",
-    state: "", district: "", city_town: "", pin_code: "",
-    // Academic
-    currently_studying: "", current_class: "", stream: "", board: "",
-    board_other: "", school_name: "", academic_year: "",
-    highest_education: "", reason_not_studying: "",
-    // Parent / guardian
-    father_name: "", father_phone: "", mother_name: "", mother_phone: "",
-    guardian_name: "", guardian_phone: "", parent_guardian_email: "",
-  });
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [realPhotoFile, setRealPhotoFile]       = useState(null); // personal photo (profile_photo)
-  const [realPhotoPreview, setRealPhotoPreview] = useState(null);
-  const realFileRef = useRef(null);
-  const [prefs, setPrefs]         = useState({ email: true, sms: false, directory: true, announce: true });
-  const [saving, setSaving]       = useState(false);
-  const [err, setErr]             = useState("");
-  const [okMsg, setOkMsg]         = useState("");
-  const fileRef = useRef(null);
-
-  /* sub-flows */
-  const [adding, setAdding]         = useState(false);
+  const [section, setSection] = useState(initialSection);
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState([]);
+  const [editId, setEditId] = useState(null);
+  const [choices, setChoices] = useState({});
+  const [form, setForm] = useState(BLANK_FORM);
+  const [baseline, setBaseline] = useState(BLANK_FORM);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [adding, setAdding] = useState(false);
   const [newProfile, setNewProfile] = useState({ name: "", relationship: "DEPENDENT" });
-  const [pinMode, setPinMode]       = useState(null);   // 'set' | 'remove' | null
-  const [pinValue, setPinValue]     = useState("");
-  const [pinPassword, setPinPassword] = useState("");   // account password re-auth
-  const [removeMode, setRemoveMode] = useState(false);  // delete-profile confirm
-  const [removePassword, setRemovePassword] = useState("");
-  const [pw, setPw]                 = useState({ old: "", next: "", confirm: "" });
-  const [pwBusy, setPwBusy]         = useState(false);
-  const [pwMsg, setPwMsg]           = useState("");
-  const teacherSecRef = useRef(null);
+  const [removing, setRemoving] = useState(false);
+  const [removePw, setRemovePw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [closed, setClosed] = useState(null);   // account-closed confirmation
+
+  const searchRef = useRef(null);
+  const paneRef = useRef(null);
 
   const email = user?.email || "";
+  const editProfile = rows.find((r) => r.id === editId) || null;
+  const editName = editProfile?.display_name || "this profile";
+  const meta = SECTIONS.find((s) => s.key === section) || SECTIONS[0];
+  const isEditing = EDITING_KEYS.includes(section);
+  const dirty = useMemo(
+    () => !!avatarFile || JSON.stringify(form) !== JSON.stringify(baseline),
+    [form, baseline, avatarFile],
+  );
 
-  /* ── mount / re-open ── */
-  useEffect(() => {
-    if (!open) return;
-    setTab(initialTab); setErr(""); setOkMsg(""); setPwMsg("");
-    setAdding(false);
-    setPinMode(null); setPinValue(""); setPinPassword("");
-    setRemoveMode(false); setRemovePassword("");
-    setPhotoFile(null); setPhotoPreview(null);
-    setRealPhotoFile(null); setRealPhotoPreview(null);
-    setPw({ old: "", next: "", confirm: "" });
-    const stored = loadPrefs(email);
-    setPrefs({
-      email:    stored.email    ?? true,
-      sms:      stored.sms      ?? false,
-      directory:stored.directory?? true,
-      announce: stored.announce ?? true,
-    });
-    refreshProfiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // "Become a teacher" opens straight on this tab but the Teacher identity
-  // section sits below ~10 unrelated profile-editing sections — jump to it
-  // instead of leaving the user staring at Display name / Bio / Academic
-  // details. Deferred a tick so the tab's content has actually painted.
-  useEffect(() => {
-    if (!open || !focusTeacher || initialTab !== "profile") return;
-    const t = setTimeout(() => {
-      teacherSecRef.current?.scrollIntoView({ block: "start" });
-    }, 0);
-    return () => clearTimeout(t);
-  }, [open, focusTeacher, initialTab]);
-
-  const refreshProfiles = async () => {
+  /* ── data loading ── */
+  const loadProfiles = useCallback(async (preferId) => {
     try {
       const res = await api.get("/accounts/profiles/");
       const list = Array.isArray(res.data) ? res.data : res.data?.results || [];
       setRows(list);
-      const start = (activeProfile && list.find((p) => p.id === activeProfile.id)) || list[0];
-      if (start) selectRow(start);
+      const pick =
+        (preferId && list.find((p) => p.id === preferId)) ||
+        (editId && list.find((p) => p.id === editId)) ||
+        (activeProfile && list.find((p) => p.id === activeProfile.id)) ||
+        list[0];
+      return pick || null;
     } catch {
+      // /profiles/ unreachable — fall back to the copies AuthContext already has
+      // so the surface still renders something editable.
       const list = profiles || [];
       setRows(list);
-      if (activeProfile) selectRow(activeProfile);
+      return activeProfile || list[0] || null;
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, activeProfile, profiles, editId]);
 
-  const fillForm = (row) => {
-    const stored = loadPrefs(email);
-    setForm({
-      display_name: row.display_name || "",
-      bio: stored.bios?.[row.id] || "",
-      first_name:   row.first_name || "",
-      last_name:    row.last_name || "",
-      phone:        row.phone || "",
-      gender:       row.gender || "",
-      date_of_birth: row.date_of_birth || "",
-      state:        row.state || "",
-      district:     row.district || "",
-      city_town:    row.city_town || "",
-      pin_code:     row.pin_code || "",
-      currently_studying:  row.currently_studying || "",
-      current_class:       row.current_class || "",
-      stream:              row.stream || "",
-      board:               row.board || "",
-      board_other:         row.board_other || "",
-      school_name:         row.school_name || "",
-      academic_year:       row.academic_year || "",
-      highest_education:   row.highest_education || "",
-      reason_not_studying: row.reason_not_studying || "",
-      father_name:         row.father_name || "",
-      father_phone:        row.father_phone || "",
-      mother_name:         row.mother_name || "",
-      mother_phone:        row.mother_phone || "",
-      guardian_name:       row.guardian_name || "",
-      guardian_phone:      row.guardian_phone || "",
-      parent_guardian_email: row.parent_guardian_email || "",
-    });
-  };
-
-  const selectRow = async (row) => {
-    setEditId(row.id);
-    setPinMode(null); setPinValue(""); setPinPassword("");
-    setRemoveMode(false); setRemovePassword("");
-    setPhotoFile(null); setPhotoPreview(null);
-    setRealPhotoFile(null); setRealPhotoPreview(null);
-    // The /profiles/ list is lean (no academic/guardian fields); fetch the full
-    // detail so a parent can view+edit any child's complete profile.
-    fillForm(row);
+  /* The list endpoint is lean (no academic / guardian columns), so the detail
+     endpoint is fetched for whichever profile is being edited. */
+  const selectForEdit = useCallback(async (id, seed) => {
+    setEditId(id);
+    setAvatarFile(null); setAvatarPreview(null);
+    setRemoving(false); setRemovePw("");
+    if (seed) { setForm(formFrom(seed)); setBaseline(formFrom(seed)); }
     try {
-      const res = await api.get(`/accounts/profiles/${row.id}/`);
-      if (res?.data) fillForm({ ...row, ...res.data });
+      const res = await api.get(`/accounts/profiles/${id}/`);
+      if (res?.data) {
+        const merged = formFrom({ ...(seed || {}), ...res.data });
+        setForm(merged); setBaseline(merged);
+        setRows((prev) => prev.map((p) => (p.id === id ? { ...p, ...res.data } : p)));
+      }
     } catch { /* keep the lean fields already shown */ }
+  }, [api]);
+
+  useEffect(() => {
+    if (!open) return;
+    setSection(SECTION_KEYS.includes(initialSection) ? initialSection : "profiles");
+    setQuery(""); setMsg(null); setAdding(false); setClosed(null);
+    (async () => {
+      const pick = await loadProfiles();
+      if (pick) await selectForEdit(pick.id, pick);
+    })();
+    // Choices come from the server so no dropdown can drift from what the
+    // serializers accept.
+    api.get("/accounts/choices/").then((r) => setChoices(r.data || {})).catch(() => setChoices({}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  /* ── deep link: ?settings=<section> ── */
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("settings") === section) return;
+    url.searchParams.set("settings", section);
+    window.history.replaceState(window.history.state, "", url);
+  }, [open, section]);
+
+  useEffect(() => {
+    if (open || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("settings")) return;
+    url.searchParams.delete("settings");
+    window.history.replaceState(window.history.state, "", url);
+  }, [open]);
+
+  /* ── Esc to close, focus the search on open, restore focus on close ── */
+  useEffect(() => {
+    if (!open) return undefined;
+    const opener = document.activeElement;
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    document.addEventListener("keydown", onKey);
+    const t = setTimeout(() => searchRef.current?.focus(), 0);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      clearTimeout(t);
+      if (opener instanceof HTMLElement) opener.focus();
+    };
+  }, [open, onClose]);
+
+  /* Section changes reset the scroll position — otherwise a short section opens
+     scrolled to wherever the previous long one was. */
+  useEffect(() => { if (paneRef.current) paneRef.current.scrollTop = 0; }, [section]);
+
+  /* ── search ── */
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return SECTIONS;
+    return SECTIONS.filter(
+      (s) => s.label.toLowerCase().includes(q) || s.keywords.includes(q),
+    );
+  }, [query]);
+
+  const go = (key) => { setSection(key); setQuery(""); setMsg(null); };
+
+  /* ── actions ── */
+  const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  /* Changing the edit target rebinds all four editing forms, so unsaved edits
+     would vanish without a word. Ask first. */
+  const pickEditProfile = (id) => {
+    if (id === editId) return;
+    if (dirty && !window.confirm(
+      `Discard unsaved changes to ${editName}?`
+    )) return;
+    selectForEdit(id, rows.find((r) => r.id === id));
   };
 
-  const currentRow = rows.find((r) => r.id === editId) || activeProfile;
-  const hasPin     = !!currentRow?.requires_pin;
-
-  const onPhoto = (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f));
+  const onPickAvatar = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setAvatarFile(f);
+    setAvatarPreview(URL.createObjectURL(f));
   };
 
-  const onRealPhoto = (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    setRealPhotoFile(f); setRealPhotoPreview(URL.createObjectURL(f));
-  };
-
-  const setPref = (k, v) => {
-    const next = { ...prefs, [k]: v }; setPrefs(next);
-    savePrefs(email, { ...loadPrefs(email), ...next });
-  };
-
-  /* ── save profile ── */
-  const handleSaveProfile = async () => {
+  const save = async () => {
     if (!editId) return;
-    setSaving(true); setErr(""); setOkMsg("");
+    setBusy(true); setMsg(null);
     try {
+      // multipart because the avatar may ride along; the endpoint accepts both.
       const fd = new FormData();
-      fd.append("display_name", (form.display_name || "").trim());
-      // Personal data (all optional — empty values clear the field server-side).
-      fd.append("first_name",    form.first_name || "");
-      fd.append("last_name",     form.last_name || "");
-      fd.append("phone",         form.phone || "");
-      fd.append("gender",        form.gender || "");
-      fd.append("date_of_birth", form.date_of_birth || "");
-      fd.append("state",         form.state || "");
-      fd.append("district",      form.district || "");
-      fd.append("city_town",     form.city_town || "");
-      fd.append("pin_code",      form.pin_code || "");
-      // Academic + parent/guardian (all optional — empty clears the field).
-      [
-        "currently_studying", "current_class", "stream", "board", "board_other",
-        "school_name", "academic_year", "highest_education", "reason_not_studying",
-        "father_name", "father_phone", "mother_name", "mother_phone",
-        "guardian_name", "guardian_phone", "parent_guardian_email",
-      ].forEach((k) => fd.append(k, form[k] || ""));
-      if (photoFile)     fd.append("avatar_image", photoFile);
-      if (realPhotoFile) fd.append("profile_photo", realPhotoFile);
-      await api.patch(`/accounts/profiles/${editId}/`, fd);
-      const stored = loadPrefs(email);
-      savePrefs(email, { ...stored, ...prefs,
-        bios: { ...(stored.bios || {}), [editId]: form.bio || "" } });
+      for (const [k, v] of Object.entries(form)) fd.append(k, v ?? "");
+      if (avatarFile) fd.append("avatar_image", avatarFile);
+      const res = await api.patch(`/accounts/profiles/${editId}/`, fd);
+      setBaseline(formFrom({ ...form, ...(res?.data || {}) }));
+      setAvatarFile(null); setAvatarPreview(null);
       await bootstrap?.();
-      await refreshProfiles();
-      setOkMsg("Saved.");
+      await loadProfiles(editId);
+      setMsg({ kind: "ok", text: "Saved." });
     } catch (e) {
-      const d = e?.response?.data;
-      setErr(typeof d === "string" ? d : Object.values(d || {}).flat().join(" ") || "Could not save.");
-    } finally { setSaving(false); }
+      setMsg({ kind: "err", text: errText(e, "Could not save your changes.") });
+    } finally { setBusy(false); }
   };
 
-  /* ── add profile ── */
-  const handleAddProfile = async () => {
-    if (!newProfile.name.trim()) { setErr("Enter a profile name."); return; }
-    setSaving(true); setErr("");
+  const addProfile = async () => {
+    if (!newProfile.name.trim()) {
+      setMsg({ kind: "err", text: "Give the profile a name." }); return;
+    }
+    setBusy(true); setMsg(null);
     try {
       const fd = new FormData();
       fd.append("display_name", newProfile.name.trim());
-      fd.append("relationship", newProfile.relationship);
+      fd.append("relationship", newProfile.relationship || "DEPENDENT");
       const res = await api.post("/accounts/profiles/", fd);
       setAdding(false); setNewProfile({ name: "", relationship: "DEPENDENT" });
-      await bootstrap?.(); await refreshProfiles();
-      if (res?.data?.id) selectRow({ id: res.data.id, display_name: newProfile.name.trim() });
+      await bootstrap?.();
+      const pick = await loadProfiles(res?.data?.id);
+      if (pick) await selectForEdit(pick.id, pick);
+      setMsg({ kind: "ok", text: "Profile added." });
     } catch (e) {
-      const d = e?.response?.data;
-      setErr(typeof d === "string" ? d : Object.values(d || {}).flat().join(" ") || "Could not add profile.");
-    } finally { setSaving(false); }
+      setMsg({ kind: "err", text: errText(e, "Could not add the profile.") });
+    } finally { setBusy(false); }
   };
 
-  /* ── remove profile (requires account password) ── */
-  const handleRemoveProfile = async () => {
-    if (!currentRow || rows.length <= 1) return;
-    if (!removePassword) { setErr("Enter your account password to remove this profile."); return; }
-    setSaving(true); setErr("");
+  const removeProfile = async () => {
+    if (!removePw) {
+      setMsg({ kind: "err", text: "Enter your account password to remove this profile." });
+      return;
+    }
+    setBusy(true); setMsg(null);
     try {
-      await api.delete(`/accounts/profiles/${currentRow.id}/`, { data: { password: removePassword } });
-      setRemoveMode(false); setRemovePassword("");
-      await bootstrap?.(); await refreshProfiles();
+      await api.delete(`/accounts/profiles/${editId}/`, { data: { password: removePw } });
+      setRemoving(false); setRemovePw("");
+      await bootstrap?.();
+      const pick = await loadProfiles();
+      if (pick) await selectForEdit(pick.id, pick);
+      setMsg({ kind: "ok", text: "Profile removed." });
     } catch (e) {
-      const d = e?.response?.data;
-      setErr(d?.password || d?.detail ||
-        (typeof d === "string" ? d : "Could not remove profile."));
-    } finally { setSaving(false); }
+      setMsg({ kind: "err", text: errText(e, "Could not remove the profile.") });
+    } finally { setBusy(false); }
   };
 
-  /* ── PIN (all changes require the ACCOUNT password — also the forgot-PIN path) ── */
-  const handleSavePin = async () => {
-    if (!/^\d{4,6}$/.test(pinValue)) { setErr("PIN must be 4–6 digits."); return; }
-    if (!pinPassword) { setErr("Enter your account password to change the PIN."); return; }
-    setSaving(true); setErr("");
-    try {
-      await api.post("/accounts/profiles/pin/", { profile_id: editId, pin: pinValue, password: pinPassword });
-      setPinMode(null); setPinValue(""); setPinPassword("");
-      await bootstrap?.(); await refreshProfiles(); setOkMsg("PIN updated.");
-    } catch (e) {
-      const d = e?.response?.data;
-      setErr(d?.password || d?.pin ||
-        (typeof d === "string" ? d : "Could not update PIN."));
-    } finally { setSaving(false); }
+  /* Teaching-track destinations. The Faculty and Expert public-profile editors
+     are real screens in the teacher app; Settings links to them rather than
+     shipping a second copy of each form. */
+  const homeBase = (teacherSignupUrl || "").split("/signup")[0];
+  const applyUrl = (track) =>
+    `${homeBase}/signup?role=teacher&add_track=${encodeURIComponent(track)}`;
+  // "Edit … profile" goes to that track's public-profile editor; "Switch to …"
+  // goes to the track's normal landing page — switching tracks shouldn't dump
+  // you into a form you didn't ask for.
+  const EDITOR_PATH = {
+    academy: "/teacher/profile",
+    skill: "/teacher/expert/profile",
   };
-
-  const handleRemovePin = async () => {
-    if (!pinPassword) { setErr("Enter your account password to remove the PIN."); return; }
-    setSaving(true); setErr("");
-    try {
-      await api.post("/accounts/profiles/pin/", { profile_id: editId, pin: "", password: pinPassword });
-      setPinMode(null); setPinPassword("");
-      await bootstrap?.(); await refreshProfiles(); setOkMsg("PIN removed.");
-    } catch (e) {
-      const d = e?.response?.data;
-      setErr(d?.password || (typeof d === "string" ? d : "Could not remove PIN."));
-    } finally { setSaving(false); }
+  const TRACK_HOME = {
+    academy: "/teacher/dashboard",
+    skill: "/teacher/expert/profile",
   };
-
-  /* ── change password ── */
-  const handleChangePassword = async () => {
-    setPwMsg("");
-    if (!pw.old || !pw.next) { setPwMsg("Fill in both fields."); return; }
-    if (pw.next.length < 8)  { setPwMsg("New password must be at least 8 characters."); return; }
-    if (pw.next !== pw.confirm) { setPwMsg("New passwords don't match."); return; }
-    setPwBusy(true);
-    try {
-      await api.post("/accounts/change-password/", { old_password: pw.old, new_password: pw.next });
-      setPw({ old: "", next: "", confirm: "" }); setPwMsg("✓ Password changed.");
-    } catch (e) {
-      const d = e?.response?.data;
-      setPwMsg(typeof d === "string" ? d : Object.values(d || {}).flat().join(" ") || "Could not change password.");
-    } finally { setPwBusy(false); }
+  const openEditor = (track) => {
+    const dest = EDITOR_PATH[track];
+    // From a learner context the teacher app needs a password unlock first, so
+    // route through the switcher's flow rather than a raw link that would bounce
+    // to login.
+    if (onManageTrack) { onManageTrack(track, dest); return; }
+    if (teachUrl) {
+      const origin = new URL(teachUrl, window.location.href).origin;
+      window.location.href = origin + dest;
+    }
   };
 
   if (!open) return null;
 
-  /* ─────────────────────────── render ─────────────────────────── */
+  const grouped = GROUP_ORDER
+    .map((g) => ({ group: g, items: visible.filter((s) => s.group === g) }))
+    .filter((g) => g.items.length > 0);
+
   // Portalled to document.body: the header this lives under has
-  // backdrop-filter, which makes it the containing block for any
-  // position:fixed descendant and clips the overlay to the header's box.
+  // backdrop-filter, which makes it the containing block for any position:fixed
+  // descendant and would clip the overlay to the header's box.
   return createPortal(
-    <div className="sm-overlay"
-      onClick={(e) => { if (e.target.classList.contains("sm-overlay")) onClose?.(); }}>
-      <div className="sm-card" role="dialog" aria-modal="true" aria-label="Settings">
+    <div className="st-overlay"
+      onClick={(e) => { if (e.target.classList.contains("st-overlay")) onClose?.(); }}>
+      <div className="st-card" role="dialog" aria-modal="true" aria-label="Settings">
 
-        {/* head */}
-        <div className="sm-head">
-          <h3 className="sm-title">Settings</h3>
-          <button className="sm-x" onClick={onClose} aria-label="Close">✕</button>
-        </div>
-        <div className="sm-email">{email}</div>
-
-        {/* tabs */}
-        <div className="sm-tabs">
-          <button className={`sm-tab ${tab === "profile" ? "on" : ""}`} onClick={() => setTab("profile")}>
-            Manage profiles
-          </button>
-          <button className={`sm-tab ${tab === "account" ? "on" : ""}`} onClick={() => setTab("account")}>
-            Global settings
+        {/* ── header ── */}
+        <div className="st-head">
+          <span className="st-head__av">{initials(activeProfile?.display_name || user?.username)}</span>
+          <div className="st-head__txt">
+            <div className="st-head__title">Settings</div>
+            <div className="st-head__sub">
+              {[activeProfile?.display_name, email].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+          <button type="button" className="st-head__x" onClick={onClose} aria-label="Close settings">
+            <RiCloseLine />
           </button>
         </div>
 
-        {/* body */}
-        <div className="sm-body">
-
-          {/* ══ MANAGE PROFILES ══════════════════════════════════════ */}
-          {tab === "profile" && (
-            <>
-              {/* ── learner profiles ── */}
-              <div className="sm-sec">Learner profiles</div>
-              <div className="sm-editrow">
-                <span className="sm-av sm-av--sm">{initials(currentRow?.display_name)}</span>
-                <select className="sm-select" value={editId || ""}
-                  onChange={(e) => { const r = rows.find((x) => x.id === e.target.value); if (r) selectRow(r); }}>
-                  {rows.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {[r.display_name, classBoard(r)].filter(Boolean).join(" · ")}
-                    </option>
-                  ))}
-                </select>
-                <button className="sm-mini" onClick={() => { setAdding((v) => !v); setErr(""); }}>
-                  {adding ? "Close" : "+ Add"}
-                </button>
-              </div>
-
-              {adding && (
-                <div className="sm-addform">
-                  <input className="sm-input" placeholder="Profile name" value={newProfile.name}
-                    onChange={(e) => setNewProfile((n) => ({ ...n, name: e.target.value }))} />
-                  <select className="sm-select" value={newProfile.relationship}
-                    onChange={(e) => setNewProfile((n) => ({ ...n, relationship: e.target.value }))}>
-                    <option value="DEPENDENT">Child / Dependent</option>
-                    <option value="SELF">Myself</option>
-                  </select>
-                  <button className="sm-save sm-save--sm" onClick={handleAddProfile} disabled={saving}>Create</button>
-                </div>
-              )}
-
-              {/* ── profile detail ── */}
-              <div className="sm-sec">Profile</div>
-              <div className="sm-photorow">
-                {photoPreview
-                  ? <img className="sm-av sm-av--lg" src={photoPreview} alt="" />
-                  : (currentRow?.avatar_type === "image" && currentRow?.avatar)
-                    ? <img className="sm-av sm-av--lg" src={currentRow.avatar} alt="" />
-                    : <span className="sm-av sm-av--lg">{initials(currentRow?.display_name)}</span>}
-                <button className="sm-photobtn" onClick={() => fileRef.current?.click()}>Change photo</button>
-                <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
-              </div>
-
-              <label className="sm-label">Display name</label>
-              <input className="sm-input" value={form.display_name}
-                onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} />
-
-              <label className="sm-label">Bio</label>
-              <textarea className="sm-input sm-textarea" rows={2} value={form.bio}
-                placeholder="A short line about you"
-                onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))} />
-
-              {/* ── personal details (optional; feeds the faculty application) ── */}
-              <div className="sm-sec">Personal details</div>
-              <div className="sm-tg-sub" style={{ marginBottom: 10 }}>
-                Optional — fill in what you like. These details are reused by the
-                faculty application form so you don't have to type them twice.
-              </div>
-
-              <div className="sm-photorow">
-                {realPhotoPreview
-                  ? <img className="sm-av sm-av--lg" src={realPhotoPreview} alt="" />
-                  : (currentRow?.profile_photo)
-                    ? <img className="sm-av sm-av--lg" src={currentRow.profile_photo} alt="" />
-                    : <span className="sm-av sm-av--lg">{initials(currentRow?.display_name)}</span>}
-                <button className="sm-photobtn" onClick={() => realFileRef.current?.click()}>
-                  {currentRow?.profile_photo || realPhotoPreview ? "Change photo" : "Add photo"}
-                </button>
-                <input ref={realFileRef} type="file" accept="image/*" hidden onChange={onRealPhoto} />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label className="sm-label">First name</label>
-                  <input className="sm-input" value={form.first_name}
-                    onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Last name</label>
-                  <input className="sm-input" value={form.last_name}
-                    onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Phone</label>
-                  <input className="sm-input" value={form.phone}
-                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Date of birth</label>
-                  <input className="sm-input" type="date" value={form.date_of_birth}
-                    onChange={(e) => setForm((f) => ({ ...f, date_of_birth: e.target.value }))} />
-                </div>
-              </div>
-
-              <label className="sm-label">Gender</label>
-              <select className="sm-select" value={form.gender}
-                onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}>
-                <option value="">Prefer not to specify</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-              </select>
-
-              <label className="sm-label">Address</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <input className="sm-input" placeholder="State" value={form.state}
-                  onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} />
-                <input className="sm-input" placeholder="District" value={form.district}
-                  onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))} />
-                <input className="sm-input" placeholder="City / town" value={form.city_town}
-                  onChange={(e) => setForm((f) => ({ ...f, city_town: e.target.value }))} />
-                <input className="sm-input" placeholder="Pincode" value={form.pin_code}
-                  onChange={(e) => setForm((f) => ({ ...f, pin_code: e.target.value }))} />
-              </div>
-
-              {/* ── academic details ── */}
-              <div className="sm-sec">Academic details</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label className="sm-label">Currently studying?</label>
-                  <select className="sm-select" value={form.currently_studying}
-                    onChange={(e) => setForm((f) => ({ ...f, currently_studying: e.target.value }))}>
-                    {STUDYING_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="sm-label">Class</label>
-                  <select className="sm-select" value={form.current_class}
-                    onChange={(e) => setForm((f) => ({ ...f, current_class: e.target.value }))}>
-                    {CLASS_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="sm-label">Stream</label>
-                  <select className="sm-select" value={form.stream}
-                    onChange={(e) => setForm((f) => ({ ...f, stream: e.target.value }))}>
-                    {STREAM_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="sm-label">Board</label>
-                  <select className="sm-select" value={form.board}
-                    onChange={(e) => setForm((f) => ({ ...f, board: e.target.value }))}>
-                    {BOARD_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-              </div>
-              {form.board === "other" && (
-                <>
-                  <label className="sm-label">Board name (other)</label>
-                  <input className="sm-input" value={form.board_other}
-                    onChange={(e) => setForm((f) => ({ ...f, board_other: e.target.value }))} />
-                </>
-              )}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label className="sm-label">School / institution</label>
-                  <input className="sm-input" value={form.school_name}
-                    onChange={(e) => setForm((f) => ({ ...f, school_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Academic year</label>
-                  <input className="sm-input" placeholder="e.g. 2025–26" value={form.academic_year}
-                    onChange={(e) => setForm((f) => ({ ...f, academic_year: e.target.value }))} />
-                </div>
-              </div>
-              {form.currently_studying === "no" && (
-                <>
-                  <label className="sm-label">Highest education</label>
-                  <select className="sm-select" value={form.highest_education}
-                    onChange={(e) => setForm((f) => ({ ...f, highest_education: e.target.value }))}>
-                    {HIGHED_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                  <label className="sm-label">Reason for not studying</label>
-                  <input className="sm-input" value={form.reason_not_studying}
-                    onChange={(e) => setForm((f) => ({ ...f, reason_not_studying: e.target.value }))} />
-                </>
-              )}
-
-              {/* ── parent / guardian ── */}
-              <div className="sm-sec">Parent / guardian</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <label className="sm-label">Father's name</label>
-                  <input className="sm-input" value={form.father_name}
-                    onChange={(e) => setForm((f) => ({ ...f, father_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Father's phone</label>
-                  <input className="sm-input" value={form.father_phone}
-                    onChange={(e) => setForm((f) => ({ ...f, father_phone: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Mother's name</label>
-                  <input className="sm-input" value={form.mother_name}
-                    onChange={(e) => setForm((f) => ({ ...f, mother_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Mother's phone</label>
-                  <input className="sm-input" value={form.mother_phone}
-                    onChange={(e) => setForm((f) => ({ ...f, mother_phone: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Guardian's name</label>
-                  <input className="sm-input" value={form.guardian_name}
-                    onChange={(e) => setForm((f) => ({ ...f, guardian_name: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="sm-label">Guardian's phone</label>
-                  <input className="sm-input" value={form.guardian_phone}
-                    onChange={(e) => setForm((f) => ({ ...f, guardian_phone: e.target.value }))} />
-                </div>
-              </div>
-              <label className="sm-label">Parent / guardian email</label>
-              <input className="sm-input" type="email" value={form.parent_guardian_email}
-                onChange={(e) => setForm((f) => ({ ...f, parent_guardian_email: e.target.value }))} />
-
-              {/* ── PIN ── */}
-              <div className="sm-sec">Security · this profile</div>
-              <div className="sm-pinrow">
-                <div>
-                  <div className="sm-tg-title">Profile PIN</div>
-                  <div className="sm-tg-sub">{hasPin ? "This profile is PIN-protected" : "No PIN set"}</div>
-                </div>
-                <div className="sm-row-actions">
-                  {!pinMode && (
-                    <button className="sm-mini"
-                      onClick={() => { setPinMode("set"); setPinValue(""); setPinPassword(""); setErr(""); }}>
-                      {hasPin ? "Change / reset" : "Set PIN"}
-                    </button>
-                  )}
-                  {hasPin && !pinMode && (
-                    <button className="sm-mini sm-mini--danger"
-                      onClick={() => { setPinMode("remove"); setPinPassword(""); setErr(""); }}>Remove</button>
-                  )}
-                </div>
-              </div>
-              {pinMode === "set" && (
-                <div className="sm-addform" style={{ flexWrap: "wrap", gap: 8 }}>
-                  <input className="sm-input" inputMode="numeric" maxLength={6}
-                    placeholder="New 4–6 digit PIN" value={pinValue}
-                    onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))} />
-                  <input className="sm-input" type="password" autoComplete="current-password"
-                    placeholder="Account password" value={pinPassword}
-                    onChange={(e) => setPinPassword(e.target.value)} />
-                  <div className="sm-tg-sub" style={{ flexBasis: "100%" }}>
-                    Forgot the current PIN? You don't need it — your account password resets it.
-                  </div>
-                  <button className="sm-save sm-save--sm" onClick={handleSavePin} disabled={saving}>
-                    Save PIN
-                  </button>
-                  <button className="sm-mini" onClick={() => { setPinMode(null); setPinValue(""); setPinPassword(""); }}>
-                    Cancel
-                  </button>
-                </div>
-              )}
-              {pinMode === "remove" && (
-                <div className="sm-addform" style={{ flexWrap: "wrap", gap: 8 }}>
-                  <input className="sm-input" type="password" autoComplete="current-password"
-                    placeholder="Account password to remove PIN" value={pinPassword}
-                    onChange={(e) => setPinPassword(e.target.value)} />
-                  <button className="sm-save sm-save--sm sm-save--danger" onClick={handleRemovePin} disabled={saving}>
-                    Remove PIN
-                  </button>
-                  <button className="sm-mini" onClick={() => { setPinMode(null); setPinPassword(""); }}>
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              {/* ── notifications ── */}
-              <div className="sm-sec">Notifications · this profile</div>
-              <div className="sm-togglerow">
-                <div>
-                  <div className="sm-tg-title">Email notifications</div>
-                  <div className="sm-tg-sub">{email}</div>
-                </div>
-                <Toggle on={prefs.email} onChange={(v) => setPref("email", v)} />
-              </div>
-              <div className="sm-togglerow">
-                <div><div className="sm-tg-title">SMS / WhatsApp alerts</div></div>
-                <Toggle on={prefs.sms} onChange={(v) => setPref("sms", v)} />
-              </div>
-
-              {/* ── privacy ── */}
-              <div className="sm-sec">Privacy</div>
-              <div className="sm-togglerow">
-                <div>
-                  <div className="sm-tg-title">Show me in the expert directory</div>
-                  <div className="sm-tg-sub">Let others find this profile</div>
-                </div>
-                <Toggle on={prefs.directory} onChange={(v) => setPref("directory", v)} />
-              </div>
-
-              {/* ── danger zone (learner) — removal needs account password ── */}
-              {rows.length > 1 && !currentRow?.is_default && (
-                <>
-                  <div className="sm-sec">Danger zone</div>
-                  {!removeMode ? (
-                    <button className="sm-linkbtn sm-linkbtn--danger"
-                      onClick={() => { setRemoveMode(true); setRemovePassword(""); setErr(""); }} disabled={saving}>
-                      Remove this profile
-                    </button>
-                  ) : (
-                    <div className="sm-addform" style={{ flexWrap: "wrap", gap: 8 }}>
-                      <div className="sm-tg-sub" style={{ flexBasis: "100%" }}>
-                        Removing “{currentRow?.display_name}” can’t be undone. Enter your account password to confirm.
-                      </div>
-                      <input className="sm-input" type="password" autoComplete="current-password"
-                        placeholder="Account password" value={removePassword}
-                        onChange={(e) => setRemovePassword(e.target.value)} />
-                      <button className="sm-save sm-save--sm sm-save--danger"
-                        onClick={handleRemoveProfile} disabled={saving}>
-                        Remove profile
-                      </button>
-                      <button className="sm-mini" onClick={() => { setRemoveMode(false); setRemovePassword(""); }}>
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <PrefsSection />
-              {/* ── teacher identity section ── */}
-              <div ref={teacherSecRef}>
-                <TeacherSection teacherInfo={teacherInfo}
-                  mkAddTrack={mkAddTrack}
-                  facultyFormUrl={facultyFormUrl}
-                  expertProfileUrl={expertProfileUrl}
-                  onManageTrack={onManageTrack} />
-              </div>
-            </>
-          )}
-
-          {/* ══ GLOBAL SETTINGS ══════════════════════════════════════ */}
-          {tab === "account" && (
-            <>
-              <div className="sm-sec">Account</div>
-              <label className="sm-label">Email</label>
-              <input className="sm-input" value={email} readOnly />
-              <div className="sm-tg-sub" style={{ marginTop: 4 }}>
-                This is the email you log in with. Changing your password below
-                updates your sign-in credentials.
-              </div>
-              <label className="sm-label">Username</label>
-              <input className="sm-input" value={user?.username || ""} readOnly />
-
-              <div className="sm-sec">Change password</div>
-              <input className="sm-input sm-mb" type="password" placeholder="Current password"
-                value={pw.old} onChange={(e) => setPw((p) => ({ ...p, old: e.target.value }))}
-                autoComplete="current-password" />
-              <input className="sm-input sm-mb" type="password" placeholder="New password"
-                value={pw.next} onChange={(e) => setPw((p) => ({ ...p, next: e.target.value }))}
-                autoComplete="new-password" />
-              <input className="sm-input" type="password" placeholder="Confirm new password"
-                value={pw.confirm} onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))}
-                autoComplete="new-password" />
-              {pwMsg && (
-                <div className={`sm-mini-msg ${/✓/.test(pwMsg) ? "ok" : "err"}`}>{pwMsg}</div>
-              )}
-              <button className="sm-linkbtn sm-mt" onClick={handleChangePassword} disabled={pwBusy}>
-                {pwBusy ? "Updating…" : "Update password"}
-              </button>
-
-              <div className="sm-sec">Preferences</div>
-              <div className="sm-togglerow">
-                <div>
-                  <div className="sm-tg-title">Product updates &amp; announcements</div>
-                  <div className="sm-tg-sub">Occasional email from ShikshaCom</div>
-                </div>
-                <Toggle on={prefs.announce} onChange={(v) => setPref("announce", v)} />
-              </div>
-
-              <div className="sm-sec">Session</div>
-              <button className="sm-linkbtn sm-linkbtn--danger" onClick={logout}>
-                Log out of this account
-              </button>
-            </>
-          )}
-
-          {err  && <div className="sm-err">{err}</div>}
-          {okMsg && <div className="sm-ok">{okMsg}</div>}
-        </div>
-
-        {/* footer */}
-        <div className="sm-footer">
-          <button className="sm-cancel" onClick={onClose}>Close</button>
-          {tab === "profile" && (
-            <button className="sm-save" onClick={handleSaveProfile} disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
+        {/* ── search ── */}
+        <div className="st-searchbar">
+          <RiSearchLine className="st-searchbar__icon" />
+          <input
+            ref={searchRef}
+            className="st-searchbar__input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder='Search settings — try "password", "devices", "streak"…'
+            aria-label="Search settings"
+          />
+          {query && (
+            <button type="button" className="st-searchbar__clear"
+              onClick={() => setQuery("")} aria-label="Clear search">
+              <RiCloseLine />
             </button>
           )}
         </div>
+
+        {!query && (
+          <div className="st-chips">
+            {SUGGESTIONS.map((s) => (
+              <button key={s.key} type="button" className="st-chip" onClick={() => go(s.key)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── body: sidebar + pane ── */}
+        <div className="st-body">
+          <nav className="st-side st-scroll" aria-label="Settings sections">
+            {grouped.length === 0 && (
+              <p className="st-side__none">No settings match “{query}”.</p>
+            )}
+            {grouped.map(({ group, items }) => (
+              <div key={group}>
+                <div className="st-side__group">{group}</div>
+                {items.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <button key={s.key} type="button"
+                      className={`st-navitem ${section === s.key ? "on" : ""}`}
+                      onClick={() => go(s.key)}>
+                      <Icon className="st-navitem__icon" />
+                      <span className="st-navitem__lbl">{s.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+
+          <div className="st-pane st-scroll" ref={paneRef}>
+            {closed ? (
+              <div className="st-closed">
+                <div className="st-closed__glyph">👋</div>
+                <h2 className="st-h1">Your account is closed</h2>
+                <p className="st-caption">
+                  You’ve been signed out everywhere. Your data is permanently
+                  deleted after {closed.grace_days} days — contact support before
+                  then if this was a mistake.
+                </p>
+                <button type="button" className="st-btn st-btn--primary"
+                  onClick={() => window.location.reload()}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                {isEditing && rows.length > 0 && (
+                  <EditScopeStrip
+                    profiles={rows}
+                    editId={editId}
+                    onPick={pickEditProfile}
+                  />
+                )}
+
+                {section === "profiles" && (
+                  <ProfilesSection
+                    profiles={rows} editId={editId}
+                    activeProfileId={activeProfile?.id}
+                    onPick={pickEditProfile}
+                    form={form} setField={setField}
+                    avatarPreview={avatarPreview} onPickAvatar={onPickAvatar}
+                    adding={adding} setAdding={setAdding}
+                    newProfile={newProfile} setNewProfile={setNewProfile}
+                    onAddProfile={addProfile}
+                    choices={choices} busy={busy}
+                    canRemove={rows.length > 1 && !editProfile?.is_default}
+                    onRemove={() => setRemoving(true)}
+                  />
+                )}
+
+                {section === "profiles" && removing && (
+                  <div className="st-danger">
+                    <p className="st-danger__warn">
+                      Removing “{editName}” can’t be undone. Enter your account
+                      password to confirm.
+                    </p>
+                    <input className="st-input st-input--danger" type="password"
+                      autoComplete="current-password" placeholder="Account password"
+                      value={removePw} onChange={(e) => setRemovePw(e.target.value)} />
+                    <div className="st-confirm__row">
+                      <button type="button" className="st-btn st-btn--danger-solid"
+                        onClick={removeProfile} disabled={busy}>
+                        {busy ? "Removing…" : "Remove profile"}
+                      </button>
+                      <button type="button" className="st-btn"
+                        onClick={() => { setRemoving(false); setRemovePw(""); }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {section === "personal" && (
+                  <PersonalSection form={form} setField={setField}
+                    choices={choices} api={api} editName={editName} />
+                )}
+                {section === "academic" && (
+                  <AcademicSection form={form} setField={setField}
+                    choices={choices} editName={editName} />
+                )}
+                {section === "guardian" && (
+                  <GuardianSection form={form} setField={setField} />
+                )}
+                {section === "security" && (
+                  <SecuritySection api={api} editProfile={editProfile}
+                    onProfilesChanged={async () => {
+                      await bootstrap?.();
+                      await loadProfiles(editId);
+                    }} />
+                )}
+                {section === "sessions" && <SessionsSection api={api} />}
+                {section === "notifications" && (
+                  <NotificationsSection api={api} email={email} />
+                )}
+                {section === "goals" && (
+                  <GoalsSection api={api} editProfileId={editId} />
+                )}
+                {section === "billing" && <BillingSection api={api} />}
+                {section === "teacher" && (
+                  <TeacherIdentitySection
+                    teacherInfo={teacherInfo}
+                    applyUrl={applyUrl}
+                    onOpenEditor={openEditor}
+                    onSwitchTrack={(t) => onManageTrack?.(t, TRACK_HOME[t])}
+                    isTeacherContext={isTeacherContext}
+                    activeTrack={teacherInfo?.active_track}
+                  />
+                )}
+                {section === "privacy" && (
+                  <PrivacySection api={api} email={email}
+                    onDeleted={(data) => setClosed(data)} />
+                )}
+
+                {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── footer save strip ── */}
+        <div className="st-foot">
+          <span className="st-foot__hint">
+            {isEditing ? meta.hint : ""}
+          </span>
+          <div className="st-foot__actions">
+            <button type="button" className="st-foot__close" onClick={onClose}>Close</button>
+            {isEditing && !closed && (
+              <button type="button" className="st-btn st-btn--primary"
+                onClick={save} disabled={busy || !dirty}>
+                {busy ? "Saving…" : "Save changes"}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

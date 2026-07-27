@@ -66,7 +66,7 @@ function useCompact() {
   return compact;
 }
 
-export default function ChatPanel({ directTo, courseRoom, initialDraft = "", theme }) {
+export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
   const [searchParams] = useSearchParams();
   const initialView = (() => {
     const v = searchParams.get("view");
@@ -196,7 +196,7 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "", the
   const showThreadPane = view === "inbox" && (!compact || showThreadOnMobile);
 
   return (
-    <div className={"cc-root" + (compact ? " cc-root-compact" : "") + (theme ? ` cc-theme-${theme}` : "")}>
+    <div className={"cc-root" + (compact ? " cc-root-compact" : "")}>
       <nav className="cc-sidebar">
         {SIDEBAR_ITEMS.map((item) => {
           const isActive = item.kind === "category" ? (view === "inbox" && category === item.key) : view === item.key;
