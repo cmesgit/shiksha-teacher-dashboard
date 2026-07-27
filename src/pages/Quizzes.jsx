@@ -3,8 +3,9 @@
 // Academy "Quizzes" (teacher) — ONE flat, filterable list of every quiz across
 // every class the teacher takes. Matches the design handoff's Quizzes screen
 // (Academy Dashboard.dc.html lines 827–868), teacher branch: a "+ Create quiz"
-// head button, a subject-pill row on the left, an Upcoming/Completed filter
-// pushed to the right margin, and a "View results" action per quiz.
+// head button, a subject-pill row on the left, and a "View results" action per
+// quiz. Quizzes have no due date (product decision: they don't expire), so
+// there is no Upcoming/Completed filter — one list, newest first.
 //
 // This screen used to be scoped to a route param — reachable only via
 // Classes → a class → Quiz. It now stands alone as a nav destination. The
@@ -48,14 +49,6 @@ const STATUS_META = {
   rejected: { label: "Changes requested", tone: "danger"  },
 };
 
-// The design's two-option filter on the right margin (qtabALabel / qtabBLabel).
-// Teacher branch reads "Active"/"Past" — "Upcoming"/"Completed" is the
-// student-side wording (dc.html: qtabALabel/qtabBLabel differ by isStudent).
-const TABS = [
-  { value: "active", label: "Active" },
-  { value: "past",   label: "Past"   },
-];
-
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
 
@@ -85,7 +78,6 @@ export default function Quizzes() {
 
   // "" = all subjects. Seeded from the route so a deep link preselects.
   const [subjectFilter, setSubjectFilter] = useState(subjectId ? String(subjectId) : "");
-  const [tab, setTab] = useState("active");
 
   const createRef = useRef(null);
 
@@ -278,17 +270,13 @@ export default function Quizzes() {
   };
 
   // ── Derived rows ───────────────────────────────────────────────────────
+  // Quizzes don't expire (no due date), so there's no Active/Past split any
+  // more — one flat list, most recently created first.
   const decorated = useMemo(() => {
-    const now = Date.now();
     return (quizzes || []).map((q) => {
-      const due = q.due_date ? new Date(q.due_date).getTime() : null;
       const questions = q.questions_count ?? 0;
-      // Undated quizzes are still ahead of the teacher, so they read Active.
-      const tab = due != null && due < now ? "past" : "active";
       return {
         ...q,
-        due,
-        tab,
         // Design's card subtitle is "{class} · avg {score}%" — this app has
         // no batch on a Quiz (unlike Assignment/LiveSession), so course_title
         // is the closest real substitute for "which class" a subtitle can
@@ -298,10 +286,7 @@ export default function Quizzes() {
           q.total_attempts > 0 ? `avg ${pct(q.average_score)}` : null,
           plural(questions, "question"),
         ].filter(Boolean).join(" · "),
-        // Design's footer text is just the due/held date (dc.html's q.footText).
-        stateLabel: q.due_date
-          ? `${tab === "past" ? "Held" : "Due"} ${fmtDate(q.due_date)}`
-          : "No due date",
+        stateLabel: q.created_at ? `Created ${fmtDate(q.created_at)}` : "",
         perf:
           q.total_attempts > 0
             ? `Avg ${num(q.average_score)} (range ${num(q.lowest_score)}–${num(q.highest_score)}) · ` +
@@ -321,14 +306,8 @@ export default function Quizzes() {
     () =>
       decorated
         .filter((q) => !subjectFilter || String(q.subjectId) === subjectFilter)
-        .filter((q) => q.tab === tab)
-        .sort((a, b) => {
-          if (tab === "past") return (b.due ?? 0) - (a.due ?? 0); // most recent first
-          if (a.due == null) return 1;                                 // undated last
-          if (b.due == null) return -1;
-          return a.due - b.due;                                        // soonest first
-        }),
-    [decorated, subjectFilter, tab]
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
+    [decorated, subjectFilter]
   );
 
   // ── States ─────────────────────────────────────────────────────────────
@@ -414,17 +393,6 @@ export default function Quizzes() {
             </button>
           ))}
         </div>
-
-        <select
-          className="ac-select"
-          value={tab}
-          onChange={(e) => setTab(e.target.value)}
-          aria-label="Filter quizzes"
-        >
-          {TABS.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
-          ))}
-        </select>
       </div>
 
       {rows.length === 0 ? (
@@ -433,11 +401,7 @@ export default function Quizzes() {
             plain
             icon="quiz"
             title="Nothing here"
-            message={
-              tab === "past"
-                ? "No quizzes have passed their due date yet."
-                : "No active quizzes. Use “+ Create quiz” to set one."
-            }
+            message="No quizzes yet. Use “+ Create quiz” to make one."
           />
         </section>
       ) : (
