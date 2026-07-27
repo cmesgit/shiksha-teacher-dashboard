@@ -20,7 +20,9 @@ export default function ClassroomUI({
   const [raiseHandToasts, setRaiseHandToasts] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const [activePanel, setActivePanel] = useState(null);
+  // The right rail is now a persistent tab strip (Chat / Notes / People /
+  // Info) rather than a toggle-to-close panel — always one tab active.
+  const [activePanel, setActivePanel] = useState("chat");
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
 
@@ -37,9 +39,27 @@ export default function ClassroomUI({
 
   const { messages: chatMessages, sendMessage } = useLiveSessionChat(sessionId);
 
-  /* ───── PANEL TOGGLE ───── */
-  const togglePanel = (panel) => {
-    setActivePanel((current) => (current === panel ? null : panel));
+  /* ───── SESSION DURATION TIMER — lives in the sidebar's session-info
+     block now (spec section 10), not the control bar. ───── */
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(null);
+  useEffect(() => {
+    if (startRef.current == null) startRef.current = Date.now();
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const formatTime = (s) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
+
+  /* ───── TAB SWITCH (Chat / Notes / People / Info) ───── */
+  const switchTab = (panel) => {
+    setActivePanel(panel);
     setOpenMenuId(null);
   };
 
@@ -201,6 +221,14 @@ export default function ClassroomUI({
   const mainTrack = screenTrack || cameraTrack;
   const pipTrack = screenTrack ? cameraTrack : null;
 
+  // Main-stage "LIVE" badge + name label (spec section 10). Track-selection
+  // itself is unchanged above — this just reads who the resolved main track
+  // belongs to so the overlay can label it.
+  const mainStageName =
+    mainTrack?.participant?.name ||
+    mainTrack?.participant?.identity ||
+    (isPresenter ? "You" : "Teacher");
+
   /* ───── WAITING ───── */
   if (!mainTrack) {
     return (
@@ -266,14 +294,16 @@ export default function ClassroomUI({
     peopleList = peopleList.concat(remoteParticipants);
   }
 
-  /* ───── MAIN UI ───── */
+  /* ───── MAIN UI ─────
+     Full-viewport dark overlay: a video+sidebar row (flex:1), then the
+     control bar full-width beneath both (spec section 10). This is a
+     different DOM shape than TeacherPrivateClassroomUI.jsx's (which nests
+     the control bar under just the video column) — that file is untouched
+     and keeps using the "classroom-layout" grid classes; this one uses its
+     own "cf-*" classes so neither layout affects the other via live.css. */
   return (
     <div
-      className={
-        "classroom-layout" +
-        (isFullscreen ? " fs-mode" : "") +
-        (!activePanel ? " panel-closed" : "")
-      }
+      className={"cf-shell" + (isFullscreen ? " fs-mode" : "")}
       ref={containerRef}
     >
 
@@ -294,41 +324,90 @@ export default function ClassroomUI({
         </div>
       )}
 
-      {/* LEFT COLUMN: video + control bar */}
-      <div className="classroom-main">
+      <div className="cf-row">
 
-        {/* VIDEO */}
-        <div className="main-stage">
-          <VideoTrack trackRef={mainTrack} />
+        {/* VIDEO AREA */}
+        <div className="cf-video">
+          <div className="main-stage">
+            <VideoTrack trackRef={mainTrack} />
 
-          {pipTrack && (
+            <span className="cf-live-badge">LIVE</span>
+            <span className="cf-name-label">{mainStageName}</span>
+
+            <button
+              className="video-fs-btn"
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? <MdFullscreenExit size={22} /> : <MdFullscreen size={22} />}
+            </button>
+          </div>
+
+          {/* SELF CAMERA PIP — shown whenever the main stage is occupied by
+              a screen share (existing gating, unchanged), now with a
+              "Camera off" placeholder state instead of just disappearing
+              when the local camera isn't publishing. */}
+          {screenTrack && (
             <div className="pip-camera">
-              <VideoTrack trackRef={pipTrack} />
+              {pipTrack ? (
+                <VideoTrack trackRef={pipTrack} />
+              ) : (
+                <div className="pip-camera__off">
+                  <div className="pip-camera__avatar">
+                    {(localName || "Y").charAt(0).toUpperCase()}
+                  </div>
+                  <span>Camera off</span>
+                </div>
+              )}
+              <span className="pip-camera__label">You</span>
             </div>
           )}
-
-          <button
-            className="video-fs-btn"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-          >
-            {isFullscreen ? <MdFullscreenExit size={22} /> : <MdFullscreen size={22} />}
-          </button>
         </div>
 
-        {/* CONTROL BAR */}
-        <ControlBar
-          onLeave={onLeave}
-          role={role}
-          activePanel={activePanel}
-          onTogglePanel={togglePanel}
-          sessionId={sessionId}
-        />
-      </div>
+        {/* RIGHT SIDEBAR — always visible: session info + timer, then a
+            Chat/Notes/People/Info tab strip (spec section 10). */}
+        <div className="cf-sidebar">
 
-      {activePanel && (
-        <div className="right-sidebar">
+          <div className="cf-session-info">
+            <div className="cf-session-subject">Live Session</div>
+            <div className="cf-session-topic">
+              {isPresenter ? "You're teaching" : "Session in progress"}
+            </div>
+            <div className="cf-timer-row">
+              <span className="cf-timer-dot" />
+              <span className="cf-timer">{formatTime(elapsed)}</span>
+            </div>
+          </div>
+
+          <div className="cf-tabs">
+            <button
+              className={"cf-tab" + (activePanel === "chat" ? " cf-tab--active" : "")}
+              onClick={() => switchTab("chat")}
+            >
+              Chat
+            </button>
+            <button
+              className={"cf-tab" + (activePanel === "notes" ? " cf-tab--active" : "")}
+              onClick={() => switchTab("notes")}
+            >
+              Notes
+            </button>
+            <button
+              className={"cf-tab" + (activePanel === "people" ? " cf-tab--active" : "")}
+              onClick={() => switchTab("people")}
+            >
+              People
+            </button>
+            <button
+              className={"cf-tab" + (activePanel === "info" ? " cf-tab--active" : "")}
+              onClick={() => switchTab("info")}
+            >
+              Info
+            </button>
+          </div>
+
+          <div className="cf-tab-body">
 
           {activePanel === "chat" && (
             <LiveChatPanel
@@ -336,10 +415,11 @@ export default function ClassroomUI({
               messages={chatMessages}
               onSendMessage={sendMessage}
               participants={peopleList}
+              hideHeader
             />
           )}
 
-          {activePanel === "notes" && <NotesPanel sessionId={sessionId} />}
+          {activePanel === "notes" && <NotesPanel sessionId={sessionId} hideHeader />}
 
           {activePanel === "people" && (
             <div className="ppl-panel">
@@ -463,16 +543,6 @@ export default function ClassroomUI({
 
           {activePanel === "info" && (
             <div className="side-panel">
-              <div className="side-panel__header">
-                <h3>Session Info</h3>
-                <button
-                  className="side-panel__close"
-                  onClick={() => setActivePanel(null)}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
               <div className="side-panel__body">
                 <div className="side-panel__field">
                   <div className="side-panel__field-label">Session ID</div>
@@ -494,8 +564,18 @@ export default function ClassroomUI({
             </div>
           )}
 
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* CONTROL BAR — full width, beneath the video+sidebar row */}
+      <ControlBar
+        onLeave={onLeave}
+        role={role}
+        sessionId={sessionId}
+        hideTimer
+        hidePanelButtons
+      />
 
     </div>
   );

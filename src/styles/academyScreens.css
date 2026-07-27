@@ -305,6 +305,49 @@
   text-align: right;
   flex-shrink: 0;
 }
+/* Right-aligned value+caption block (Students' "Enrolled" date) — the design's
+   own row-stat shape (dc.html lines 2060–2063: 76px, right-aligned, 12px/800
+   value over a 9px/.4px/600 uppercase caption), reused here for a real field
+   in place of the design's fabricated "Attendance"/"Avg score" stats (see
+   AllStudents.jsx header comment for why those aren't shown). */
+.ac-row__stat { width: 84px; text-align: right; flex-shrink: 0; }
+.ac-row__statValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.ac-row__statLabel {
+  font-size: var(--fs-chip);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* Round colour-initials avatar (Students, dc.html line 2055 — 34px circle,
+   11px/700 initials). Colour comes from subjectChipPalette() keyed on the
+   student's name, the same "same entity, same colour everywhere" rule the
+   subject chips already use, rather than the design's own list-index rotation
+   (AV[i % AV.length]) — index rotation would reshuffle a student's colour
+   every time the list is filtered/searched, which a stable per-person hash
+   avoids. */
+.ac-row__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+}
+.ac-row__avatar img { width: 100%; height: 100%; object-fit: cover; }
 
 /* "starts in 25m" */
 .ac-when {
@@ -330,6 +373,10 @@
 .ac-tag--warning { background: var(--warning-soft); color: var(--warning); }
 .ac-tag--danger  { background: var(--danger-soft);  color: var(--danger); }
 .ac-tag--neutral { background: var(--chip-neutral-soft); color: var(--chip-neutral); }
+/* Static (non-pulsing) teal badge — e.g. Classes' "{n} students" count, which
+   uses the same teal as --tag--live (dc.html's classes-card stLabel) but isn't
+   a live-session state, so it must not inherit the livePulse animation. */
+.ac-tag--teal    { background: var(--teal-soft);    color: var(--teal); }
 
 /* In-progress session. The design's static prototype has no equivalent — its
    rows only ever show plain relative-time text — but a session here can really
@@ -522,6 +569,24 @@
   gap: 8px;
 }
 
+/* Square avatar/initials chip in a card's top-left (Classes' batch code,
+   dc.html "Cards page" c.avText/avBg/avColor — Subjects and Teachers use the
+   same slot with different content, e.g. teacher initials). */
+.ac-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 12px;
+  background: var(--academy-soft);
+  color: var(--primary);
+}
+
 .ac-card__title {
   font-size: 13px;
   font-weight: 600;
@@ -532,6 +597,31 @@
   font-size: var(--fs-small);
   color: var(--ink-muted);
   margin-top: 3px;
+}
+
+/* In-card progress row (dc.html c.hasBar — Classes' syllabus-completion bar;
+   same track/fill/label treatment as BatchProgress's .bp-row-bar family,
+   declared here too since a card grid needs it, a row list doesn't). */
+.ac-card__bar { display: flex; align-items: center; gap: 8px; }
+.ac-card__barTrack {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--academy-soft);
+  overflow: hidden;
+}
+.ac-card__barFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--primary), var(--teal));
+  transition: width .3s ease;
+}
+.ac-card__pct {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 10.5px;
+  color: var(--primary);
+  white-space: nowrap;
 }
 
 /* Footer is pinned to the card's bottom so a grid row's cards align. */

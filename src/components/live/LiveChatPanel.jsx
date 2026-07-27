@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { IoSend } from "react-icons/io5";
 import "./LiveChatPanel.css";
 
-export default function LiveChatPanel({ messages = [], onSendMessage }) {
+export default function LiveChatPanel({ messages = [], onSendMessage, hideHeader = false }) {
   const [input, setInput] = useState("");
   const containerRef = useRef(null);
 
@@ -33,7 +33,7 @@ export default function LiveChatPanel({ messages = [], onSendMessage }) {
 
   return (
     <div className="cp-outer">
-      <div className="cp-header">Chat</div>
+      {!hideHeader && <div className="cp-header">Chat</div>}
 
       <div className="cp-wrap">
         <div className="cp-messages" ref={containerRef}>

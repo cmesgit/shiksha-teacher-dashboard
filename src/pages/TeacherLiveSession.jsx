@@ -23,16 +23,17 @@ function readCache(id) {
   }
 }
 
-/* ── Fullscreen wrapper styles (kills scroll) ── */
+/* ── Fullscreen wrapper styles (kills scroll). Full-viewport dark overlay
+   per the design handoff's video-conference spec (section 10) — no padding,
+   edge-to-edge. ── */
 const fullscreenWrap = {
   width: "100vw",
   height: "100vh",
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  background: "#c9dde1",
+  background: "#0f1117",
   boxSizing: "border-box",
-  padding: "14px",
 };
 
 const liveKitWrap = {
@@ -51,7 +52,7 @@ const centerMsg = {
   justifyContent: "center",
   flexDirection: "column",
   gap: 16,
-  background: "#c9dde1",
+  background: "#0f1117",
 };
 
 export default function TeacherLiveSession() {
@@ -107,7 +108,7 @@ export default function TeacherLiveSession() {
   if (loading) {
     return (
       <div style={centerMsg}>
-        <p style={{ fontSize: 16, color: "#102a2a", margin: 0 }}>
+        <p style={{ fontSize: 16, color: "#e5eaed", margin: 0 }}>
           Connecting...
         </p>
       </div>
@@ -117,7 +118,7 @@ export default function TeacherLiveSession() {
   if (error || !sessionData?.token) {
     return (
       <div style={centerMsg}>
-        <p style={{ fontSize: 16, color: "#102a2a", margin: 0 }}>
+        <p style={{ fontSize: 16, color: "#e5eaed", margin: 0 }}>
           {error || "Session unavailable"}
         </p>
         <button
@@ -130,7 +131,7 @@ export default function TeacherLiveSession() {
             padding: "10px 24px",
             borderRadius: 999,
             border: "none",
-            background: "#005f6f",
+            background: "#425f7f",
             color: "#fff",
             cursor: "pointer",
             fontSize: 14,

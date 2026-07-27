@@ -1,23 +1,22 @@
 /* ============================================================
    CHAT PANEL — shared design, identical in teacher + student apps.
-   Canonical teal (#005f6f) matches the in-call chrome this panel
-   sits inside (ControlBar active states etc. in live.css), not the
-   dashboard's separate --live token — the panel never leaves the
-   call, so it stays visually part of the call chrome around it.
+   Re-themed dark to match the video-conference overlay (live.css'
+   --ls-* tokens) — the panel never leaves the call, so it stays
+   visually part of the call chrome around it.
    ============================================================ */
 
 :root {
-  --cp-teal:        #005f6f;
-  --cp-teal-hover:  #004a58;
-  --cp-teal-track:  rgba(0, 95, 111, 0.28);
+  --cp-teal:        #425f7f;
+  --cp-teal-hover:  #35506c;
+  --cp-teal-track:  rgba(66, 95, 127, 0.4);
 
-  --cp-slate:       #415B7E;
+  --cp-slate:       #1e2435;
 
-  --cp-surface:     #ffffff;
-  --cp-border:      #e5eaed;
-  --cp-text-dark:   #0f172a;
-  --cp-text-muted:  #64748b;
-  --cp-text-empty:  #9ca3af;
+  --cp-surface:     #161b27;
+  --cp-border:      #2a3147;
+  --cp-text-dark:   #e5eaed;
+  --cp-text-muted:  #9ca3af;
+  --cp-text-empty:  #6b7c83;
 
   --cp-radius:        12px;
   --cp-radius-bubble: 7px;
@@ -28,25 +27,26 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--cp-surface);
-  border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius);
+  background: transparent;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(26, 44, 51, 0.06);
+  box-shadow: none;
 }
 
 .cp-header {
-  flex: 0 0 44px;
-  height: 44px;
-  background: var(--cp-teal);
-  color: #ffffff;
+  flex: 0 0 40px;
+  height: 40px;
+  background: var(--cp-slate);
+  color: var(--cp-text-dark);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.2px;
   flex-shrink: 0;
+  border-bottom: 1px solid var(--cp-border);
 }
 
 .cp-wrap {
@@ -130,10 +130,11 @@
   flex: 1;
   min-width: 0;
   height: 38px;
-  border: none;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
   outline: none;
-  background: transparent;
-  padding: 0 4px;
+  background: var(--cp-slate);
+  padding: 0 12px;
   font-size: 13.5px;
   font-family: inherit;
   color: var(--cp-text-dark);
@@ -141,21 +142,21 @@
 .cp-input::placeholder { color: var(--cp-text-empty); }
 
 .cp-send-btn {
-  width: 36px;
   height: 36px;
+  padding: 0 14px;
   border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--cp-teal);
+  border-radius: 8px;
+  background: var(--cp-teal);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease;
 }
-.cp-send-btn:hover { color: var(--cp-teal-hover); transform: translateX(2px); }
-.cp-send-btn:active { transform: translateX(2px) scale(0.96); }
+.cp-send-btn:hover { background: var(--cp-teal-hover); }
+.cp-send-btn:active { transform: scale(0.96); }
 
 @media (max-width: 768px) {
   .cp-header     { flex-basis: 40px; height: 40px; font-size: 13px; }

@@ -4,7 +4,22 @@ import {
 } from "@livekit/components-react";
 import { useState, useEffect, useRef } from "react";
 
-export default function ControlBar({ onLeave, onEndSession, role, activePanel, onTogglePanel, sessionId }) {
+export default function ControlBar({
+  onLeave,
+  onEndSession,
+  role,
+  activePanel,
+  onTogglePanel,
+  sessionId,
+  // New conference-shell (regular Live Session) callers move the duration
+  // timer into the right-rail session-info block and the Chat/Notes/People/
+  // Info toggle into an in-rail tab bar (see ClassroomUI.jsx), so they pass
+  // these to suppress this bar's own copies. Defaulting both to false keeps
+  // Private Sessions (TeacherPrivateClassroomUI.jsx) byte-for-byte the same
+  // as before — it doesn't pass either prop.
+  hideTimer = false,
+  hidePanelButtons = false,
+}) {
   const isPresenter = role === "PRESENTER";
   const isStudent = !isPresenter;
 
@@ -237,22 +252,23 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
   };
 
   return (
-    <div className="control-bar">
+    <div className={`control-bar${hideTimer && hidePanelButtons ? " control-bar--center" : ""}`}>
 
-      {/* LEFT — TIMER */}
-      <div className="cb-timer">{formatTime(elapsed)}</div>
+      {/* LEFT — TIMER (moved to the sidebar's session-info block for the
+          conference-shell layout; Private Sessions still show it here) */}
+      {!hideTimer && <div className="cb-timer">{formatTime(elapsed)}</div>}
 
       {/* CENTER — MAIN ACTIONS */}
       <div className="cb-center">
 
         {/* Mute */}
         <button
-          className="cb-btn"
+          className={`cb-btn ${micOn ? "cb-btn--active" : "cb-btn--muted"}`}
           onClick={toggleMic}
           disabled={micBusy}
           title={micError || (micOn ? "Mute" : "Unmute")}
         >
-          <div className={`cb-icon ${micOn ? "" : "cb-icon--off"}`}>
+          <div className="cb-icon">
             {micOn ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -275,12 +291,12 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
 
         {/* Video */}
         <button
-          className="cb-btn"
+          className={`cb-btn ${videoOn ? "cb-btn--active" : "cb-btn--muted"}`}
           onClick={toggleVideo}
           disabled={videoBusy}
           title={videoError || (videoOn ? "Turn off camera" : "Turn on camera")}
         >
-          <div className={`cb-icon ${videoOn ? "" : "cb-icon--off"}`}>
+          <div className="cb-icon">
             {videoOn ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="23 7 16 12 23 17 23 7"/>
@@ -297,8 +313,8 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
         </button>
 
         {/* Screen Share */}
-        <button className="cb-btn" onClick={toggleScreen} title="Share screen">
-          <div className={`cb-icon ${screenOn ? "cb-icon--active" : ""}`}>
+        <button className={`cb-btn ${screenOn ? "cb-btn--active" : ""}`} onClick={toggleScreen} title="Share screen">
+          <div className="cb-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
               <polyline points="8 21 12 17 16 21"/>
@@ -306,13 +322,16 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
               <polyline points="9 14 12 11 15 14"/>
             </svg>
           </div>
-          <span className="cb-label">Screen</span>
+          <span className="cb-label">Share</span>
         </button>
 
-        {/* Raise Hand — non-presenter only */}
+        {/* Raise Hand — non-presenter only (e.g. a substitute/assistant
+            teacher joined without presenter rights). Not shown to the
+            primary presenter, matching the design, which has no raise-hand
+            affordance in the main teaching view. */}
         {isStudent && (
-          <button className="cb-btn" onClick={toggleHand} title={handRaised ? "Lower hand" : "Raise hand"}>
-            <div className={`cb-icon ${handRaised ? "cb-icon--active" : ""}`}>
+          <button className={`cb-btn ${handRaised ? "cb-btn--active" : ""}`} onClick={toggleHand} title={handRaised ? "Lower hand" : "Raise hand"}>
+            <div className="cb-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 12V4.5a1.5 1.5 0 0 1 3 0V11" />
                 <path d="M11 11V2.5a1.5 1.5 0 0 1 3 0V11" />
@@ -374,24 +393,41 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
           )}
         </div>
 
-        {/* Leave — always just a local disconnect, never ends the session
-            for the other party. */}
-        <button className="cb-btn" onClick={leaveRoom} title="Leave class">
-          <div className="cb-icon cb-icon--leave">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/>
-            </svg>
-          </div>
-          <span className="cb-label">Leave</span>
-        </button>
+        {/* Leave / End Call.
+            - Primary presenter, regular Live Session (no onEndSession passed):
+              a single button that plays the spec's red "End Call" role —
+              for this flow "Leave" already is the session's real end-for-
+              everyone action, so it just gets the red treatment.
+            - Presenter with onEndSession (Private Sessions): keep both —
+              plain "Leave" (soft, local-only disconnect) stays as-is, and
+              the distinct, confirmed "End Session" action takes the red
+              "End Call" treatment instead, since ending-for-everyone is
+              what it actually does.
+            - Non-presenter (e.g. substitute/assistant teacher): plain
+              "Leave" only — they can't end the call for everyone. */}
+        {isPresenter && !onEndSession ? (
+          <button className="cb-btn cb-endcall" onClick={leaveRoom} title="End call for everyone">
+            <div className="cb-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/>
+              </svg>
+            </div>
+            <span className="cb-label">End Call</span>
+          </button>
+        ) : (
+          <button className="cb-btn" onClick={leaveRoom} title="Leave class">
+            <div className="cb-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/>
+              </svg>
+            </div>
+            <span className="cb-label">Leave</span>
+          </button>
+        )}
 
-        {/* End Session — presenter-only, explicit + confirmed. Only shown
-            when the page passes onEndSession (Private Sessions); Skill
-            sessions and the generic Classes live view don't pass it, so
-            this stays hidden there. */}
         {isPresenter && onEndSession && (
           <button
-            className="cb-btn"
+            className="cb-btn cb-endcall"
             onClick={() => {
               if (window.confirm("End this session for the student? They'll be disconnected immediately.")) {
                 onEndSession();
@@ -399,73 +435,79 @@ export default function ControlBar({ onLeave, onEndSession, role, activePanel, o
             }}
             title="End session for everyone"
           >
-            <div className="cb-icon cb-icon--leave">
+            <div className="cb-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="15" y1="9" x2="9" y2="15"/>
                 <line x1="9" y1="9" x2="15" y2="15"/>
               </svg>
             </div>
-            <span className="cb-label">End</span>
+            <span className="cb-label">End Call</span>
           </button>
         )}
 
       </div>
 
-      {/* RIGHT — Info / People / Chat */}
-      <div className="cb-right">
-        <button
-          className={`cb-side-btn ${activePanel === "info" ? "cb-side-btn--active" : ""}`}
-          onClick={() => onTogglePanel("info")}
-          title="Session info"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
-          </svg>
-          <span>Info</span>
-        </button>
+      {/* RIGHT — Info / People / Chat / Notes toggles.
+          The conference-shell layout (regular Live Session) moves these
+          into an in-rail tab bar instead (see ClassroomUI.jsx) and passes
+          hidePanelButtons to suppress this row; Private Sessions don't pass
+          it, so this stays exactly as before there. */}
+      {!hidePanelButtons && (
+        <div className="cb-right">
+          <button
+            className={`cb-side-btn ${activePanel === "info" ? "cb-side-btn--active" : ""}`}
+            onClick={() => onTogglePanel("info")}
+            title="Session info"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <span>Info</span>
+          </button>
 
-        <button
-          className={`cb-side-btn ${activePanel === "people" ? "cb-side-btn--active" : ""}`}
-          onClick={() => onTogglePanel("people")}
-          title="Participants"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <span>People</span>
-        </button>
+          <button
+            className={`cb-side-btn ${activePanel === "people" ? "cb-side-btn--active" : ""}`}
+            onClick={() => onTogglePanel("people")}
+            title="Participants"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>People</span>
+          </button>
 
-        <button
-          className={`cb-side-btn ${activePanel === "chat" ? "cb-side-btn--active" : ""}`}
-          onClick={() => onTogglePanel("chat")}
-          title="Chat"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span>Chat</span>
-        </button>
+          <button
+            className={`cb-side-btn ${activePanel === "chat" ? "cb-side-btn--active" : ""}`}
+            onClick={() => onTogglePanel("chat")}
+            title="Chat"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Chat</span>
+          </button>
 
-        <button
-          className={`cb-side-btn ${activePanel === "notes" ? "cb-side-btn--active" : ""}`}
-          onClick={() => onTogglePanel("notes")}
-          title="Notes"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-          <span>Notes</span>
-        </button>
-      </div>
+          <button
+            className={`cb-side-btn ${activePanel === "notes" ? "cb-side-btn--active" : ""}`}
+            onClick={() => onTogglePanel("notes")}
+            title="Notes"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span>Notes</span>
+          </button>
+        </div>
+      )}
 
     </div>
   );

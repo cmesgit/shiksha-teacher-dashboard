@@ -14,7 +14,7 @@ const NOTES_URL = {
 // In-call Notes panel (right rail, alongside Chat) — private per-user
 // scratchpad for a session. Autosaves via a debounced PATCH so it behaves
 // like a normal notes app rather than requiring an explicit save.
-export default function NotesPanel({ sessionId, sessionType = "live" }) {
+export default function NotesPanel({ sessionId, sessionType = "live", hideHeader = false }) {
   const [content, setContent] = useState("");
   const [status, setStatus] = useState("loading"); // loading | idle | saving | saved
   const saveTimer = useRef(null);
@@ -60,7 +60,7 @@ export default function NotesPanel({ sessionId, sessionType = "live" }) {
 
   return (
     <div className="cp-outer">
-      <div className="cp-header">Notes</div>
+      {!hideHeader && <div className="cp-header">Notes</div>}
       <div className="np-wrap">
         <textarea
           className="np-textarea"

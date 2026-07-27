@@ -48,6 +48,7 @@ export default function GroupSessionControlBar({
     (session?.admitMode || session?.admit_mode || "").toLowerCase() === "locked"
   );
   const [lockBusy, setLockBusy] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
 
   const mountedAtRef = useRef(Date.now());
   const otherRef = useRef(null);
@@ -163,6 +164,10 @@ export default function GroupSessionControlBar({
           localParticipant.setCameraEnabled(false);
           setVideoOn(false);
         }
+
+        if (msg.type === "lower-hand") {
+          setHandRaised(false);
+        }
       } catch {}
     };
 
@@ -228,6 +233,26 @@ export default function GroupSessionControlBar({
   const leaveRoom = async () => {
     await room.disconnect();
     if (onLeave) onLeave();
+  };
+
+  // Same raise/lower-hand data-channel protocol as the shared ControlBar's
+  // RaiseHandButton — kept inline (rather than importing that component) so
+  // it renders with this file's gs-cb-* classes instead of cb-*.
+  const toggleHand = async () => {
+    if (!localParticipant) return;
+    const type = handRaised ? "lower-hand" : "raise-hand";
+    try {
+      await localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify({ type })),
+        { reliable: true }
+      );
+      setHandRaised(!handRaised);
+      window.dispatchEvent(new CustomEvent("raise-hand-local", {
+        detail: { type, identity: localParticipant.identity },
+      }));
+    } catch (e) {
+      console.error("raise-hand failed", e);
+    }
   };
 
   const copySessionId = async () => {
@@ -312,6 +337,20 @@ export default function GroupSessionControlBar({
           <span className="gs-cb-label">Screen</span>
         </button>
 
+        {isStudent && (
+          <button className="gs-cb-btn" onClick={toggleHand} title={handRaised ? "Lower hand" : "Raise hand"}>
+            <div className={`gs-cb-icon ${handRaised ? "gs-cb-icon--active" : ""}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 12V4.5a1.5 1.5 0 0 1 3 0V11" />
+                <path d="M11 11V2.5a1.5 1.5 0 0 1 3 0V11" />
+                <path d="M14 11.5V4.5a1.5 1.5 0 0 1 3 0V15" />
+                <path d="M17 8.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-2a7 7 0 0 1-6.29-3.94l-2.4-4.79a1.5 1.5 0 0 1 2.63-1.45L8 12" />
+              </svg>
+            </div>
+            <span className="gs-cb-label">{handRaised ? "Lower" : "Raise"}</span>
+          </button>
+        )}
+
         <div className="gs-cb-other-wrap" ref={otherRef}>
           <button className={`gs-cb-btn ${otherOpen ? "gs-cb-btn--active" : ""}`} title="More options" onClick={() => setOtherOpen((v) => !v)}>
             <div className="gs-cb-icon">
@@ -368,6 +407,16 @@ export default function GroupSessionControlBar({
         <button className={`gs-cb-side-btn ${activePanel === "chat" ? "gs-cb-side-btn--active" : ""}`} onClick={() => onTogglePanel("chat")} title="Chat">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Chat</span>
+        </button>
+
+        <button className={`gs-cb-side-btn ${activePanel === "notes" ? "gs-cb-side-btn--active" : ""}`} onClick={() => onTogglePanel("notes")} title="Notes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          <span>Notes</span>
         </button>
       </div>
     </div>

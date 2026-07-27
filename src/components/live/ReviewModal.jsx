@@ -50,8 +50,12 @@ export default function ReviewModal({ sessionId, onDone, sessionType = "live" })
   return (
     <div className="reviewModal__overlay">
       <div className="reviewModal__panel">
-        <h2 className="reviewModal__title">How was the class?</h2>
-        <p className="reviewModal__sub">Rate the session — your feedback helps improve future classes.</p>
+        <div className="reviewModal__icon" aria-hidden="true">📝</div>
+
+        <div className="reviewModal__head">
+          <h2 className="reviewModal__title">How was the class?</h2>
+          <p className="reviewModal__sub">Rate the session — your feedback helps improve future classes.</p>
+        </div>
 
         <Stars value={rating} onChange={setRating} />
 
@@ -59,7 +63,7 @@ export default function ReviewModal({ sessionId, onDone, sessionType = "live" })
           className="reviewModal__textarea"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Anything you'd like to share? (optional)"
+          placeholder="Share your thoughts (optional)…"
           rows={3}
         />
 
@@ -73,7 +77,7 @@ export default function ReviewModal({ sessionId, onDone, sessionType = "live" })
             disabled={rating === 0 || submitting}
             onClick={submit}
           >
-            {submitting ? "Submitting…" : "Submit"}
+            {submitting ? "Submitting…" : "Submit review"}
           </button>
         </div>
       </div>

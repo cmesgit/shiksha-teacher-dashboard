@@ -15,15 +15,21 @@
   border: 1px solid var(--cp-border);
   border-radius: 8px;
   padding: 10px 12px;
-  font-size: 13px;
-  font-family: inherit;
+  background: var(--cp-slate);
+  font-size: 12px;
+  font-family: "Georgia", serif;
   color: var(--cp-text-dark);
-  line-height: 1.5;
+  line-height: 1.7;
   outline: none;
 }
 
 .np-textarea:focus {
   border-color: var(--cp-teal);
+}
+
+.np-textarea::placeholder {
+  color: var(--cp-text-empty);
+  font-family: inherit;
 }
 
 .np-textarea::placeholder {
