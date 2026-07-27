@@ -13,6 +13,12 @@
  *
  * 4. Each row is clickable — navigates to student detail page
  *    → We pass student data via router state (no extra API call needed)
+ *
+ * ONE ROW = ONE STUDENT, NOT ONE ACCOUNT. This app is multi-profile: a parent
+ * with three enrolled children is one login and three students, so several
+ * rows can share the same `email`/`account_id`/`username`. `student.id` is the
+ * learner-profile id (the student), which is why it — and never the email — is
+ * the row key. Use displayNameOf() rather than `username` for the same reason.
  */
 
 import { useNavigate } from "react-router-dom";
@@ -21,6 +27,12 @@ import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/students.css";
 import { LoadingState } from "../components/StateViews";
+
+// full_name is optional on a learner profile; display_name is what the profile
+// picker shows and is the only field that distinguishes siblings on one
+// account, so it comes before the account-level `username` fallback.
+const displayNameOf = (s) =>
+  s.full_name || s.display_name || s.username || "Unnamed student";
 
 export default function AllStudents() {
   const navigate = useNavigate();
@@ -59,10 +71,12 @@ export default function AllStudents() {
   const filtered = data.students.filter((s) => {
     const q = search.toLowerCase();
     return (
-      (s.full_name || "").toLowerCase().includes(q) ||
+      displayNameOf(s).toLowerCase().includes(q) ||
       (s.email || "").toLowerCase().includes(q) ||
       (s.student_id || "").toLowerCase().includes(q) ||
-      (s.course_title || "").toLowerCase().includes(q)
+      // course_titles lists every course this student shares with the teacher;
+      // course_title is only the first of them.
+      (s.course_titles || [s.course_title]).join(" ").toLowerCase().includes(q)
     );
   });
 
@@ -110,7 +124,7 @@ export default function AllStudents() {
               {/* .map() loops through each student and renders a <tr> */}
               {filtered.map((student, idx) => (
                 <tr
-                  key={student.id}
+                  key={student.id || `account:${student.account_id}`}
                   className="students-row"
                   onClick={() =>
                     navigate(`/teacher/students/${student.id}`, {
@@ -129,16 +143,16 @@ export default function AllStudents() {
                           <span>{student.avatar}</span>
                         ) : (
                           <span>
-                            {(student.full_name || "?")[0].toUpperCase()}
+                            {displayNameOf(student)[0].toUpperCase()}
                           </span>
                         )}
                       </div>
-                      <span>{student.full_name || student.username}</span>
+                      <span>{displayNameOf(student)}</span>
                     </div>
                   </td>
                   <td>{student.email}</td>
                   <td>{student.student_id || "—"}</td>
-                  <td>{student.course_title}</td>
+                  <td>{(student.course_titles || [student.course_title]).join(", ")}</td>
                   <td>
                     {new Date(student.enrolled_at).toLocaleDateString("en-GB", {
                       day: "2-digit",

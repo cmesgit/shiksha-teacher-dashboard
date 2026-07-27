@@ -15,6 +15,12 @@ import { IoChevronBack } from "react-icons/io5";
 import { FiMail, FiPhone, FiUser, FiCalendar, FiHash, FiBook } from "react-icons/fi";
 import "../styles/student-detail.css";
 
+// The row shape here comes from AllStudents.jsx via router state — it describes
+// ONE STUDENT (a learner profile), while `email`/`username` belong to the
+// ACCOUNT and are shared with any enrolled siblings. See AllStudents.jsx.
+const displayNameOf = (s) =>
+  s.full_name || s.display_name || s.username || "Unnamed student";
+
 export default function AllStudentDetail() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,14 +54,16 @@ export default function AllStudentDetail() {
             ) : student.avatar_type === "emoji" && student.avatar ? (
               <span>{student.avatar}</span>
             ) : (
-              <span>{(student.full_name || "?")[0].toUpperCase()}</span>
+              <span>{displayNameOf(student)[0].toUpperCase()}</span>
             )}
           </div>
 
           <div className="sd-profile-info">
-            <h2>{student.full_name || student.username}</h2>
+            <h2>{displayNameOf(student)}</h2>
             {student.course_title && (
-              <p className="sd-subject-badge">{student.course_title}</p>
+              <p className="sd-subject-badge">
+                {(student.course_titles || [student.course_title]).join(" · ")}
+              </p>
             )}
           </div>
         </div>
@@ -65,7 +73,9 @@ export default function AllStudentDetail() {
           <div className="sd-detail-item">
             <FiMail className="sd-detail-icon" />
             <div>
-              <span className="sd-detail-label">Email</span>
+              {/* Account-level: shared with this student's enrolled siblings,
+                  so labelled as the account's rather than the student's. */}
+              <span className="sd-detail-label">Account email</span>
               <span className="sd-detail-value">{student.email}</span>
             </div>
           </div>
@@ -89,7 +99,7 @@ export default function AllStudentDetail() {
           <div className="sd-detail-item">
             <FiUser className="sd-detail-icon" />
             <div>
-              <span className="sd-detail-label">Username</span>
+              <span className="sd-detail-label">Account username</span>
               <span className="sd-detail-value">{student.username}</span>
             </div>
           </div>
@@ -97,8 +107,12 @@ export default function AllStudentDetail() {
           <div className="sd-detail-item">
             <FiBook className="sd-detail-icon" />
             <div>
-              <span className="sd-detail-label">Course</span>
-              <span className="sd-detail-value">{student.course_title}</span>
+              <span className="sd-detail-label">
+                {(student.course_titles || []).length > 1 ? "Courses" : "Course"}
+              </span>
+              <span className="sd-detail-value">
+                {(student.course_titles || [student.course_title]).join(", ")}
+              </span>
             </div>
           </div>
 

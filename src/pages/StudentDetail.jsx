@@ -3,6 +3,12 @@ import { IoChevronBack } from "react-icons/io5";
 import { FiMail, FiPhone, FiUser, FiCalendar, FiHash } from "react-icons/fi";
 import "../styles/student-detail.css";
 
+// The row shape here comes from StudentsList.jsx via router state — it describes
+// ONE STUDENT (a learner profile), while `email`/`username` belong to the
+// ACCOUNT and are shared with any enrolled siblings. See StudentsList.jsx.
+const displayNameOf = (s) =>
+  s.full_name || s.display_name || s.username || "Unnamed student";
+
 export default function StudentDetail() {
   const navigate = useNavigate();
   const { subjectId, studentId } = useParams();
@@ -38,12 +44,12 @@ export default function StudentDetail() {
             ) : student.avatar_type === "emoji" && student.avatar ? (
               <span>{student.avatar}</span>
             ) : (
-              <span>{(student.full_name || "?")[0].toUpperCase()}</span>
+              <span>{displayNameOf(student)[0].toUpperCase()}</span>
             )}
           </div>
 
           <div className="sd-profile-info">
-            <h2>{student.full_name || student.username}</h2>
+            <h2>{displayNameOf(student)}</h2>
             {subjectName && <p className="sd-subject-badge">{subjectName}</p>}
           </div>
         </div>
@@ -52,7 +58,9 @@ export default function StudentDetail() {
           <div className="sd-detail-item">
             <FiMail className="sd-detail-icon" />
             <div>
-              <span className="sd-detail-label">Email</span>
+              {/* Account-level: shared with this student's enrolled siblings,
+                  so labelled as the account's rather than the student's. */}
+              <span className="sd-detail-label">Account email</span>
               <span className="sd-detail-value">{student.email}</span>
             </div>
           </div>
@@ -76,7 +84,7 @@ export default function StudentDetail() {
           <div className="sd-detail-item">
             <FiUser className="sd-detail-icon" />
             <div>
-              <span className="sd-detail-label">Username</span>
+              <span className="sd-detail-label">Account username</span>
               <span className="sd-detail-value">{student.username}</span>
             </div>
           </div>
