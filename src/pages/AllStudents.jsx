@@ -23,14 +23,15 @@
  *    verbatim rather than dropped to match the prototype.
  *
  * Divergence from the design's row — deliberate, not an oversight: the mockup
- * additionally shows a per-student "Attendance %" and "Avg score" stat and a
- * "Last active" line. None of those exist anywhere in this API response or in
- * any cheap-to-add backend source (confirmed against TeacherAllStudentsView) —
- * the only real attendance figure that exists is a batch-level average used by
- * BatchProgressDetail, not a per-student one. Rather than fabricate numbers,
- * the row's right-hand slot shows the student's real `enrolled_at` date
- * instead, the same "don't show a stat with no data behind it" call already
- * made elsewhere in this project.
+ * shows a per-student "Attendance %". That one still doesn't exist anywhere
+ * real: LiveSessionAttendance is keyed by account, not learner_profile, so on
+ * a multi-profile account it can't be attributed to one sibling over another,
+ * and LiveSession.batch is nullable (course-wide sessions), so "sessions in
+ * their batch" isn't a clean denominator either — a computed number here
+ * would look real but wouldn't be. Avg quiz score, by contrast, IS real and
+ * now wired up (TeacherAllStudentsView aggregates it in one grouped query,
+ * same Avg(score/quiz.total_marks*100) definition `build_progress_stats`
+ * already uses for a single learner) — shown alongside `enrolled_at`.
  *
  * ONE ROW = ONE STUDENT, NOT ONE ACCOUNT. This app is multi-profile: a parent
  * with three enrolled children is one login and three students, so several
@@ -42,6 +43,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { FiMessageCircle } from "react-icons/fi";
 import api from "../api/apiClient";
 import { LoadingState, ErrorState } from "../components/StateViews";
 import { subjectChipPalette } from "../utils/subjectChips";
@@ -211,9 +213,31 @@ export default function AllStudents() {
                     </div>
                   </div>
 
+                  {student.avg_quiz_score != null && (
+                    <div className="ac-row__stat">
+                      <div className="ac-row__statValue">{student.avg_quiz_score}%</div>
+                      <div className="ac-row__statLabel">Avg score</div>
+                    </div>
+                  )}
+
                   <div className="ac-row__stat">
                     <div className="ac-row__statValue">{fmtEnrolled(student.enrolled_at)}</div>
                     <div className="ac-row__statLabel">Enrolled</div>
+                  </div>
+
+                  <div className="ac-row__actions">
+                    <button
+                      type="button"
+                      className="ac-btn ac-btn--icon"
+                      aria-label={`Message ${name}`}
+                      title="Message"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/teacher/chat", { state: { learnerId: student.id } });
+                      }}
+                    >
+                      <FiMessageCircle size={16} />
+                    </button>
                   </div>
                 </div>
               );
