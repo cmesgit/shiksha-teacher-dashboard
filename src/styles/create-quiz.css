@@ -828,3 +828,75 @@
 .cq-bank-item-answer { color: #17b17f; font-weight: 600; text-transform: none; }
 
 .cq-bank-add-btn { width: 100%; margin-top: 12px; }
+
+/* ── Cancel-confirmation modal — was previously unstyled (the JSX
+   referenced .quiz-modal-overlay/.quiz-modal-box/etc. but no rule for them
+   existed anywhere in this app). Matches the Academy handoff's modal spec:
+   fixed overlay, white panel, 16px radius, 28px/30px padding. ── */
+.quiz-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: cq-overlayIn .2s ease;
+}
+
+.quiz-modal-box {
+  background: #fff;
+  color: #1a2c33;
+  padding: 28px 30px;
+  border-radius: 16px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+  animation: cq-popIn .2s ease;
+  text-align: left;
+}
+
+.quiz-modal-box h3 { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #1a2c33; }
+.quiz-modal-box p { margin: 0; font-size: 13px; line-height: 1.5; color: #6b7c83; }
+
+.quiz-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.quiz-btn-cancel {
+  background: #fff;
+  color: #6b7c83;
+  border: 1px solid #e5eaed;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.quiz-btn-cancel:hover { background: #f5f7f9; }
+
+.quiz-btn-exit {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.quiz-btn-exit:hover { background: #b91c1c; }
+
+@keyframes cq-popIn {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes cq-overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

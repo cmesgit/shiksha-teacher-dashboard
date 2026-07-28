@@ -16,6 +16,7 @@ import { IoCheckmarkCircle } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/quiz-draft-preview.css";
 import { LoadingState } from "../components/StateViews";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
 
@@ -28,6 +29,7 @@ export default function QuizDraftPreview() {
   const [fetchError, setFetchError] = useState(null);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState(null);
+  const [confirmDlg, setConfirmDlg] = useState(null);
 
   useEffect(() => {
     async function fetchQuiz() {
@@ -51,8 +53,8 @@ export default function QuizDraftPreview() {
     fetchQuiz();
   }, [quizId]);
 
-  const handlePublish = async () => {
-    if (!window.confirm("Submit this quiz for admin review? Once submitted, questions can't be edited until it's approved or sent back.")) return;
+  const doPublish = async () => {
+    setConfirmDlg(null);
     setPublishing(true);
     setPublishError(null);
     try {
@@ -65,6 +67,15 @@ export default function QuizDraftPreview() {
     } finally {
       setPublishing(false);
     }
+  };
+
+  const handlePublish = () => {
+    setConfirmDlg({
+      title: "Submit this quiz for admin review?",
+      message: "Once submitted, questions can't be edited until it's approved or sent back.",
+      confirmLabel: "Submit for review",
+      onConfirm: doPublish,
+    });
   };
 
   if (loading) return <LoadingState label="Loading preview" />;
@@ -243,6 +254,10 @@ export default function QuizDraftPreview() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        dialog={confirmDlg && { ...confirmDlg, busy: publishing }}
+        onClose={() => setConfirmDlg(null)}
+      />
     </div>
   );
 }

@@ -38,12 +38,15 @@ const DATE_FORMAT = { day: "2-digit", month: "short", year: "numeric" };
 // WS events that mean "your academy slices changed".
 const REFRESH_TYPES = new Set(["ASSIGNMENT", "QUIZ", "SESSION", "SUBMISSION"]);
 
+// Quizzes have no due date (product decision — a quiz stays attemptable
+// indefinitely once published), so they're not date-scheduled events: no
+// calendar dots, no schedule-rail entries, no due/overdue chip on their
+// Assignments/Quizzes rail row. They still get their own tab in that row.
 const SCHEDULE_TYPE_FILTERS = [
   { value: "all",             label: "All" },
   { value: "assignment",      label: "Assign" },
   { value: "live-session",    label: "Live" },
   { value: "private-session", label: "Private" },
-  { value: "quiz",            label: "Quiz" },
 ];
 
 // One vocabulary for calendar dots, schedule-row chips and activity icons —
@@ -51,7 +54,6 @@ const SCHEDULE_TYPE_FILTERS = [
 const TYPE_META = {
   "live-session":    { label: "Live",     chipBg: "#e6f4f6", chipColor: "#13899b" },
   "assignment":      { label: "Assign",   chipBg: "#ecf8ee", chipColor: "#2f9d42" },
-  "quiz":            { label: "Quiz",     chipBg: "#f1e9fb", chipColor: "#7c3aed" },
   "private-session": { label: "Private",  chipBg: "#fef3ec", chipColor: "#c2701c" },
 };
 const OVERDUE_CHIP = { bg: "#fef2f2", color: "#dc2626" };
@@ -201,19 +203,22 @@ function SessionRow({ s, onAction }) {
 }
 
 function WorkRow({ item, kind, onOpen }) {
-  const overdue = item.due && new Date(item.due) < new Date();
+  const isQuiz = kind === "quizzes";
+  const overdue = !isQuiz && item.due && new Date(item.due) < new Date();
   const slot = subjectChipSlot(item.subject_name);
   return (
     <div className="ac-row" onClick={onOpen} style={{ cursor: "pointer" }}>
       <div className="ac-row__body">
         <div className="dash-workRow__top">
           <span className={`subj-chip subj-chip--${slot}`}>{item.subject_name || kind}</span>
-          <span className={`ac-tag ${overdue ? "ac-tag--danger" : "ac-tag--success"}`}>
-            {overdue ? "Overdue" : `Due ${formatDate(item.due)}`}
-          </span>
+          {!isQuiz && (
+            <span className={`ac-tag ${overdue ? "ac-tag--danger" : "ac-tag--success"}`}>
+              {overdue ? "Overdue" : `Due ${formatDate(item.due)}`}
+            </span>
+          )}
         </div>
         <div className="ac-row__topic">{item.title}</div>
-        <div className="ac-row__sub">{kind === "quizzes" ? "Quiz" : "Assignment"}</div>
+        <div className="ac-row__sub">{isQuiz ? "Quiz" : "Assignment"}</div>
       </div>
     </div>
   );
@@ -239,7 +244,7 @@ function ActivityRow({ item, onRead }) {
 function ScheduleRow({ item, onClick }) {
   const d = new Date(item.date);
   const meta = TYPE_META[item.type] || TYPE_META.assignment;
-  const overdue = new Date(item.date) < new Date() && (item.type === "assignment" || item.type === "quiz");
+  const overdue = new Date(item.date) < new Date() && item.type === "assignment";
   const chip = overdue ? OVERDUE_CHIP : { bg: meta.chipBg, color: meta.chipColor };
   return (
     <button type="button" className="dash-schedRow" onClick={onClick}>
@@ -384,12 +389,10 @@ export default function TeacherDashboard() {
     };
     assignments.forEach((a) =>
       add(a.due, new Date(a.due) < now ? "assignment-overdue" : "assignment"));
-    quizzes.forEach((q) =>
-      add(q.due, new Date(q.due) < now ? "quiz-overdue" : "quiz"));
     privateSessions.forEach((ps) => add(ps.date, "private-session"));
     allSessions.forEach((s)     => add(s.dateTime, "live-session"));
     return map;
-  }, [assignments, quizzes, privateSessions, allSessions]);
+  }, [assignments, privateSessions, allSessions]);
 
   // ── unified schedule ───────────────────────────────────────────────
   const scheduleItems = useMemo(() => {
@@ -410,14 +413,6 @@ export default function TeacherDashboard() {
         date:  a.due,
         link:  a.subject_id ? `/teacher/classes/${a.subject_id}/assignments` : null,
       }));
-    quizzes.forEach((q) =>
-      items.push({
-        id:    `quiz-${q.id}`,
-        type:  "quiz",
-        title: q.title,
-        date:  q.due,
-        link:  q.subject_id ? `/teacher/classes/${q.subject_id}/quizzes` : null,
-      }));
     privateSessions.forEach((ps) =>
       items.push({
         id:    `private-${ps.id}`,
@@ -428,7 +423,7 @@ export default function TeacherDashboard() {
       }));
     items.sort((a, b) => new Date(a.date) - new Date(b.date));
     return items;
-  }, [allSessions, assignments, quizzes, privateSessions]);
+  }, [allSessions, assignments, privateSessions]);
 
   const filteredSchedule = scheduleItems.filter((item) => {
     if (selectedDate && !isSameDay(new Date(item.date), selectedDate)) return false;

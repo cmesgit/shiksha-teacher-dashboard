@@ -33,10 +33,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiMoreHorizontal } from "react-icons/fi";
+import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import { fetchBatchedOrFanOut } from "../api/batchedList";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { subjectChipSlot } from "../utils/subjectChips";
 import "../styles/academyScreens.css";
 import "../styles/quizzes.css";
@@ -75,6 +77,9 @@ export default function Quizzes() {
   // Which card's overflow menu is open (the design's card footer has room
   // for one button, so the rest live behind this).
   const [openMenu, setOpenMenu] = useState(null);
+  // Deleting is destructive, so it confirms first — same ConfirmDialog
+  // pattern as Assignments.jsx, not a native window.confirm().
+  const [confirmDlg, setConfirmDlg] = useState(null);
 
   // "" = all subjects. Seeded from the route so a deep link preselects.
   const [subjectFilter, setSubjectFilter] = useState(subjectId ? String(subjectId) : "");
@@ -195,54 +200,63 @@ export default function Quizzes() {
         ...fresh,
       ]);
     } catch (err) {
-      alert(err.response?.data?.detail || "Failed to publish quiz.");
+      toast.error(err.response?.data?.detail || "Failed to publish quiz.");
     } finally {
       setPublishingId(null);
     }
   };
 
+  const doDelete = async (quiz, force) => {
+    setDeletingId(quiz.id);
+    try {
+      await api.delete(`/teacher/quizzes/${quiz.id}/delete/${force ? "?force=true" : ""}`);
+      setQuizzes((prev) => prev.filter((q) => q.id !== quiz.id));
+      setConfirmDlg(null);
+      toast.success("Quiz deleted.");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to delete quiz.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleDelete = async (quiz) => {
-    if (quiz.is_published) {
-      // First call without force to get attempt count
-      setDeletingId(quiz.id);
-      try {
-        await api.delete(`/teacher/quizzes/${quiz.id}/delete/`);
-        setQuizzes((prev) => prev.filter((q) => q.id !== quiz.id));
-        return;
-      } catch (err) {
-        if (err.response?.status === 409 && err.response?.data?.requires_force) {
-          const count = err.response.data.attempt_count;
-          const confirmed = window.confirm(
-            `⚠️ This quiz has ${count} student attempt(s).\n\n` +
-            `Deleting it will permanently remove ALL student scores and attempt history.\n\n` +
-            `Are you sure you want to delete it?`
-          );
-          if (!confirmed) { setDeletingId(null); return; }
-          // Second call with force=true
-          try {
-            await api.delete(`/teacher/quizzes/${quiz.id}/delete/?force=true`);
-            setQuizzes((prev) => prev.filter((q) => q.id !== quiz.id));
-          } catch (err2) {
-            alert(err2.response?.data?.detail || "Failed to delete quiz.");
-          }
-        } else {
-          alert(err.response?.data?.detail || "Failed to delete quiz.");
-        }
-      } finally {
-        setDeletingId(null);
+    if (!quiz.is_published) {
+      setConfirmDlg({
+        title: "Delete this quiz?",
+        message: `“${quiz.title}” will be permanently removed.`,
+        confirmLabel: "Delete quiz",
+        danger: true,
+        onConfirm: () => doDelete(quiz, false),
+      });
+      return;
+    }
+
+    // Published — try without force first; only escalate to a stronger
+    // confirmation if the backend reports existing student attempts
+    // (409 requires_force), so a quiz nobody has taken yet deletes with
+    // just the ordinary confirm above.
+    setDeletingId(quiz.id);
+    try {
+      await api.delete(`/teacher/quizzes/${quiz.id}/delete/`);
+      setQuizzes((prev) => prev.filter((q) => q.id !== quiz.id));
+    } catch (err) {
+      if (err.response?.status === 409 && err.response?.data?.requires_force) {
+        const count = err.response.data.attempt_count;
+        setConfirmDlg({
+          title: "Delete this quiz?",
+          message:
+            `This quiz has ${count} student attempt${count === 1 ? "" : "s"}. Deleting it will ` +
+            `permanently remove ALL student scores and attempt history. This can't be undone.`,
+          confirmLabel: "Delete quiz",
+          danger: true,
+          onConfirm: () => doDelete(quiz, true),
+        });
+      } else {
+        toast.error(err.response?.data?.detail || "Failed to delete quiz.");
       }
-    } else {
-      // Unpublished — simple confirm
-      if (!window.confirm("Delete this quiz?")) return;
-      setDeletingId(quiz.id);
-      try {
-        await api.delete(`/teacher/quizzes/${quiz.id}/delete/`);
-        setQuizzes((prev) => prev.filter((q) => q.id !== quiz.id));
-      } catch (err) {
-        alert(err.response?.data?.detail || "Failed to delete quiz.");
-      } finally {
-        setDeletingId(null);
-      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -351,7 +365,13 @@ export default function Quizzes() {
         </div>
         <div className="ac-head__actions">
           <div className="ac-menuWrap" ref={createRef}>
-            <button type="button" className="ac-headBtn" onClick={onCreateClick}>
+            {/* dc.html hardcodes #425f7f (slate --primary) for every
+                content-creation head button (+ Create quiz, + Upload
+                recording, + Upload material) — same convention Assignments.jsx
+                documents; only the role-differentiated "+ Schedule session"
+                uses --action (teacher maroon). ac-headBtn defaults to
+                --action, so this needs the primary modifier explicitly. */}
+            <button type="button" className="ac-headBtn ac-headBtn--primary" onClick={onCreateClick}>
               + Create quiz
             </button>
             {createOpen && (
@@ -519,6 +539,10 @@ export default function Quizzes() {
           })}
         </div>
       )}
+      <ConfirmDialog
+        dialog={confirmDlg && { ...confirmDlg, busy: deletingId != null }}
+        onClose={() => setConfirmDlg(null)}
+      />
     </div>
   );
 }

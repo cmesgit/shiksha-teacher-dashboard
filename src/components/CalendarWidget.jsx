@@ -11,11 +11,10 @@ const MONTHS = [
 ];
 
 // Matches TYPE_META in TeacherDashboard.jsx (same categories, same colours).
+// Quizzes have no due date, so they never generate calendar events.
 const EVENT_COLORS = {
   "assignment":         "#2f9d42",
   "assignment-overdue": "#dc2626",
-  "quiz":               "#7c3aed",
-  "quiz-overdue":       "#dc2626",
   "private-session":    "#c2701c",
   "live-session":       "#13899b",
 };

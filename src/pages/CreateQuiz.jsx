@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiSearch } from "react-icons/fi";
 import { IoCheckmarkCircle } from "react-icons/io5";
+import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import "../styles/create-quiz.css";
 import { LoadingState } from "../components/StateViews";
@@ -365,10 +366,10 @@ export default function CreateQuiz() {
         })),
       });
 
-      alert("Quiz created successfully");
+      toast.success("Quiz created successfully");
       navigate(`/teacher/classes/${subjectId}/quizzes`);
     } catch (err) {
-      alert(err.response?.data?.detail || "Quiz creation failed");
+      toast.error(err.response?.data?.detail || "Quiz creation failed");
     } finally {
       setLoading(false);
     }
