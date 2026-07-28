@@ -36,10 +36,6 @@ import "../styles/academyScreens.css";
 // NULL batch means course-wide, shown as "All batches".
 const ALL_BATCHES = "All";
 
-// The row's status tag. A past-due assignment isn't an alarm for the person who
-// set it, so "Closed" reads neutral rather than danger.
-const STATUS_TONE = { open: "success", closed: "neutral" };
-
 const fmtDue = (d) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
 
@@ -144,23 +140,42 @@ export default function Assignments() {
 
   const now = Date.now();
 
-  // Decorate once: status key + the design's single meta line.
+  // Decorate once: the design's single meta line + the sort bucket.
+  //
+  // The status tag itself is NOT an open/closed indicator — dc.html maps every
+  // teacher assignment row to a single "active" status (line 3285: `.map((a)
+  // => ({ ...a, st: "active" }))`), which always renders as `Due {date}` in
+  // teal (AP_ST.active = { bg: "#e6f4f6", ink: "#13899b" }, line 3287), even
+  // for the mock's own overdue example (assignment #3, due two days ago —
+  // still tagged "Due 23 Jul", never "Overdue"/"Closed"). A teacher isn't
+  // racing their own deadline, so the tag just restates when it's due; the
+  // meta line below it carries the batch/submission context instead (a.meta
+  // in the design, e.g. "Class 10-A · 18/32 submitted" — no due date there,
+  // since the tag already shows it).
+  //
+  // `overdue` is still tracked, but only to bucket rows in the sort below —
+  // it never reaches the UI as a color or label.
   const decorated = useMemo(
     () =>
       assignments.map((a) => {
         const dueTs = a.due_date ? new Date(a.due_date).getTime() : null;
-        const stKey = dueTs != null && dueTs < now ? "closed" : "open";
+        const overdue = dueTs != null && dueTs < now;
         const meta = [
           a.batch_name || null,
           a.chapter_name || null,
-          a.due_date ? `Due ${fmtDue(a.due_date)}` : null,
           a.total_submissions > 0
             ? `${a.total_submissions} submission${a.total_submissions === 1 ? "" : "s"}`
             : "No submissions yet",
         ]
           .filter(Boolean)
           .join(" · ");
-        return { ...a, dueTs, stKey, stLabel: stKey === "closed" ? "Closed" : "Open", meta };
+        return {
+          ...a,
+          dueTs,
+          overdue,
+          stLabel: a.due_date ? `Due ${fmtDue(a.due_date)}` : "No due date",
+          meta,
+        };
       }),
     [assignments, now]
   );
@@ -185,11 +200,11 @@ export default function Assignments() {
         .filter((a) => !subjectFilter || String(a.subjectId) === subjectFilter)
         .filter((a) => batchFilter === ALL_BATCHES || (a.batch_name || "") === batchFilter)
         .sort((a, b) => {
-          // Open first (soonest deadline first), then closed (most recent first).
-          if (a.stKey !== b.stKey) return a.stKey === "open" ? -1 : 1;
+          // Not-yet-due first (soonest deadline first), then overdue (most recent first).
+          if (a.overdue !== b.overdue) return a.overdue ? 1 : -1;
           if (a.dueTs == null) return 1;
           if (b.dueTs == null) return -1;
-          return a.stKey === "open" ? a.dueTs - b.dueTs : b.dueTs - a.dueTs;
+          return a.overdue ? b.dueTs - a.dueTs : a.dueTs - b.dueTs;
         }),
     [decorated, subjectFilter, batchFilter]
   );
@@ -285,9 +300,15 @@ export default function Assignments() {
           </div>
 
           <div className="ac-menuWrap" ref={newMenuRef}>
+            {/* dc.html hardcodes #425f7f (slate --primary) for this button
+                (line 1740), same as every other content-creation head button
+                (+ Create quiz, + Upload recording, + Upload material) — only
+                the role-differentiated "+ Schedule session" uses --action.
+                ac-headBtn defaults to --action, so this needs the primary
+                modifier explicitly. */}
             <button
               type="button"
-              className="ac-headBtn"
+              className="ac-headBtn ac-headBtn--primary"
               onClick={handleNewClick}
               aria-haspopup={createSubjectId ? undefined : "menu"}
               aria-expanded={createSubjectId ? undefined : newMenuOpen}
@@ -351,16 +372,20 @@ export default function Assignments() {
                     <span className={`subj-chip subj-chip--${subjectChipSlot(a.subjectName)}`}>
                       {a.subjectName}
                     </span>
-                    <span className={`ac-tag ac-tag--${STATUS_TONE[a.stKey]}`}>{a.stLabel}</span>
+                    {/* Always teal/"Due {date}" — see the decorated useMemo above
+                        for why this never turns into an Overdue/Closed color. */}
+                    <span className="ac-tag ac-tag--teal">{a.stLabel}</span>
                   </div>
                   <div className="ac-row__topic">{a.title}</div>
                   {a.meta && <div className="ac-row__sub">{a.meta}</div>}
                 </div>
 
-                {/* The design's row carries ONE action (dc.html line 1766).
-                    "Open" leads to the submissions view, which is what a
-                    teacher opens an assignment for; edit and delete sit behind
-                    the overflow menu, reusing the design's Manage▾ pattern. */}
+                {/* The design's row carries ONE action (dc.html line 1766),
+                    labelled "Review" for the teacher branch (line 3295:
+                    `btnText: isStudent ? ... : "Review"`) — it leads to the
+                    submissions view, which is what a teacher opens an
+                    assignment for; edit and delete sit behind the overflow
+                    menu, reusing the design's Manage▾ pattern. */}
                 <div className="ac-row__actions">
                   <div className="ac-menuWrap">
                     <button
@@ -409,7 +434,7 @@ export default function Assignments() {
                       navigate(`/teacher/classes/${a.subjectId}/assignments/${a.id}/submissions`)
                     }
                   >
-                    Open
+                    Review
                   </button>
                 </div>
               </div>

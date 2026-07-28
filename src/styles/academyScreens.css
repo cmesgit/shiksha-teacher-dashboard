@@ -489,6 +489,12 @@
 .ac-headBtn--success { background: var(--success); }
 .ac-headBtn--success:hover { background: #258a38; }
 
+/* Slate variant for content-creation head buttons the design hardcodes to
+   #425f7f rather than the per-role --action (e.g. "+ New assignment", line
+   1740 — distinct from role-colored actions like "+ Schedule session"). */
+.ac-headBtn--primary { background: var(--primary); }
+.ac-headBtn--primary:hover { background: var(--primary-dark); }
+
 .ac-headBtn--outline {
   background: var(--surface);
   border: 1px solid var(--primary);
