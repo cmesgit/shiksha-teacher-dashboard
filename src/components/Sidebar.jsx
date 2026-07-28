@@ -144,15 +144,17 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
           (dc.html line 573). The subject scope now comes from the shared
           my-classes context; falls back to the track label before it loads or
           if the teacher has no classes yet, rather than showing an empty slot.
-          Not a scope switch (nothing app-wide to filter — Classes already
-          browses every batch in full) — just expandable so the collapsed
-          "N subjects" summary isn't the only way to see which ones. */}
+          Purely informational, NOT a navigation control — it used to send a
+          click through to the old classes/:subjectId hub page, which is a
+          stale/superseded UI now that CONTENT screens are flat top-level
+          pages. This just expands to read the full subject list; nothing in
+          it is clickable. */}
       <div className="acad-side__selector" ref={scopeRef}>
         <button
           type="button"
           className={`acad-side__well${subjectRows.length > 0 ? " acad-side__well--interactive" : ""}`}
           onClick={() => subjectRows.length > 0 && setScopeOpen((o) => !o)}
-          aria-haspopup={subjectRows.length > 0 ? "listbox" : undefined}
+          aria-haspopup={subjectRows.length > 0 ? "true" : undefined}
           aria-expanded={subjectRows.length > 0 ? scopeOpen : undefined}
         >
           <span className="acad-side__wellText">
@@ -167,20 +169,14 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
         </button>
 
         {scopeOpen && subjectRows.length > 0 && (
-          <div className="acad-side__menu acad-side__menu--scroll" role="listbox" aria-label="Your subjects">
+          <div className="acad-side__menu acad-side__menu--scroll" aria-label="Subjects you teach">
             {subjectRows.map((c) => (
-              <button
-                key={c.subjectId}
-                type="button"
-                role="option"
-                className="acad-side__menuItem"
-                onClick={() => { setScopeOpen(false); go(`/teacher/classes/${c.subjectId}`); }}
-              >
+              <div key={c.subjectId} className="acad-side__menuItem acad-side__menuItem--static">
                 <span className="acad-side__menuItemTitle">{c.subjectName}</span>
                 {c.courseTitle && (
                   <span className="acad-side__menuItemMeta">{c.courseTitle}</span>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         )}

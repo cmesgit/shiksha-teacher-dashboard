@@ -144,6 +144,10 @@
   color: var(--primary);
   font-weight: 700;
 }
+/* Informational row, not a control — the teacher subject list in the
+   Teaching well isn't clickable, so it shouldn't look or hover like one. */
+.acad-side__menuItem--static { cursor: default; }
+.acad-side__menuItem--static:hover { background: none; }
 .acad-side__menuItemTitle { display: block; font-weight: 600; }
 .acad-side__menuItemMeta {
   display: block;
