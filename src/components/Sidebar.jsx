@@ -12,7 +12,7 @@
  * Skill Dev keeps its OWN nav in SkillDevLayout — this sidebar only ever
  * renders the academy nav. Every item routes to a live page (no dead links).
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import { FiHome } from "react-icons/fi";
@@ -22,6 +22,28 @@ import { NAV } from "../utils/academyNav";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { HOME_URL } from "../config/urls";
 import "../styles/academySidebar.css";
+
+/* Same chevron the student sidebar's course switcher uses (Academy
+   Dashboard.dc.html line 576) — this well isn't a scope switch (there's
+   nothing to filter app-wide on), just an expand affordance so a teacher
+   with more than a couple of subjects can actually read the full list
+   instead of the "Faculty · N subjects" summary getting ellipsis-cut. */
+const ExpandCaret = () => (
+  <svg
+    className="acad-side__wellCaret"
+    width="13"
+    height="13"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="rgba(255,255,255,.6)"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+  </svg>
+);
 
 const initialsOf = (name) =>
   (name || "")
@@ -37,6 +59,32 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const location = useLocation();
   const { user, teacherInfo } = useAuth();
   const { classes } = useTeacherClasses();
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef(null);
+
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const onDoc = (e) => { if (scopeRef.current && !scopeRef.current.contains(e.target)) setScopeOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setScopeOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [scopeOpen]);
+
+  // Every distinct subject, sorted, for the expanded list — the collapsed
+  // label above it only ever shows a count once there are 3+, so this is the
+  // one place a teacher can actually read which subjects those are.
+  const subjectRows = useMemo(() => {
+    const seen = new Map();
+    for (const c of classes) {
+      if (!c.subjectId || seen.has(c.subjectId)) continue;
+      seen.set(c.subjectId, c);
+    }
+    return [...seen.values()].sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+  }, [classes]);
 
   const userName =
     user?.name || user?.full_name || user?.username ||
@@ -95,9 +143,18 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
       {/* Selector well — the design's "TEACHING / Physics · Classes 9–10"
           (dc.html line 573). The subject scope now comes from the shared
           my-classes context; falls back to the track label before it loads or
-          if the teacher has no classes yet, rather than showing an empty slot. */}
-      <div className="acad-side__selector">
-        <div className="acad-side__well">
+          if the teacher has no classes yet, rather than showing an empty slot.
+          Not a scope switch (nothing app-wide to filter — Classes already
+          browses every batch in full) — just expandable so the collapsed
+          "N subjects" summary isn't the only way to see which ones. */}
+      <div className="acad-side__selector" ref={scopeRef}>
+        <button
+          type="button"
+          className={`acad-side__well${subjectRows.length > 0 ? " acad-side__well--interactive" : ""}`}
+          onClick={() => subjectRows.length > 0 && setScopeOpen((o) => !o)}
+          aria-haspopup={subjectRows.length > 0 ? "listbox" : undefined}
+          aria-expanded={subjectRows.length > 0 ? scopeOpen : undefined}
+        >
           <span className="acad-side__wellText">
             <span className="acad-side__wellLabel">
               {teachingScope ? "Teaching" : "Faculty Portal"}
@@ -106,7 +163,27 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
               {teachingScope || "Academy Track"}
             </span>
           </span>
-        </div>
+          {subjectRows.length > 0 && <ExpandCaret />}
+        </button>
+
+        {scopeOpen && subjectRows.length > 0 && (
+          <div className="acad-side__menu acad-side__menu--scroll" role="listbox" aria-label="Your subjects">
+            {subjectRows.map((c) => (
+              <button
+                key={c.subjectId}
+                type="button"
+                role="option"
+                className="acad-side__menuItem"
+                onClick={() => { setScopeOpen(false); go(`/teacher/classes/${c.subjectId}`); }}
+              >
+                <span className="acad-side__menuItemTitle">{c.subjectName}</span>
+                {c.courseTitle && (
+                  <span className="acad-side__menuItemMeta">{c.courseTitle}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Nav */}
