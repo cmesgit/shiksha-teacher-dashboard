@@ -263,14 +263,14 @@ export default function Quizzes() {
   const handleView = (quiz) => {
     navigate(
       quiz.is_published
-        ? `/teacher/classes/${quiz.subjectId}/quizzes/${quiz.id}`
-        : `/teacher/classes/${quiz.subjectId}/quizzes/${quiz.id}/draft`
+        ? `/teacher/quizzes/${quiz.id}`
+        : `/teacher/quizzes/${quiz.id}/draft`
     );
   };
 
   const goCreate = (sid) => {
     setCreateOpen(false);
-    navigate(`/teacher/classes/${sid}/quizzes/create`);
+    navigate(`/teacher/quizzes/create/${sid}`);
   };
 
   // "+ Create quiz" needs a subject. Use the selected pill, or the only class
@@ -442,8 +442,7 @@ export default function Quizzes() {
             const primary = quiz.is_published
               ? {
                   label: "View results",
-                  onClick: () =>
-                    navigate(`/teacher/classes/${quiz.subjectId}/quizzes/${quiz.id}/submissions`),
+                  onClick: () => navigate(`/teacher/quizzes/${quiz.id}/submissions`),
                 }
               : canPublish
                 ? {

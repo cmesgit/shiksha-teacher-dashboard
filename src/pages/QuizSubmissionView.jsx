@@ -49,7 +49,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 export default function QuizSubmissionView() {
   const navigate = useNavigate();
-  const { quizId, subjectId } = useParams();
+  const { quizId } = useParams();
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -194,9 +194,7 @@ export default function QuizSubmissionView() {
                       type="button"
                       className="ac-btn"
                       onClick={() =>
-                        navigate(
-                          `/teacher/classes/${subjectId}/quizzes/${quizId}/student/${student.student_id}`
-                        )
+                        navigate(`/teacher/quizzes/${quizId}/student/${student.student_id}`)
                       }
                     >
                       View attempts

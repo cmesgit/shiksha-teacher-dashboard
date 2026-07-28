@@ -2,7 +2,7 @@
  * QuizDraftPreview.jsx
  * 
  * Teacher-only view of an UNPUBLISHED quiz.
- * Route: /teacher/classes/:subjectId/quizzes/:quizId/draft
+ * Route: /teacher/quizzes/:quizId/draft
  * 
  * Uses the existing /quizzes/:pk/ endpoint (teacher role gets full data
  * including correct answers). Shows everything the published QuizView shows,
@@ -22,7 +22,7 @@ const OPTION_LABELS = ["A", "B", "C", "D", "E", "F"];
 
 export default function QuizDraftPreview() {
   const navigate = useNavigate();
-  const { subjectId, quizId } = useParams();
+  const { quizId } = useParams();
 
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -137,7 +137,7 @@ export default function QuizDraftPreview() {
 
       <button
         className="qdp-back-btn"
-        onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}
+        onClick={() => navigate(-1)}
       >
         <IoChevronBack /> Back to Quizzes
       </button>

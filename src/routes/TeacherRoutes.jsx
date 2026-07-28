@@ -9,7 +9,7 @@
  *   This makes it accessible at /teacher/expert/inbox — the path that
  *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
  */
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -83,6 +83,20 @@ import { LOGIN_URL } from "../config/urls";
 function RedirectToMainLogin() {
   useEffect(() => { window.location.href = LOGIN_URL; }, []);
   return null;
+}
+
+// A single quiz's own child screens (view/draft/submissions/student-attempts/
+// review) used to be reachable ONLY via classes/:subjectId/quizzes/:quizId/...
+// — a relic of the pre-flattening nav, kept only because none of those
+// screens actually need subjectId for anything (their own API calls are
+// keyed on quizId/studentId/attemptId alone; subjectId was only ever there to
+// satisfy the URL shape). They now live under the same /teacher/quizzes root
+// as the list. The old paths still resolve — via a plain redirect — so any
+// existing bookmark or notification link built on the old shape keeps working.
+function LegacyQuizRedirect({ to }) {
+  const params = useParams();
+  const path = to.replace(/:(\w+)/g, (_, key) => params[key]);
+  return <Navigate to={path} replace />;
 }
 
 function DashboardEntry() {
@@ -170,12 +184,25 @@ export default function TeacherRoutes() {
             /teacher/quizzes; the bank stays routable. */}
         <Route path="quiz-bank" element={<QuizBank />} />
         <Route path="classes/:subjectId/quizzes" element={<Quizzes />} />
-        <Route path="classes/:subjectId/quizzes/create" element={<CreateQuiz />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/draft" element={<QuizDraftPreview />} />
-        <Route path="classes/:subjectId/quizzes/:quizId" element={<QuizView />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/submissions" element={<QuizSubmissionView />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/student/:studentId" element={<QuizStudentAttemptsView />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/review/:attemptId" element={<QuizReviewView />} />
+
+        {/* A quiz's own child screens — flat, matching the list's root. Create
+            stays subject-scoped (a new quiz needs a subject up front, same as
+            Create Assignment); the rest need only quizId/studentId/attemptId. */}
+        <Route path="quizzes/create/:subjectId" element={<CreateQuiz />} />
+        <Route path="quizzes/:quizId/draft" element={<QuizDraftPreview />} />
+        <Route path="quizzes/:quizId" element={<QuizView />} />
+        <Route path="quizzes/:quizId/submissions" element={<QuizSubmissionView />} />
+        <Route path="quizzes/:quizId/student/:studentId" element={<QuizStudentAttemptsView />} />
+        <Route path="quizzes/:quizId/review/:attemptId" element={<QuizReviewView />} />
+
+        {/* Old nested paths — kept as redirects so an existing bookmark or
+            notification link built before this flattening still resolves. */}
+        <Route path="classes/:subjectId/quizzes/create" element={<LegacyQuizRedirect to="/teacher/quizzes/create/:subjectId" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/draft" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/draft" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/submissions" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/submissions" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/student/:studentId" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/student/:studentId" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/review/:attemptId" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/review/:attemptId" />} />
 
         {/* Study Materials */}
         <Route path="classes/:subjectId/study-materials" element={<StudyMaterials />} />

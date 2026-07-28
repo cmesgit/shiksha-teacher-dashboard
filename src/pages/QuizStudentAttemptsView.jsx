@@ -35,7 +35,7 @@ const scoreTier = (score, total) => {
 };
 
 export default function QuizStudentAttemptsView() {
-  const { quizId, subjectId, studentId } = useParams();
+  const { quizId, studentId } = useParams();
   const navigate = useNavigate();
 
   const [attempts, setAttempts] = useState([]);
@@ -122,11 +122,7 @@ export default function QuizStudentAttemptsView() {
                   <button
                     type="button"
                     className="ac-btn"
-                    onClick={() =>
-                      navigate(
-                        `/teacher/classes/${subjectId}/quizzes/${quizId}/review/${a.id}`
-                      )
-                    }
+                    onClick={() => navigate(`/teacher/quizzes/${quizId}/review/${a.id}`)}
                   >
                     Review
                   </button>
