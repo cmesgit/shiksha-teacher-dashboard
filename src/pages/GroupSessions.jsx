@@ -205,27 +205,12 @@ function uniqueByUserId(list) {
 }
 
 async function updateScheduledSession(sessionId, payload) {
-  // groupSessionService currently has create/cancel/decline/join APIs, but no
-  // update API. This helper tries the common backend routes. If the backend
-  // uses a different route, add it in groupSessionService.js later.
-  const candidates = [
-    { method: "patch", url: `/sessions/group-sessions/${sessionId}/` },
-    { method: "patch", url: `/sessions/group-sessions/${sessionId}/update/` },
-    { method: "post", url: `/sessions/group-sessions/${sessionId}/update/` },
-  ];
-
-  let lastErr = null;
-  for (const c of candidates) {
-    try {
-      const res = await api[c.method](c.url, payload);
-      if (res?.data) return res.data;
-    } catch (err) {
-      lastErr = err;
-      const status = err?.response?.status;
-      if (status && ![404, 405].includes(status)) throw err;
-    }
-  }
-  throw lastErr || new Error("Update endpoint not available.");
+  // PATCH group_session_detail (host-only, while status="scheduled"):
+  // topic/scheduled_date/scheduled_time/duration_minutes, plus additive-only
+  // invited_user_ids (new ids get invited; ids missing from the submission
+  // are left alone — this never revokes an existing invite).
+  const res = await api.patch(`/sessions/group-sessions/${sessionId}/`, payload);
+  return res.data;
 }
 
 // Teacher hosts get 5 duration choices (incl. 2h/3h) for both the scheduler

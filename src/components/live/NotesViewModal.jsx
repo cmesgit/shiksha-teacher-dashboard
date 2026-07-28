@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import api from "../../api/apiClient";
 import "./NotesViewModal.css";
 
-// Live/Private/Group sessions are backed by different Django apps with
-// different URL prefixes — no single shared notes path.
+// Live/Private/Group sessions (and a recording, the same idea applied to a
+// past session's video) are backed by different Django apps with different
+// URL prefixes — no single shared notes path.
 const NOTES_URL = {
   live: (id) => `/livestream/sessions/${id}/notes/`,
   private: (id) => `/sessions/${id}/notes/`,
   group: (id) => `/sessions/group-sessions/${id}/notes/`,
+  recording: (id) => `/courses/recordings/${id}/notes/`,
 };
 
 // Opened from a past/history-tab "Notes" button — lets a participant re-read

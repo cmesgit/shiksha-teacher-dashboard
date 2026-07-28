@@ -6,17 +6,30 @@ import "./ScheduleSessionModal.css";
 // Spec section 5: 440px modal, title + Subject/Batch 2-up + Date/Time 2-up,
 // Cancel + Schedule session (#7a1c1c) footer. No duration field in the spec —
 // the server defaults end_time to start_time + 60min.
-export default function ScheduleSessionModal({ initialSubjectId, onClose, onScheduled }) {
+//
+// Edit mode (editSession set): same shell, prefilled from the session being
+// rescheduled. Subject/batch are shown read-only — the backend's reschedule
+// endpoint only accepts title/description/start/end, since changing either
+// would make this a different class's timetable entry, not a reschedule of
+// this one. Duration is preserved from the original session rather than
+// reset to 60min, so a longer/shorter session keeps its length when moved.
+export default function ScheduleSessionModal({ initialSubjectId, editSession, onClose, onScheduled }) {
+  const isEdit = Boolean(editSession);
   const [subjects, setSubjects] = useState([]);
   const [subjectId, setSubjectId] = useState(initialSubjectId || "");
   const [batches, setBatches] = useState([]);
   const [batchId, setBatchId] = useState("");
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [title, setTitle] = useState(editSession?.title || "");
+  const [date, setDate] = useState(
+    editSession ? new Date(editSession.start_time).toISOString().slice(0, 10) : ""
+  );
+  const [time, setTime] = useState(
+    editSession ? new Date(editSession.start_time).toTimeString().slice(0, 5) : ""
+  );
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (isEdit) return; // subject/batch are fixed in edit mode — nothing to pick
     api
       .get("/courses/teacher/my-classes/")
       .then((res) => {
@@ -36,6 +49,7 @@ export default function ScheduleSessionModal({ initialSubjectId, onClose, onSche
   }, []);
 
   useEffect(() => {
+    if (isEdit) return;
     if (!subjectId) { setBatches([]); setBatchId(""); return; }
     let cancelled = false;
     api
@@ -50,14 +64,14 @@ export default function ScheduleSessionModal({ initialSubjectId, onClose, onSche
         if (!cancelled) { setBatches([]); setBatchId(""); }
       });
     return () => { cancelled = true; };
-  }, [subjectId]);
+  }, [subjectId, isEdit]);
 
   const submit = async () => {
     if (!title.trim() || !date || !time) {
       toast.error("Please fill in the session title, date, and time.");
       return;
     }
-    if (!subjectId || !batchId) {
+    if (!isEdit && (!subjectId || !batchId)) {
       toast.error("Please select a subject and batch.");
       return;
     }
@@ -67,26 +81,39 @@ export default function ScheduleSessionModal({ initialSubjectId, onClose, onSche
       toast.error("Please enter a valid date and time.");
       return;
     }
-    const end = new Date(start.getTime() + 60 * 60000);
+    const durationMs = isEdit
+      ? new Date(editSession.end_time) - new Date(editSession.start_time)
+      : 60 * 60000;
+    const end = new Date(start.getTime() + durationMs);
 
     setSubmitting(true);
     try {
-      await api.post("/livestream/sessions/", {
-        title: title.trim(),
-        description: "",
-        subject_id: subjectId,
-        batch_id: batchId,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-      });
-      toast.success("Session scheduled!");
+      if (isEdit) {
+        await api.patch(`/livestream/sessions/${editSession.id}/reschedule/`, {
+          title: title.trim(),
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+        });
+        toast.success("Session updated!");
+      } else {
+        await api.post("/livestream/sessions/", {
+          title: title.trim(),
+          description: "",
+          subject_id: subjectId,
+          batch_id: batchId,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+        });
+        toast.success("Session scheduled!");
+      }
       onScheduled();
     } catch (err) {
       const msg =
         err.response?.data?.detail ||
         err.response?.data?.non_field_errors?.[0] ||
         err.response?.data?.start_time?.[0] ||
-        "Failed to schedule session.";
+        err.response?.data?.end_time?.[0] ||
+        (isEdit ? "Failed to update session." : "Failed to schedule session.");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -104,8 +131,12 @@ export default function ScheduleSessionModal({ initialSubjectId, onClose, onSche
             </svg>
           </div>
           <div>
-            <h2 className="scheduleModal__title">Schedule a live session</h2>
-            <p className="scheduleModal__sub">Students in the selected batch will be notified and can join at the scheduled time.</p>
+            <h2 className="scheduleModal__title">{isEdit ? "Edit live session" : "Schedule a live session"}</h2>
+            <p className="scheduleModal__sub">
+              {isEdit
+                ? "Students in this batch will see the updated time."
+                : "Students in the selected batch will be notified and can join at the scheduled time."}
+            </p>
           </div>
         </div>
 
@@ -120,28 +151,41 @@ export default function ScheduleSessionModal({ initialSubjectId, onClose, onSche
           />
         </div>
 
-        <div className="scheduleModal__row">
-          <div className="scheduleModal__field">
-            <label className="scheduleModal__label">Subject</label>
-            <select className="scheduleModal__input" value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+        {isEdit ? (
+          <div className="scheduleModal__row">
+            <div className="scheduleModal__field">
+              <label className="scheduleModal__label">Subject</label>
+              <input className="scheduleModal__input" value={editSession.subject_name || ""} disabled />
+            </div>
+            <div className="scheduleModal__field">
+              <label className="scheduleModal__label">Batch</label>
+              <input className="scheduleModal__input" value={editSession.batch_name || "All batches"} disabled />
+            </div>
           </div>
-          <div className="scheduleModal__field">
-            <label className="scheduleModal__label">Batch</label>
-            <select className="scheduleModal__input" value={batchId} onChange={(e) => setBatchId(e.target.value)} disabled={!batches.length}>
-              {batches.length === 0 ? (
-                <option value="">No batches</option>
-              ) : (
-                batches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
-                ))
-              )}
-            </select>
+        ) : (
+          <div className="scheduleModal__row">
+            <div className="scheduleModal__field">
+              <label className="scheduleModal__label">Subject</label>
+              <select className="scheduleModal__input" value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="scheduleModal__field">
+              <label className="scheduleModal__label">Batch</label>
+              <select className="scheduleModal__input" value={batchId} onChange={(e) => setBatchId(e.target.value)} disabled={!batches.length}>
+                {batches.length === 0 ? (
+                  <option value="">No batches</option>
+                ) : (
+                  batches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
+                  ))
+                )}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="scheduleModal__row">
           <div className="scheduleModal__field">
@@ -159,7 +203,7 @@ export default function ScheduleSessionModal({ initialSubjectId, onClose, onSche
             Cancel
           </button>
           <button type="button" className="scheduleModal__btn scheduleModal__btn--primary" disabled={submitting} onClick={submit}>
-            {submitting ? "Scheduling…" : "Schedule session"}
+            {submitting ? (isEdit ? "Saving…" : "Scheduling…") : (isEdit ? "Save changes" : "Schedule session")}
           </button>
         </div>
       </div>

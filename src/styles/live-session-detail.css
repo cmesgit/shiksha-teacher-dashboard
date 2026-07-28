@@ -1,0 +1,62 @@
+/* live-session-detail.css — the one screen (LiveSessionDetail) that was
+   built on raw dark-slate inline styles instead of the shared Academy design
+   tokens. Stat-tile shape matches quiz-submission-view.css's qsv-stat* (same
+   idea: a small grid of number+label tiles), reproduced here rather than
+   imported so this screen doesn't couple to an unrelated one. */
+
+.lsd-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+.lsd-back-btn:hover { color: var(--ink); }
+
+.lsd-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.lsd-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-page-title);
+  letter-spacing: -.4px;
+  color: var(--ink);
+}
+.lsd-sub { margin: 0; font-size: var(--fs-body); color: var(--ink-faint); }
+
+.lsd-statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.lsd-statTile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+  padding: 14px 16px;
+}
+.lsd-statValue { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-stat); color: var(--ink); }
+.lsd-statLabel { font-size: var(--fs-small); color: var(--ink-muted); margin-top: 3px; }
+
+.lsd-sectionTitle {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+.lsd-section + .lsd-section { margin-top: 20px; }
+
+.lsd-recFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lsd-recBody { display: flex; align-items: center; gap: 14px; }
+.lsd-recThumb { width: 96px; height: 56px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.lsd-recTitle { margin: 0 0 4px; font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.lsd-recStatus { margin: 0; font-size: 12px; color: var(--ink-muted); }

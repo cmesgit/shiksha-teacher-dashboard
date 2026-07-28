@@ -58,7 +58,7 @@ const STATUS_CONFIG = {
   CANCELLED: { label: "Cancelled", color: "#dc2626", bg: "#fef2f2" },
 };
 
-function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, onCancel, onEnd, menuOpen, onToggleMenu }) {
+function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, onOpenDetail, onEdit, onCancel, onEnd, menuOpen, onToggleMenu }) {
   void tick;
 
   const status = session.computed_status;
@@ -90,9 +90,20 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
 
   const canManage = ["SCHEDULED", "WAITING_FOR_TEACHER", "LIVE", "PAUSED", "RECONNECTING"].includes(status);
   const isLive = ["LIVE", "PAUSED", "RECONNECTING"].includes(status);
+  // Mirrors the backend's own reschedule gate (livestream/views.py
+  // reschedule_live_session): only while still SCHEDULED — once a session is
+  // waiting/live/paused it's effectively already started, so editing its
+  // time no longer makes sense.
+  const canEdit = status === "SCHEDULED";
 
   return (
-    <div className="liveSessionRow">
+    <div
+      className="liveSessionRow"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenDetail(session)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenDetail(session); } }}
+    >
       <div className="liveSessionRow__time">
         <strong>{fmtClockTime(start)}</strong>
         <span className="liveSessionRow__day">{dayLabel(start)}</span>
@@ -110,10 +121,11 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
       </div>
 
       {/* The design's row carries ONE visible action (dc.html's Live Sessions
-          row template). Cancel/End/Notes sit behind the overflow menu,
+          row template). Cancel/End/Edit/Notes sit behind the overflow menu,
           reusing the same .ac-menuWrap "Manage" pattern Assignments already
-          uses for the same reason. */}
-      <div className="liveSessionRow__actions">
+          uses for the same reason. Row click (above) opens the detail page;
+          stopPropagation here keeps that from also firing on every button. */}
+      <div className="liveSessionRow__actions" onClick={(e) => e.stopPropagation()}>
         {status === "COMPLETED" ? (
           <button
             type="button"
@@ -151,6 +163,24 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
             </button>
             {menuOpen && (
               <div className="ac-menu" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="ac-menu__item"
+                  onClick={() => { onToggleMenu(null); onOpenDetail(session); }}
+                >
+                  View details
+                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="ac-menu__item"
+                    onClick={() => { onToggleMenu(null); onEdit(session); }}
+                  >
+                    Edit / reschedule
+                  </button>
+                )}
                 {canManage && (
                   <button
                     type="button"
@@ -192,6 +222,7 @@ export default function LiveSessions() {
   const [pastSort, setPastSort] = useState("newest");
   const [tick, setTick] = useState(0);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [editSession, setEditSession] = useState(null);
   const [notesSession, setNotesSession] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
   const wsRefs = useRef([]);
@@ -342,11 +373,14 @@ export default function LiveSessions() {
 
   const handleOpenNotes = (session) => setNotesSession(session);
 
+  const handleOpenDetail = (session) => navigate(`/teacher/live-sessions/${session.id}/detail`);
+
   const handleScheduled = () => {
     setShowSchedule(false);
-    // The create endpoint's response is minimal ({id, room, status}); the WS
-    // broadcast it triggers will normally add the full row to `sessions` on
-    // its own — this is just a fallback in case that message is delayed.
+    setEditSession(null);
+    // The create/reschedule endpoints' responses are minimal; the WS
+    // broadcast they trigger will normally update `sessions` on its own —
+    // this is just a fallback in case that message is delayed.
     fetchSessions();
   };
 
@@ -463,6 +497,8 @@ export default function LiveSessions() {
                 onStart={handleStart}
                 onOpenRecording={handleOpenRecording}
                 onOpenNotes={handleOpenNotes}
+                onOpenDetail={handleOpenDetail}
+                onEdit={setEditSession}
                 onCancel={handleCancel}
                 onEnd={handleEnd}
                 menuOpen={rowMenu === s.id}
@@ -477,6 +513,14 @@ export default function LiveSessions() {
         <ScheduleSessionModal
           initialSubjectId={subjectId}
           onClose={() => setShowSchedule(false)}
+          onScheduled={handleScheduled}
+        />
+      )}
+
+      {editSession && (
+        <ScheduleSessionModal
+          editSession={editSession}
+          onClose={() => setEditSession(null)}
           onScheduled={handleScheduled}
         />
       )}
