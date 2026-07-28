@@ -12,6 +12,24 @@ const titleCase = (s) =>
 
 const DASH_ROOTS = new Set(["/teacher/dashboard", "/teacher/expert"]);
 
+// CONTENT screens under /teacher/classes/:subjectId/<seg> are also mounted as
+// flat top-level routes (see TeacherRoutes.jsx's "CONTENT nav items are flat"
+// comment) and the sidebar now links straight to those flat routes. A teacher
+// arriving that way never visited Classes, so a literal path-derived crumb
+// ("Classes" → /teacher/classes) is misleading — clicking it lands on the
+// unrelated Classes list instead of anything quiz/assignment/etc-related.
+// Collapse "Classes" + this segment into one crumb pointing at the real flat
+// list instead. `students` is deliberately excluded: the per-class list
+// (StudentsList) is a genuinely different screen from the flat one
+// (AllStudents), not a flattened duplicate, so its nested ancestry is real.
+const FLATTENED_CONTENT = {
+  assignments: { label: "Assignments", to: "/teacher/assignments" },
+  quizzes: { label: "Quizzes", to: "/teacher/quizzes" },
+  "study-materials": { label: "Study Materials", to: "/teacher/study-materials" },
+  "session-recordings": { label: "Recordings", to: "/teacher/recordings" },
+  "live-sessions": { label: "Live Sessions", to: "/teacher/live-sessions" },
+};
+
 export default function Breadcrumbs() {
   const { pathname } = useLocation();
   const { isAuthenticated, context, teacherInfo, activeProfile } = useAuth();
@@ -22,7 +40,15 @@ export default function Breadcrumbs() {
   const segs = pathname.split("/").filter(Boolean);
   const crumbs = [];
   let acc = "";
-  for (const seg of segs) {
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i];
+    if (seg === "classes" && isId(segs[i + 1]) && FLATTENED_CONTENT[segs[i + 2]]) {
+      const flat = FLATTENED_CONTENT[segs[i + 2]];
+      acc = `/teacher/classes/${segs[i + 1]}/${segs[i + 2]}`;
+      crumbs.push({ label: flat.label, to: flat.to });
+      i += 2; // consumed :subjectId and the content segment too
+      continue;
+    }
     acc += `/${seg}`;
     if (seg === "teacher" || isId(seg)) continue; // /teacher/… is the app root
     crumbs.push({ label: titleCase(seg), to: acc });

@@ -94,7 +94,7 @@ export default function QuizSubmissionView() {
         <button
           type="button"
           className="qsv-back-btn"
-          onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes/${quizId}`)}
+          onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}
         >
           <IoChevronBack size={14} /> Back to Quizzes
         </button>
@@ -126,7 +126,7 @@ export default function QuizSubmissionView() {
       <button
         type="button"
         className="qsv-back-btn"
-        onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes/${quizId}`)}
+        onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}
       >
         <IoChevronBack size={14} /> Back to Quizzes
       </button>
