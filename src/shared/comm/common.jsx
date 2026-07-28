@@ -21,7 +21,15 @@ export function initials(name) {
 // Small, deterministic hash -> one of a fixed palette, so the same person
 // always gets the same "no photo" avatar color instead of a random one
 // re-rolling on every render.
-const AV_COLORS = ["#b3402e", "#1dcaab", "#ff8f01", "#6b2410", "#2c6e8f", "#7a4fb5"];
+//
+// dc.html's own Messages screenshots show every avatar as a single flat
+// blue (#425f7f) — the design doesn't hash per person at all. A busy inbox
+// telling people apart by color is real, valuable functionality the mock
+// never needed (it only ever shows 2-3 fixed contacts), so that's kept;
+// only the 6 hex values themselves are swapped for the app's own subject-
+// chip ink palette (tokens.css --subj-N-ink) so they read as part of this
+// app's brand instead of the old terracotta/teal/orange set.
+const AV_COLORS = ["#13899b", "#1d4ed8", "#c2701c", "#2f9d42", "#7a1c1c", "#7c3aed"];
 export function avatarColor(seed) {
   let h = 0;
   for (let i = 0; i < (seed || "").length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;

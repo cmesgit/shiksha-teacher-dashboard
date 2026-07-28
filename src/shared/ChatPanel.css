@@ -415,3 +415,41 @@
 @media (prefers-reduced-motion: reduce) {
   .cc-spinner, .cc-skel-avatar, .cc-skel-line, .cc-msg-highlight .cc-bubble, .cc-bubble-file-pending { animation: none; }
 }
+
+/* ── Academy theme override ────────────────────────────────────────────
+   Applied via <ChatPanel theme="academy" /> on both apps' real Messages
+   screens (pages/Chat.jsx) — NOT on SkillInbox, which never passes a
+   theme prop and keeps the original terracotta→teal look the rest of this
+   file still defaults to.
+
+   Values confirmed against Academy Dashboard.dc.html's Messages screen
+   (data-screen-label="Messages") AND its own reference screenshots
+   (student-12-messages.png / teacher-20-messages.png) — the design does
+   NOT role-tint this screen the way nearly everywhere else in the app is
+   role-tinted: bubbles/send button/avatars are the same flat blue
+   (#425f7f) in both screenshots, even the teacher one. Only the icon rail
+   below (which the design has no equivalent of at all) is themed to the
+   viewing app's own real sidebar color, for visual continuity with the
+   rest of that app rather than a fixed literal. */
+.cc-theme-academy {
+  --cc-grad: #425f7f;
+  --cc-border: #e5eaed;
+  --cc-bg-soft: #f9fafb;
+  --cc-ink: #1a2c33;
+  --cc-accent: #13899b;
+  --cc-teal: #13899b;
+  --cc-danger: #dc2626;
+  --cc-font-head: 'Montserrat', sans-serif;
+  --cc-font-body: 'Poppins', system-ui, sans-serif;
+  border-color: var(--cc-border);
+}
+.cc-theme-academy .cc-sidebar { background: var(--side-bg, #425f7f); border-right: 1px solid rgba(0,0,0,.12); }
+.cc-theme-academy .cc-sidebar-item-active { background: rgba(255,255,255,.18); }
+.cc-theme-academy .cc-card-active { background: #eef1f2; }
+.cc-theme-academy .cc-bubble { background: #fff; border: 1px solid var(--cc-border); color: var(--cc-ink); }
+.cc-theme-academy .cc-msg-mine .cc-bubble { background: var(--cc-grad); border-color: var(--cc-grad); color: #fff; }
+.cc-theme-academy .cc-search-bar { background: #f9fafb; }
+.cc-theme-academy .cc-card-unread-badge,
+.cc-theme-academy .cc-count-pill { background: var(--cc-accent); }
+.cc-theme-academy .cc-muted-icon,
+.cc-theme-academy .cc-announcement-tag { color: var(--cc-accent); }
