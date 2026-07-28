@@ -63,7 +63,7 @@ export default function QuizStudentAttemptsView() {
     return () => { cancelled = true; };
   }, [quizId, studentId]);
 
-  const goBack = () => navigate(`/teacher/classes/${subjectId}/quizzes/${quizId}/submissions`);
+  const goBack = () => navigate(-1);
 
   if (loading) {
     return <div className="ac-screen"><LoadingState label="Loading attempts" /></div>;

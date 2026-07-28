@@ -81,7 +81,7 @@ export default function QuizDraftPreview() {
   if (loading) return <LoadingState label="Loading preview" />;
   if (fetchError) return (
     <div className="qdp-page">
-      <button className="qdp-back-btn" onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}>
+      <button className="qdp-back-btn" onClick={() => navigate(-1)}>
         <IoChevronBack /> Back to Quizzes
       </button>
       <div className="qdp-fetch-error">⚠️ {fetchError}</div>

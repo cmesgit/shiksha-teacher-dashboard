@@ -56,7 +56,7 @@ export default function QuizView() {
     <div className="quiz-view-page">
       <button
         className="qv-back-btn"
-        onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}
+        onClick={() => navigate(-1)}
       >
         <IoChevronBack /> Back
       </button>

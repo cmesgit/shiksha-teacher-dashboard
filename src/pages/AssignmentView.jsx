@@ -45,9 +45,7 @@ export default function AssignmentView() {
       
       <button
         className="av-back-btn"
-        onClick={() =>
-          navigate(`/teacher/classes/${subjectId}/assignments`)
-        }
+        onClick={() => navigate(-1)}
       >
         <IoChevronBack /> Back
       </button>
