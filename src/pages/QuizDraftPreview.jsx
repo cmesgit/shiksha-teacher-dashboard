@@ -118,6 +118,14 @@ export default function QuizDraftPreview() {
           {publishError && <span className="qdp-publish-error">{publishError}</span>}
           {canSubmit && (
             <button
+              className="qdp-back-btn"
+              onClick={() => navigate(`/teacher/quizzes/${quizId}/edit`)}
+            >
+              Edit quiz
+            </button>
+          )}
+          {canSubmit && (
+            <button
               className="qdp-publish-btn"
               onClick={handlePublish}
               disabled={publishing || questions.length === 0}

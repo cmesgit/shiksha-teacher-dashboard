@@ -73,6 +73,7 @@ export default function Quizzes() {
   const [error, setError] = useState(null);
   const [publishingId, setPublishingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   // Which card's overflow menu is open (the design's card footer has room
   // for one button, so the rest live behind this).
@@ -257,6 +258,19 @@ export default function Quizzes() {
       }
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleDuplicate = async (quiz) => {
+    setDuplicatingId(quiz.id);
+    try {
+      const res = await api.post(`/teacher/quizzes/${quiz.id}/duplicate/`);
+      toast.success("Quiz duplicated — editing the copy now.");
+      navigate(`/teacher/quizzes/${res.data.id}/edit`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to duplicate quiz.");
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -510,6 +524,35 @@ export default function Quizzes() {
                           >
                             {quiz.is_published ? "View quiz" : "Preview quiz"}
                           </button>
+                          {canPublish && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="ac-menu__item"
+                              onClick={() => { setOpenMenu(null); navigate(`/teacher/quizzes/${quiz.id}/edit`); }}
+                            >
+                              Edit quiz
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="ac-menu__item"
+                            onClick={() => { setOpenMenu(null); handleDuplicate(quiz); }}
+                            disabled={duplicatingId === quiz.id}
+                          >
+                            {duplicatingId === quiz.id ? "Duplicating…" : "Duplicate quiz"}
+                          </button>
+                          {quiz.is_published && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="ac-menu__item"
+                              onClick={() => { setOpenMenu(null); navigate(`/teacher/quizzes/${quiz.id}/analytics`); }}
+                            >
+                              Analytics
+                            </button>
+                          )}
                           <button
                             type="button"
                             role="menuitem"

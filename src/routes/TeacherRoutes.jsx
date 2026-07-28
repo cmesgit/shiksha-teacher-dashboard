@@ -25,7 +25,8 @@ import CreateAssignment from "../pages/CreateAssignment";
 import AssignmentView from "../pages/AssignmentView";
 import SubmissionView from "../pages/SubmissionView";
 import Quizzes from "../pages/Quizzes";
-import CreateQuiz from "../pages/CreateQuiz";
+import QuizBuilder from "../pages/QuizBuilder";
+import QuizAnalytics from "../pages/QuizAnalytics";
 import QuizBank from "../pages/QuizBank";
 import QuizView from "../pages/QuizView";
 import QuizDraftPreview from "../pages/QuizDraftPreview";
@@ -188,10 +189,12 @@ export default function TeacherRoutes() {
         {/* A quiz's own child screens — flat, matching the list's root. Create
             stays subject-scoped (a new quiz needs a subject up front, same as
             Create Assignment); the rest need only quizId/studentId/attemptId. */}
-        <Route path="quizzes/create/:subjectId" element={<CreateQuiz />} />
+        <Route path="quizzes/create/:subjectId" element={<QuizBuilder />} />
+        <Route path="quizzes/:quizId/edit" element={<QuizBuilder />} />
         <Route path="quizzes/:quizId/draft" element={<QuizDraftPreview />} />
         <Route path="quizzes/:quizId" element={<QuizView />} />
         <Route path="quizzes/:quizId/submissions" element={<QuizSubmissionView />} />
+        <Route path="quizzes/:quizId/analytics" element={<QuizAnalytics />} />
         <Route path="quizzes/:quizId/student/:studentId" element={<QuizStudentAttemptsView />} />
         <Route path="quizzes/:quizId/review/:attemptId" element={<QuizReviewView />} />
 
