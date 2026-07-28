@@ -1,18 +1,46 @@
 /**
  * FILE: teacher_ui/src/pages/PrivateSessionDetail.jsx
- * DEPLOYMENT READY — field-name agnostic via norm()
  *
- * FIX: Moved isApproved/isOngoing/isPending/isProposed declarations
- *      ABOVE `startable` to fix TDZ (Temporal Dead Zone) error:
- *      "Cannot access 'ae' before initialization"
+ * Private Session detail (teacher). The design handoff has no mockup for
+ * this page — only the list, requests, and reschedule-modal screens (README
+ * section 6) — so this isn't a pixel-matched screen; it's re-skinned onto
+ * the same tokens/shadows/radii as the rest of the redesigned app (shared
+ * .ac-tag for the status chip, .ac-btn for actions, .ac-tabs for the
+ * cross-navigation tab bar) rather than left on the old bespoke tps__ look.
+ *
+ * All the real per-status action logic is unchanged from before this pass:
+ * isPending/isProposed/isApproved/isOngoing/isCompleted still gate exactly
+ * the same actions they did (see the "FIX: TDZ" comment below, kept because
+ * the bug it fixes is still real). What changed is presentation:
+ *   - Confirm/Start/End/Accept/Accept-session are plain yes/no, so they now
+ *     use the shared <ConfirmDialog /> (same component Assignments' delete
+ *     confirm uses) instead of a hand-rolled tps__modal.
+ *   - Decline and Reschedule need real form fields (a reason textarea; a
+ *     date+time pair), so they use the new shared <ReasonModal />box and
+ *     <RescheduleModal /> from components/PrivateSessionModals.jsx — the
+ *     exact "Propose a new time" modal from the teacher-17 screenshot, also
+ *     used by PrivateSessionsDashboard.jsx's Requests-tab row action so
+ *     there's one implementation, not two.
+ *   - The old page rendered every action twice — once in the header actions
+ *     row, once again as a giant centered CTA at the bottom of the summary
+ *     column (isApproved: header "Start Session" + a second bottom "Start
+ *     Session" button; isPending: same duplication for "Accept Session").
+ *     Both pairs called the exact same setModal(...), so the bottom copy was
+ *     pure visual duplication, not a second capability — it's gone; the
+ *     header action is the only one now.
  */
 
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
 import privateSessionService from "../api/privateSessionService";
+import "../styles/academyScreens.css";
 import "../styles/privateSessions.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { RescheduleModal, ReasonModal } from "../components/PrivateSessionModals";
 import NotesViewModal from "../components/live/NotesViewModal";
+import { statusLabel, statusTone } from "../utils/sessionStatus";
 
 /* ── Normalize fields — handles both mock + real API shapes ── */
 function norm(s) {
@@ -62,24 +90,6 @@ function calcEnd(t, dur) {
   return `${eh % 12 || 12}:${String(em).padStart(2, "0")} ${eh >= 12 ? "p.m" : "a.m"}`;
 }
 
-function statusTitle(s) {
-  const map = {
-    approved: "UPCOMING", ongoing: "LIVE SESSION", pending: "PENDING",
-    needs_reconfirmation: "PROPOSED CHANGES", proposed_changes: "PROPOSED CHANGES",
-    completed: "COMPLETED", declined: "DECLINED",
-    cancelled: "CANCELLED", cancelled_by_student: "CANCELLED BY STUDENT",
-    cancelled_by_teacher: "CANCELLED BY TEACHER",
-    teacher_no_show: "TEACHER NO-SHOW", student_no_show: "STUDENT NO-SHOW",
-    expired: "EXPIRED", withdrawn: "REQUEST WITHDRAWN",
-  };
-  return map[s] || s?.toUpperCase() || "";
-}
-
-function canStart() {
-  // Teachers can start the session at any time once approved
-  return true;
-}
-
 function minsUntilStart(date, time) {
   if (!date || !time) return null;
   try {
@@ -105,13 +115,8 @@ export default function PrivateSessionDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null); // cancel | start | reschedule | decline | accept | accept-session | end
   const [showNotes, setShowNotes] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [declineReason, setDeclineReason] = useState("");
-  const [resTime, setResTime] = useState("");
-  const [resDuration, setResDuration] = useState("");
-  const [resNote, setResNote] = useState("");
   const [busy, setBusy] = useState(false);
 
   const pathTab = loc.pathname.includes("/request/") ? "requests"
@@ -122,7 +127,7 @@ export default function PrivateSessionDetail() {
   // Tick for start button timer
   const [, setTick] = useState(0);
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 30000);
+    const iv = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(iv);
   }, []);
 
@@ -142,38 +147,35 @@ export default function PrivateSessionDetail() {
     load();
   }, [id]);
 
+  const BackButton = () => (
+    <div className="psd__backRow">
+      <button type="button" className="psd__back" onClick={goBack}>&lsaquo; Back to Sessions</button>
+    </div>
+  );
+
   if (loading) return (
-    <div className="tps__detail-wrapper">
-      <div className="tps__sidebar-back">
-        <button className="tps__back" onClick={goBack}>‹ Back to Sessions</button>
-      </div>
+    <div className="psd__wrapper">
+      <BackButton />
       <LoadingState label="Loading session details" />
     </div>
   );
   if (error) return (
-    <div className="tps__detail-wrapper">
-      <div className="tps__sidebar-back">
-        <button className="tps__back" onClick={goBack}>‹ Back to Sessions</button>
-      </div>
-      <div className="tps__page">
-        <p className="tps__empty" style={{ color: "#ef4444" }}>{error}</p>
-      </div>
+    <div className="psd__wrapper">
+      <BackButton />
+      <ErrorState message={error} />
     </div>
   );
   if (!session) return (
-    <div className="tps__detail-wrapper">
-      <div className="tps__sidebar-back">
-        <button className="tps__back" onClick={goBack}>‹ Back to Sessions</button>
-      </div>
-      <div className="tps__page">
-        <p className="tps__empty">Session not found.</p>
-      </div>
+    <div className="psd__wrapper">
+      <BackButton />
+      <EmptyState icon="calendar" title="Session not found" message="It may have been removed." />
     </div>
   );
 
   const s = norm(session);
 
-  // ✅ FIX: Declare status flags BEFORE they are used
+  // Declare status flags BEFORE they are used (TDZ fix from the original
+  // file — still real: `startable` reads isApproved).
   const isPending = s.status === "pending";
   const isProposed = s.status === "proposed_changes" || s.status === "needs_reconfirmation";
   const isApproved = s.status === "approved";
@@ -182,15 +184,23 @@ export default function PrivateSessionDetail() {
   const startable = isApproved;
   const mins = minsUntilStart(s._date, s._time);
 
-  async function doAction(fn) {
+  const timingLine = `${fmtTime(s._time)}${calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}`;
+
+  async function runAction(fn, successMsg) {
     setBusy(true);
-    try { await fn(); } catch (err) { console.error("Action failed:", err); }
-    setBusy(false);
-    setModal(null);
+    try {
+      await fn();
+      if (successMsg) toast.success(successMsg);
+      setModal(null);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "That didn't go through. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   /* participant names — handles both array of strings and array of objects */
-  const participantNames = (s._participants || []).map(p => {
+  const participantNames = (s._participants || []).map((p) => {
     if (typeof p === "string") return p;
     if (p.name) return p.name;
     if (p.student?.name) return p.student.name;
@@ -198,280 +208,192 @@ export default function PrivateSessionDetail() {
   });
 
   return (
-    <div className="tps__detail-wrapper">
-      <div className="tps__sidebar-back">
-        <button className="tps__back" onClick={goBack}>‹ Back to Sessions</button>
+    <div className="psd__wrapper">
+      <BackButton />
+
+      <div className="ac-tabs ac-tabs--tight" role="tablist" aria-label="Private session view">
+        <button type="button" role="tab" aria-selected={pathTab === "scheduled"} className={`ac-tab${pathTab === "scheduled" ? " is-active" : ""}`} onClick={() => nav("/teacher/private-sessions", { state: { tab: "scheduled", refresh: true } })}>Scheduled</button>
+        <button type="button" role="tab" aria-selected={pathTab === "requests"} className={`ac-tab${pathTab === "requests" ? " is-active" : ""}`} onClick={() => nav("/teacher/private-sessions", { state: { tab: "requests", refresh: true } })}>Requests</button>
+        <button type="button" role="tab" aria-selected={pathTab === "history"} className={`ac-tab${pathTab === "history" ? " is-active" : ""}`} onClick={() => nav("/teacher/private-sessions", { state: { tab: "history", refresh: true } })}>History</button>
       </div>
 
-      <div className="tps__tabs" style={{ marginBottom: 20 }}>
-        <button className={`tps__tab ${pathTab === "scheduled" ? "tps__tab--active" : ""}`} onClick={() => nav("/teacher/private-sessions", { state: { tab: "scheduled", refresh: true } })}>Scheduled</button>
-        <button className={`tps__tab ${pathTab === "requests" ? "tps__tab--active" : ""}`} onClick={() => nav("/teacher/private-sessions", { state: { tab: "requests", refresh: true } })}>Requests</button>
-        <button className={`tps__tab ${pathTab === "history" ? "tps__tab--active" : ""}`} onClick={() => nav("/teacher/private-sessions", { state: { tab: "history", refresh: true } })}>History</button>
-      </div>
-
-      <div className="tps__page">
-      <div className="tps__dheader">
-        <h2 className="tps__dstatus">
-          STATUS: {statusTitle(s.status)}
-          {isApproved && s._date && s._time && ` (${fmtDate(s._date)}) at ${fmtTime(s._time)}`}
-          {mins !== null && isApproved && mins > 0 && mins <= 20 && (
-            <span className="tps__countdown"> · Session Starting in {mins} Minutes</span>
-          )}
-        </h2>
-        <div className="tps__dactions">
-          {isOngoing && (
-            <button className="tps__abtn tps__abtn--primary" onClick={() => nav(`/teacher/private-session/live/${s.id}`)}>🔴 Join Live Session</button>
-          )}
-          {isOngoing && (
-            <button className="tps__abtn tps__abtn--outline" onClick={() => setModal("end")}>End Session</button>
-          )}
-          {isApproved && (
-            <button className="tps__abtn tps__abtn--outline" onClick={() => setModal("cancel")}>Cancel Class</button>
-          )}
-          {isApproved && startable && (
-            <button className="tps__abtn tps__abtn--primary" onClick={() => setModal("start")}>Start Session</button>
-          )}
-          {isPending && (
-            <>
-              <button className="tps__abtn tps__abtn--accept" onClick={() => setModal("accept-session")}>Accept Session</button>
-              <button className="tps__abtn tps__abtn--primary" onClick={() => setModal("timing")}>Set Timing</button>
-              <button className="tps__abtn tps__abtn--outline" onClick={() => setModal("decline")}>Decline</button>
-            </>
-          )}
-          {isProposed && (
-            <>
-              <button className="tps__abtn tps__abtn--primary" onClick={() => setModal("accept")}>Accept</button>
-              <button className="tps__abtn tps__abtn--outline" onClick={() => setModal("decline")}>Decline</button>
-            </>
-          )}
-          {isCompleted && (
-            <button className="tps__abtn tps__abtn--outline" onClick={() => setShowNotes(true)}>My Notes</button>
-          )}
-        </div>
-      </div>
-
-      <div className="tps__dbody">
-        <div className="tps__dleft">
-          <h3>Summary:</h3>
-          <table className="tps__dtable"><tbody>
-            <tr><td>Course:</td><td>{s.course}</td></tr>
-            <tr><td>Subject:</td><td>{s.subject}</td></tr>
-            {s.topic && <tr><td>Topic:</td><td>{s.topic}</td></tr>}
-            <tr><td>Teacher:</td><td>{s._teacher}</td></tr>
-            <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-            <tr><td>{isPending || isProposed ? "Time Slot:" : "Timing:"}</td><td>{fmtTime(s._time)}{calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}</td></tr>
-            <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-          </tbody></table>
-
-          {s.note && (<><h4>Student's Note:</h4><div className="tps__note">{s.note}</div></>)}
-          {s.teacher_note && (<><h4>Teacher's Note:</h4><div className="tps__note tps__note--teacher">{s.teacher_note}</div></>)}
-          {s.reschedule_note && (<><h4>Reschedule Note:</h4><div className="tps__note tps__note--teacher">{s.reschedule_note}</div></>)}
-          {s.cancel_reason && (<><h4>Cancellation Reason:</h4><div className="tps__note tps__note--cancel">{s.cancel_reason}</div></>)}
-
-          {isApproved && (
-            <div className="tps__start-wrap">
-              <button
-                className="tps__start-btn"
-                onClick={() => setModal("start")}
-              >
-                ▶ Start Session
-              </button>
-            </div>
-          )}
-
-          {isPending && (
-            <div className="tps__accept-wrap">
-              <button
-                className="tps__accept-btn"
-                onClick={() => setModal("accept-session")}
-              >
-                ✓ Accept Session
-              </button>
-            </div>
-          )}
+      <div className="psd__page">
+        <div className="psd__header">
+          <h2 className="psd__status">
+            <span className={`ac-tag ac-tag--${statusTone(s.status)}`}>{statusLabel(s.status)}</span>
+            {isApproved && s._date && s._time && (
+              <span className="psd__statusWhen">{fmtDate(s._date)} at {fmtTime(s._time)}</span>
+            )}
+            {mins !== null && isApproved && mins > 0 && mins <= 20 && (
+              <span className="psd__countdown">Starting in {mins} minutes</span>
+            )}
+          </h2>
+          <div className="psd__actions">
+            {isOngoing && (
+              <button type="button" className="ac-btn ac-btn--primary" onClick={() => nav(`/teacher/private-session/live/${s.id}`)}>Join Live Session</button>
+            )}
+            {isOngoing && (
+              <button type="button" className="ac-btn ac-btn--danger" onClick={() => setModal("end")}>End Session</button>
+            )}
+            {isApproved && (
+              <button type="button" className="ac-btn ac-btn--danger" onClick={() => setModal("cancel")}>Cancel Class</button>
+            )}
+            {isApproved && startable && (
+              <button type="button" className="ac-btn ac-btn--success" onClick={() => setModal("start")}>Start Session</button>
+            )}
+            {isPending && (
+              <>
+                <button type="button" className="ac-btn ac-btn--success" onClick={() => setModal("accept-session")}>Accept Session</button>
+                <button type="button" className="ac-btn ac-btn--warning" onClick={() => setModal("reschedule")}>Reschedule</button>
+                <button type="button" className="ac-btn ac-btn--danger" onClick={() => setModal("decline")}>Decline</button>
+              </>
+            )}
+            {isProposed && (
+              <>
+                <button type="button" className="ac-btn ac-btn--primary" onClick={() => setModal("accept")}>Accept</button>
+                <button type="button" className="ac-btn ac-btn--danger" onClick={() => setModal("decline")}>Decline</button>
+              </>
+            )}
+            {isCompleted && (
+              <button type="button" className="ac-btn" onClick={() => setShowNotes(true)}>My Notes</button>
+            )}
+          </div>
         </div>
 
-        <div className="tps__dright">
-          <div className="tps__gbox">
-            <h3>Group Strength: {s._groupSize}</h3>
-            {participantNames.length > 0
-              ? participantNames.map((p, i) => <p key={i} className="tps__gname">{p}</p>)
-              : <p className="tps__gname" style={{ opacity: 0.5 }}>No participants yet</p>}
+        <div className="psd__body">
+          <div className="psd__left">
+            <h3>Summary</h3>
+            <table className="psd__table"><tbody>
+              <tr><td>Course:</td><td>{s.course}</td></tr>
+              <tr><td>Subject:</td><td>{s.subject}</td></tr>
+              {s.topic && <tr><td>Topic:</td><td>{s.topic}</td></tr>}
+              <tr><td>Teacher:</td><td>{s._teacher}</td></tr>
+              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
+              <tr><td>{isPending || isProposed ? "Time slot:" : "Timing:"}</td><td>{timingLine}</td></tr>
+              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
+            </tbody></table>
+
+            {s.note && (<><h4>Student&rsquo;s note</h4><div className="psd__note">{s.note}</div></>)}
+            {s.teacher_note && (<><h4>Teacher&rsquo;s note</h4><div className="psd__note psd__note--info">{s.teacher_note}</div></>)}
+            {s.reschedule_note && (<><h4>Reschedule note</h4><div className="psd__note psd__note--info">{s.reschedule_note}</div></>)}
+            {s.cancel_reason && (<><h4>Cancellation reason</h4><div className="psd__note psd__note--danger">{s.cancel_reason}</div></>)}
+          </div>
+
+          <div className="psd__right">
+            <div className="psd__groupBox">
+              <h3>Group strength: {s._groupSize}</h3>
+              {participantNames.length > 0
+                ? participantNames.map((p, i) => <p key={i} className="psd__gname">{p}</p>)
+                : <p className="psd__gname" style={{ opacity: 0.5 }}>No participants yet</p>}
+            </div>
           </div>
         </div>
       </div>
-      </div>{/* end tps__page */}
 
       {/* ══ MODALS ══ */}
 
       {modal === "cancel" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>Cancel Session</h3>
-            <table className="tps__minfo"><tbody>
-              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-              <tr><td>Time:</td><td>{fmtTime(s._time)}{calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}</td></tr>
-              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-            </tbody></table>
-            <h4>Reason for Cancellation:</h4>
-            <textarea className="tps__mtxt" value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="A family emergency has come up..." />
-            <p className="tps__mwarn"><strong>Note:</strong> This will cancel the session and notify the students.</p>
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--pri" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.cancelSession(s.id, cancelReason);
-                goBack();
-              })}>{busy ? "..." : "Proceed"}</button>
-            </div>
-          </div>
-        </div>
+        <ReasonModal
+          session={s}
+          title="Cancel session"
+          sub={`This will cancel the ${fmtDate(s._date)} session and notify the student${s._groupSize > 1 ? "s" : ""}.`}
+          placeholder="A family emergency has come up…"
+          confirmLabel="Cancel session"
+          tone="danger"
+          busy={busy}
+          onClose={() => setModal(null)}
+          onSubmit={(reason) => runAction(async () => {
+            await privateSessionService.teacherCancelSession(s.id, reason);
+            goBack();
+          })}
+        />
       )}
 
-      {modal === "start" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>Start Session?</h3>
-            <table className="tps__minfo"><tbody>
-              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-              <tr><td>Time:</td><td>{fmtTime(s._time)}{calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}</td></tr>
-              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-            </tbody></table>
-            <p className="tps__mwarn"><strong>Note:</strong> Students will be notified immediately.</p>
-            {mins !== null && mins > 0 && (
-              <p className="tps__minfo-text">Starting {mins} minute{mins !== 1 ? "s" : ""} before scheduled time.</p>
-            )}
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--pri" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.startSession(s.id);
-                nav(`/teacher/private-session/live/${s.id}`);
-              })}>{busy ? "..." : "Confirm"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modal === "timing" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>Set Schedule Timing</h3>
-            <table className="tps__minfo"><tbody>
-              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-              <tr><td>Time:</td><td>{fmtTime(s._time)}</td></tr>
-              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-            </tbody></table>
-            <div className="tps__mfield">
-              <label>Timing:</label>
-              <input type="time" className="tps__minput-time" value={resTime} onChange={e => setResTime(e.target.value)} />
-            </div>
-            <div className="tps__mfield">
-              <label>Duration:</label>
-              <input type="number" className="tps__minput" value={resDuration} onChange={e => setResDuration(e.target.value)} placeholder={`${s._duration}`} />
-              <span style={{ color: "#b8cce0", marginLeft: 4 }}>minutes</span>
-            </div>
-            <div className="tps__mfield">
-              <label>Note (For Students):</label>
-              <textarea className="tps__mtxt" value={resNote} onChange={e => setResNote(e.target.value)} placeholder="Dear students, I've adjusted our session..." />
-            </div>
-            <p className="tps__mwarn"><strong>Note:</strong> This will send a confirmation request to the students.</p>
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--pri" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.rescheduleRequest(s.id, {
-                  new_date: s._date,
-                  new_time: resTime,
-                  duration: resDuration || s._duration,
-                  note: resNote,
-                });
-                goBack();
-              })}>{busy ? "..." : "Confirm"}</button>
-            </div>
-          </div>
-        </div>
+      {modal === "reschedule" && (
+        <RescheduleModal
+          session={s}
+          busy={busy}
+          onClose={() => setModal(null)}
+          onSubmit={({ new_date, new_time, note }) => runAction(async () => {
+            await privateSessionService.rescheduleRequest(s.id, { new_date, new_time, note });
+            goBack();
+          })}
+        />
       )}
 
       {modal === "decline" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>Decline Request</h3>
-            <table className="tps__minfo"><tbody>
-              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-              <tr><td>Time:</td><td>{fmtTime(s._time)}</td></tr>
-              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-            </tbody></table>
-            <h4>Reason for Declining:</h4>
-            <textarea className="tps__mtxt" value={declineReason} onChange={e => setDeclineReason(e.target.value)} placeholder="I'm unavailable at this time..." />
-            <p className="tps__mwarn"><strong>Note:</strong> This will decline the request and notify students.</p>
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--decline" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.declineRequest(s.id, declineReason);
-                goBack();
-              })}>{busy ? "..." : "Decline"}</button>
-            </div>
-          </div>
-        </div>
+        <ReasonModal
+          session={s}
+          title="Decline request"
+          sub={`${s._student || "This student"}'s request will be declined and they'll be notified.`}
+          placeholder="I'm unavailable at this time…"
+          confirmLabel="Decline"
+          tone="danger"
+          busy={busy}
+          onClose={() => setModal(null)}
+          onSubmit={(reason) => runAction(async () => {
+            await privateSessionService.declineRequest(s.id, reason);
+            goBack();
+          })}
+        />
       )}
 
-      {modal === "accept" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>Confirm Session</h3>
-            <table className="tps__minfo"><tbody>
-              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-              <tr><td>Timing:</td><td>{fmtTime(s._time)}{calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}</td></tr>
-              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-            </tbody></table>
-            <p className="tps__mwarn"><strong>Note:</strong> The session will be scheduled upon confirmation.</p>
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--pri" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.acceptRequest(s.id);
-                goBack();
-              })}>{busy ? "..." : "Confirm"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {modal === "accept-session" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>Accept Session Request</h3>
-            <table className="tps__minfo"><tbody>
-              <tr><td>Student:</td><td>{s._student}</td></tr>
-              <tr><td>Subject:</td><td>{s.subject}</td></tr>
-              <tr><td>Date:</td><td>{fmtDate(s._date)}</td></tr>
-              <tr><td>Time:</td><td>{fmtTime(s._time)}{calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}</td></tr>
-              <tr><td>Duration:</td><td>{s._durationLabel || `${s._duration} minutes`}</td></tr>
-              <tr><td>Group Size:</td><td>{s._groupSize} student{s._groupSize !== 1 ? "s" : ""}</td></tr>
-            </tbody></table>
-            <p className="tps__mwarn"><strong>Note:</strong> The session will be approved and scheduled. The student will be notified immediately.</p>
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--accept" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.acceptRequest(s.id);
-                nav("/teacher/private-sessions", { state: { tab: "scheduled", refresh: true } });
-              })}>{busy ? "Accepting..." : "Confirm"}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        dialog={modal === "start" ? {
+          title: "Start session?",
+          message: `${fmtDate(s._date)} · ${timingLine} · ${s._durationLabel || `${s._duration} minutes`}. Students will be notified immediately.${mins !== null && mins > 0 ? ` Starting ${mins} minute${mins !== 1 ? "s" : ""} before the scheduled time.` : ""}`,
+          confirmLabel: "Start session",
+          busy,
+          onConfirm: () => runAction(async () => {
+            await privateSessionService.startSession(s.id);
+            nav(`/teacher/private-session/live/${s.id}`);
+          }),
+        } : null}
+        onClose={() => setModal(null)}
+      />
 
-      {modal === "end" && (
-        <div className="tps__overlay" onClick={() => setModal(null)}>
-          <div className="tps__modal" onClick={e => e.stopPropagation()}>
-            <h3>End Session?</h3>
-            <p className="tps__mwarn"><strong>Note:</strong> This will end the session for all participants.</p>
-            <div className="tps__mbtns">
-              <button className="tps__mbtn tps__mbtn--sec" onClick={() => setModal(null)}>Back</button>
-              <button className="tps__mbtn tps__mbtn--pri" disabled={busy} onClick={() => doAction(async () => {
-                await privateSessionService.endSession(s.id);
-                goBack();
-              })}>{busy ? "..." : "End Session"}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        dialog={modal === "accept" ? {
+          title: "Confirm session",
+          message: `${fmtDate(s._date)} · ${timingLine} · ${s._durationLabel || `${s._duration} minutes`}. The session will be scheduled upon confirmation.`,
+          confirmLabel: "Confirm",
+          busy,
+          onConfirm: () => runAction(async () => {
+            await privateSessionService.acceptRequest(s.id);
+            goBack();
+          }, "Session confirmed."),
+        } : null}
+        onClose={() => setModal(null)}
+      />
+
+      <ConfirmDialog
+        dialog={modal === "accept-session" ? {
+          title: "Accept session request?",
+          message: `${s._student || "Student"} · ${s.subject || ""} · ${fmtDate(s._date)} · ${timingLine} · ${s._durationLabel || `${s._duration} minutes`} · ${s._groupSize} student${s._groupSize !== 1 ? "s" : ""}. The session will be approved and scheduled — the student will be notified immediately.`,
+          confirmLabel: "Confirm",
+          busy,
+          onConfirm: () => runAction(async () => {
+            await privateSessionService.acceptRequest(s.id);
+            nav("/teacher/private-sessions", { state: { tab: "scheduled", refresh: true } });
+          }, "Session accepted."),
+        } : null}
+        onClose={() => setModal(null)}
+      />
+
+      <ConfirmDialog
+        dialog={modal === "end" ? {
+          title: "End session?",
+          message: "This will end the session for all participants.",
+          confirmLabel: "End session",
+          danger: true,
+          busy,
+          onConfirm: () => runAction(async () => {
+            await privateSessionService.endSession(s.id);
+            goBack();
+          }),
+        } : null}
+        onClose={() => setModal(null)}
+      />
 
       {showNotes && (
         <NotesViewModal sessionId={s.id} sessionType="private" onClose={() => setShowNotes(false)} />
