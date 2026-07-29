@@ -54,7 +54,7 @@ export default function TeacherLayout() {
           {!hideTopSliderOnMobile && (
             <TeacherTopSliderTabs active={active} setActive={setActive} />
           )}
-          <main className="teacher-content" {...swipeHandlers}>
+          <main className="teacher-content page-fade" key={location.pathname} {...swipeHandlers}>
             <Breadcrumbs />
             <Outlet context={{ active, setActive }} />
           </main>

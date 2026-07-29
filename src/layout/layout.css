@@ -14,3 +14,17 @@
 .teacher-content:has(.classroom-layout) { flex:1; min-height:0; overflow:hidden !important; padding:14px !important; }
 .sidebar-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:109; backdrop-filter:blur(2px); }
 @media (max-width:768px){ .teacher-layout{min-height:100dvh} .teacher-main{min-height:100dvh} .teacher-content{padding:12px;overflow-x:hidden;overflow-y:auto} }
+
+/* Lightweight page-load fade — pure CSS, no library. Keyed by route pathname
+   in TeacherLayout.jsx/CounselorLayout.jsx/SkillDevLayout.jsx so React
+   remounts this wrapper on navigation and the animation replays. */
+.page-fade {
+  animation: page-fade-in 180ms ease both;
+}
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-fade { animation: none; }
+}

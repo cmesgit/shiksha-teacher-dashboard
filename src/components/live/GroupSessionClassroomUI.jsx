@@ -28,6 +28,7 @@ import TeacherGroupSessionControlBar from "./TeacherGroupSessionControlBar";
 import React, { useState, useRef, useEffect } from "react";
 import "../../styles/teacherGroupSessionLive.css";
 import api from "../../api/apiClient";
+import groupSessionService from "../../api/groupSessionService";
 import { useAuth } from "../../contexts/AuthContext";
 import soundManager from "../../utils/soundManager";
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
@@ -75,6 +76,13 @@ function formatTiming(session) {
 
 function sameId(a, b) {
   return a && b && String(a) === String(b);
+}
+
+function formatMmSs(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function readParticipantMeta(participant) {
@@ -159,6 +167,8 @@ export default function GroupSessionClassroomUI({
   const [activePanel, setActivePanel] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [peopleTab, setPeopleTab] = useState("participants");
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [admitMode, setAdmitMode] = useState(session?.admitMode || "open");
   const [, setTick] = useState(0);
   const bump = () => setTick((t) => t + 1);
 
@@ -168,6 +178,56 @@ export default function GroupSessionClassroomUI({
   const myUserId = user?.id ? String(user.id) : null;
   const hostId = session?.hostId ? String(session.hostId) : null;
   const hostName = session?.hostName || "";
+
+  // Poll pending join requests while the host has the requests tab open —
+  // admit/deny is low-frequency, so a short poll is simpler and lower-risk
+  // than a dedicated realtime channel (the guest has no LiveKit room yet to
+  // receive a data-channel nudge on).
+  useEffect(() => {
+    if (!isHost || admitMode !== "lobby" || activePanel !== "people" || peopleTab !== "requests") {
+      return undefined;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const rows = await groupSessionService.getJoinRequests(session?.id);
+        if (!cancelled) setJoinRequests(rows);
+      } catch {
+        /* transient poll failure — try again next tick */
+      }
+    };
+    load();
+    const interval = setInterval(load, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [isHost, admitMode, activePanel, peopleTab, session?.id]);
+
+  const toggleAdmitMode = async () => {
+    const next = admitMode === "lobby" ? "open" : "lobby";
+    try {
+      await groupSessionService.setAdmitMode(session?.id, next);
+      setAdmitMode(next);
+    } catch (e) {
+      console.error("setAdmitMode failed", e);
+    }
+  };
+
+  const admitRequest = async (requestId) => {
+    try {
+      await groupSessionService.admitJoinRequest(session?.id, requestId);
+      setJoinRequests((prev) => prev.filter((r) => r.id !== requestId));
+    } catch (e) {
+      console.error("admit failed", e);
+    }
+  };
+
+  const denyRequest = async (requestId) => {
+    try {
+      await groupSessionService.denyJoinRequest(session?.id, requestId);
+      setJoinRequests((prev) => prev.filter((r) => r.id !== requestId));
+    } catch (e) {
+      console.error("deny failed", e);
+    }
+  };
 
   const togglePanel = (panel) => {
     setActivePanel((current) => (current === panel ? null : panel));
@@ -462,8 +522,6 @@ export default function GroupSessionClassroomUI({
     ...remoteParticipants,
   ];
 
-  const joinRequests = [];
-
   const fullscreenBtn = (
     <button
       className="tgs-video-fs-btn"
@@ -494,7 +552,19 @@ export default function GroupSessionClassroomUI({
         </div>
       )}
 
-      <div className="tgs-main">
+      <div className="tgs-main" style={{ position: "relative" }}>
+        {groupSessionRemainingMs != null && (
+          <div
+            style={{
+              position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)",
+              zIndex: 5, background: "rgba(245,158,11,.15)", color: "#b45309",
+              border: "1px solid var(--tgs-warning, #f59e0b)", borderRadius: 999,
+              padding: "4px 14px", fontSize: 12, fontWeight: 700,
+            }}
+          >
+            Trial: {formatMmSs(groupSessionRemainingMs)} left
+          </div>
+        )}
         {screenShareTrack ? (
           /* ---------- SPOTLIGHT (screen share) ---------- */
           <div className="tgs-stage tgs-stage--spotlight">
@@ -614,7 +684,49 @@ export default function GroupSessionClassroomUI({
 
               {peopleTab === "requests" && (
                 <div className="tgs-ppl-list">
-                  <p className="tgs-ppl-empty">No join requests yet.</p>
+                  {isHost && (
+                    <label className="tgs-ppl-card" style={{ cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={admitMode === "lobby"}
+                        onChange={toggleAdmitMode}
+                        style={{ marginRight: 10 }}
+                      />
+                      <span className="tgs-ppl-info">
+                        <span className="tgs-ppl-name">Require approval to join</span>
+                      </span>
+                    </label>
+                  )}
+                  {admitMode !== "lobby" ? (
+                    <p className="tgs-ppl-empty">Approval is off — anyone with the link joins directly.</p>
+                  ) : joinRequests.length === 0 ? (
+                    <p className="tgs-ppl-empty">No join requests yet.</p>
+                  ) : (
+                    joinRequests.map((r) => (
+                      <div key={r.id} className="tgs-ppl-card">
+                        <div className="tgs-ppl-avatar">{(r.name || "?").charAt(0).toUpperCase()}</div>
+                        <div className="tgs-ppl-info">
+                          <div className="tgs-ppl-name">{r.name}</div>
+                        </div>
+                        <div className="tgs-ppl-actions" style={{ gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => admitRequest(r.id)}
+                            style={{ background: "#006d78", color: "#fff", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Admit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => denyRequest(r.id)}
+                            style={{ background: "transparent", color: "#ef4444", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>

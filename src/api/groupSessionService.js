@@ -129,6 +129,34 @@ const groupSessionService = {
     return res.data;
   },
 
+  // ─────────────────────────────────────────────
+  // Knock-to-join (admit_mode="lobby")
+  // ─────────────────────────────────────────────
+  async getJoinStatus(sessionId) {
+    const res = await api.get(`/sessions/group-sessions/${sessionId}/my-join-status/`);
+    return res.data; // { status: "pending"|"admitted"|"denied", deny_message }
+  },
+
+  async getJoinRequests(sessionId) {
+    const res = await api.get(`/sessions/group-sessions/${sessionId}/join-requests/`);
+    return res.data || []; // [{ id, user_id, name, requested_at }]
+  },
+
+  async admitJoinRequest(sessionId, requestId) {
+    const res = await api.post(
+      `/sessions/group-sessions/${sessionId}/join-requests/${requestId}/admit/`
+    );
+    return res.data;
+  },
+
+  async denyJoinRequest(sessionId, requestId, message = "") {
+    const res = await api.post(
+      `/sessions/group-sessions/${sessionId}/join-requests/${requestId}/deny/`,
+      { message }
+    );
+    return res.data;
+  },
+
   async hideFromHistory(sessionId) {
     const res = await api.post(`/sessions/group-sessions/${sessionId}/hide/`);
     return res.data;

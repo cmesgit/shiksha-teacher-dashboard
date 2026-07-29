@@ -94,7 +94,7 @@ export default function SkillDevLayout() {
 
       <div className="teacher-main">
         <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
-        <main className="teacher-content teacher-content--expert">
+        <main className="teacher-content teacher-content--expert page-fade" key={pathname}>
           <Breadcrumbs />
           <Outlet />
         </main>

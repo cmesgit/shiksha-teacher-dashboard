@@ -6,6 +6,7 @@ import {
 import { Track } from "livekit-client";
 import LiveChatPanel from "./LiveChatPanel";
 import NotesPanel from "./NotesPanel";
+import Whiteboard from "./Whiteboard";
 import ControlBar from "./ControlBar";
 import React, { useState, useRef, useEffect } from "react";
 import useLiveSessionChat from "../../hooks/useLiveSessionChat";
@@ -25,6 +26,7 @@ export default function TeacherPrivateSessionUI({
   const [raiseHandToasts, setRaiseHandToasts] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activePanel, setActivePanel] = useState(null);
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
 
   const menuRef = useRef(null);
@@ -263,7 +265,9 @@ export default function TeacherPrivateSessionUI({
 
         {/* VIDEO */}
         <div className="main-stage">
-          {mainTrack ? (
+          {whiteboardOpen ? (
+            <Whiteboard />
+          ) : mainTrack ? (
             <VideoTrack trackRef={mainTrack} />
           ) : (
             <div className="camera-off-tile" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%", color: "#cbd5e1", fontSize: 16 }}>
@@ -295,6 +299,8 @@ export default function TeacherPrivateSessionUI({
           activePanel={activePanel}
           onTogglePanel={togglePanel}
           sessionId={sessionId}
+          whiteboardOpen={whiteboardOpen}
+          onToggleWhiteboard={() => setWhiteboardOpen((v) => !v)}
         />
       </div>
 
