@@ -8,19 +8,19 @@
  *
  * It merges two things that used to be separate screens:
  *   1. the teaching profile (subject, skills, about, languages) and
- *   2. the weekly availability grid (was ExpertAvailability.jsx).
+ *   2. the weekly availability grid — now the shared
+ *      components/SkillAvailabilityGrid.jsx (also used by the standalone
+ *      ExpertAvailability.jsx deep link, so the grid code isn't duplicated).
  *
  * Wired to:
- *   GET   /skill/teacher/profile/       → headline, skills, about, languages
- *   GET   /skill/teacher/dashboard/     → rating / students / sessions stats
- *   GET   /skill/teacher/availability/  → { open, booked }
- *   PATCH /skill/teacher/availability/  → { open: [...] }
+ *   GET  /skill/teacher/profile/       → headline, skills, about, languages
+ *   GET  /skill/teacher/dashboard/     → rating / students / sessions stats
  * "Edit Profile" opens the full profile editor (ExpertProfileEdit).
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
-import { DAYS, SLOTS } from "../../api/availabilityStore";
+import SkillAvailabilityGrid from "../../components/SkillAvailabilityGrid";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
 import { LoadingState } from "../../components/StateViews";
@@ -33,59 +33,28 @@ export default function ExpertCourse() {
   const [profile, setProfile] = useState(null);
   const [stats,   setStats]   = useState({ taught: 0, active: 0, pending: 0 });
   const [rating,  setRating]  = useState(null);
-  const [avail,   setAvail]   = useState({ open: [], booked: [] });
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [error,   setError]   = useState("");
 
   useEffect(() => {
     Promise.allSettled([
       api.get("/skill/teacher/profile/"),
       api.get("/skill/teacher/dashboard/"),
-      api.get("/skill/teacher/availability/"),
-    ]).then(([p, d, a]) => {
-      if (p.status === "fulfilled") setProfile(p.value.data);
+    ]).then(([p, d]) => {
+      const profileData = p.status === "fulfilled" ? p.value.data : null;
+      if (profileData) setProfile(profileData);
+
+      // Dashboard's avg_rating wins; profile's cached rating is the fallback
+      // when the dashboard call fails — computed here, not a second effect.
+      let nextRating = null;
       if (d.status === "fulfilled") {
         const st = d.value.data.stats || {};
         setStats(st);
-        if (st.avg_rating != null) setRating(Number(st.avg_rating));
+        if (st.avg_rating != null) nextRating = Number(st.avg_rating);
       }
-      if (a.status === "fulfilled") {
-        setAvail({ open: a.value.data.open || [], booked: a.value.data.booked || [] });
-      }
+      if (nextRating == null && profileData?.rating != null) nextRating = Number(profileData.rating);
+      if (nextRating != null) setRating(nextRating);
     }).finally(() => setLoading(false));
   }, []);
-
-  // Fallback: profile payload also carries the cached rating.
-  useEffect(() => {
-    if (profile?.rating != null) setRating(r => (r != null ? r : Number(profile.rating)));
-  }, [profile]);
-
-  const toggle = (k) => {
-    if (avail.booked.includes(k)) return;           // an accepted booking — locked
-    setAvail(prev => ({
-      ...prev,
-      open: prev.open.includes(k) ? prev.open.filter(x => x !== k) : [...prev.open, k],
-    }));
-    setSaved(false);
-  };
-
-  const resetAvail = () => { setAvail(prev => ({ ...prev, open: [] })); setSaved(false); };
-
-  const saveAvail = async () => {
-    setSaving(true); setError("");
-    try {
-      const r = await api.patch("/skill/teacher/availability/", { open: avail.open });
-      setAvail({ open: r.data.open || avail.open, booked: r.data.booked || avail.booked });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch {
-      setError("Couldn't save your availability. Check your connection and try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) {
     return <LoadingState label="Loading your profile" />;
@@ -113,7 +82,7 @@ export default function ExpertCourse() {
       </div>
 
       {/* ── Course header card ── */}
-      <div className="rd-card teacher" style={{ "--acc": "#13899b" }}>
+      <div className="rd-card teacher">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 900, fontSize: 22, color: "#1a2c33", letterSpacing: "-.5px" }}>
@@ -127,7 +96,7 @@ export default function ExpertCourse() {
             {subjects.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 10 }}>
                 {subjects.map((sub) => (
-                  <span key={sub} style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 100, background: "#e7f3f4", color: "#0a808a" }}>{sub}</span>
+                  <span key={sub} style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 100, background: "var(--skill-soft)", color: "var(--skill-ink)" }}>{sub}</span>
                 ))}
               </div>
             )}
@@ -167,64 +136,16 @@ export default function ExpertCourse() {
             <div style={sectionLabel}>Languages</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {languages.map((l) => (
-                <span key={l} style={{ ...tagStyle, background: "#eef4f5", color: "#0a808a" }}>{l}</span>
+                <span key={l} style={{ ...tagStyle, background: "var(--skill-soft)", color: "var(--skill-ink)" }}>{l}</span>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Weekly availability ── */}
-      <div className="rd-card teacher" style={{ "--acc": "#13899b" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, gap: 10, flexWrap: "wrap" }}>
-          <h4 style={{ margin: 0 }}>Weekly availability</h4>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {saved && (
-              <span style={{ fontSize: 12, color: "#2f9d42", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                <Icon.check size={13} /> Saved
-              </span>
-            )}
-            <button className="sk-btn sk-btn--ghost" style={{ padding: "8px 14px", fontSize: 12 }} onClick={resetAvail} disabled={saving}>
-              Reset
-            </button>
-            <button className="sk-btn" style={{ padding: "8px 16px", fontSize: 12 }} onClick={saveAvail} disabled={saving}>
-              {saving ? "Saving…" : "Save availability"}
-            </button>
-          </div>
-        </div>
-        <p style={{ fontSize: 12, color: "#6b7c83", margin: "0 0 12px", lineHeight: 1.5 }}>
-          Click a slot to toggle it on/off — this weekly pattern <b>repeats every week</b>,
-          and students book the next upcoming date for a slot. Accepted bookings are locked.
-        </p>
-
-        {error && (
-          <div style={{ background: "rgba(192,73,47,.1)", color: "#c0492f", padding: "9px 13px", borderRadius: 9, fontSize: 12.5, marginBottom: 12 }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#6b7c83", marginBottom: 14, flexWrap: "wrap" }}>
-          <Legend color="#13899b" label="Open" />
-          <Legend color="#f0a23b" label="Booked · locked" />
-          <Legend color="#fff" border label="Closed" />
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: `64px repeat(${DAYS.length}, minmax(54px, 1fr))`,
-            gap: 6, alignItems: "center", minWidth: 420,
-          }}>
-            <div />
-            {DAYS.map((d) => (
-              <div key={d} style={{ fontSize: 10.5, fontWeight: 700, color: "#6b7c83", textAlign: "center" }}>{d}</div>
-            ))}
-            {SLOTS.map((sl, si) => (
-              <Row key={sl} sl={sl} si={si} avail={avail} toggle={toggle} />
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* ── Weekly availability + blackout dates (shared component — see
+          components/SkillAvailabilityGrid.jsx) ── */}
+      <SkillAvailabilityGrid />
     </div>
   );
 }
@@ -242,7 +163,7 @@ const tagStyle = {
 function Metric({ icon, value, label }) {
   return (
     <div style={{ textAlign: "center" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: "#0a808a" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: "var(--skill-ink)" }}>
         {icon}
         <span style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 900, fontSize: 19, color: "#1a2c33", letterSpacing: "-.4px" }}>{value}</span>
       </div>
@@ -251,31 +172,3 @@ function Metric({ icon, value, label }) {
   );
 }
 
-function Legend({ color, border, label }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-      <span style={{ width: 12, height: 12, borderRadius: 3, background: color, border: border ? "1px solid #e3dccf" : "none" }} />
-      {label}
-    </span>
-  );
-}
-
-function Row({ sl, si, avail, toggle }) {
-  return (
-    <>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: "#9aa9af", textAlign: "right", paddingRight: 4 }}>{sl}</div>
-      {DAYS.map((d, di) => {
-        const k  = `${di}-${si}`;
-        const st = avail.booked.includes(k) ? "booked" : avail.open.includes(k) ? "open" : "closed";
-        if (st === "booked") {
-          return <button key={di} disabled className="slot booked" title="Booked — locked"><Icon.check size={12} /></button>;
-        }
-        return (
-          <button key={di} onClick={() => toggle(k)} className={`slot ${st === "open" ? "on" : ""}`}>
-            {st === "open" ? "" : "+"}
-          </button>
-        );
-      })}
-    </>
-  );
-}

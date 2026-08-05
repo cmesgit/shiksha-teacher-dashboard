@@ -182,7 +182,7 @@ export default function ExpertPromote() {
           "Cancel anytime — promotion stops and your reach decays.",
         ].map((t, i) => (
           <div key={i} style={{ display: "flex", gap: 9, marginBottom: 9 }}>
-            <span style={{ color: "#13899b", flexShrink: 0 }}><Icon.check size={14} /></span>
+            <span style={{ color: "var(--skill)", flexShrink: 0 }}><Icon.check size={14} /></span>
             <span style={{ fontSize: 12.5, color: "#6b7c83", lineHeight: 1.5 }}>{t}</span>
           </div>
         ))}

@@ -1,0 +1,56 @@
+/* src/styles/skillAvailabilityGrid.css — shared weekly grid + blackout dates */
+
+.sag-saved { font-size: 12px; color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.sag-error { background: var(--danger-soft); color: var(--danger); padding: 9px 13px; border-radius: 9px; font-size: 12.5px; margin-bottom: 12px; }
+
+.sag-legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-muted); margin-bottom: 14px; flex-wrap: wrap; }
+.sag-legendItem { display: inline-flex; align-items: center; gap: 5px; }
+.sag-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sag-swatch--open { background: var(--skill); }
+.sag-swatch--booked { background: var(--warning); }
+.sag-swatch--closed { background: var(--surface); border: 1px solid var(--border); }
+
+.sag-dayRow { padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.sag-dayRow:last-child { border-bottom: none; }
+.sag-dayLabel { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.sag-slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.sag-slot {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.sag-slot--open { background: var(--skill-soft); border-color: var(--skill-border); color: var(--skill-ink); }
+.sag-slot--booked { background: var(--warning-soft); border-color: var(--warning); color: var(--warning); cursor: not-allowed; }
+.sag-dayFooter { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.sag-freeCount { font-size: 11px; color: var(--skill-ink); font-weight: 600; }
+.sag-notFree { font-size: 11px; color: var(--sk-meta-faint); font-style: italic; }
+.sag-dayLink { all: unset; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--ink-muted); }
+.sag-dayLink:hover { color: var(--ink); }
+
+.sag-blackoutRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--divider);
+}
+.sag-blackoutRange { font-size: 13px; font-weight: 700; color: var(--ink); }
+.sag-blackoutLabel { font-size: 11.5px; color: var(--ink-muted); margin-top: 1px; }
+.sag-removeBtn { all: unset; cursor: pointer; font-size: 18px; color: var(--ink-faint); padding: 0 6px; }
+.sag-removeBtn:hover { color: var(--danger); }
+
+.sag-blackoutForm { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.sag-dateInput, .sag-labelInput {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: var(--font-body);
+}
+.sag-labelInput { flex: 1; min-width: 140px; }
+.sag-arrow { color: var(--ink-faint); }

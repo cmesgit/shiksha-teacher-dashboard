@@ -32,6 +32,7 @@ export default function ConfirmDialog({ dialog, onClose }) {
     cancelLabel = "Cancel",
     danger = false,
     busy = false,
+    tone,   // e.g. "skill" — retints --tcd-primary/--tcd-danger via CSS, see confirmDialog.css
     onConfirm,
   } = dialog;
 
@@ -42,7 +43,7 @@ export default function ConfirmDialog({ dialog, onClose }) {
 
   return (
     <div
-      className="tcd__overlay"
+      className={`tcd__overlay${tone ? ` tcd__overlay--${tone}` : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="tcd__title"

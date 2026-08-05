@@ -174,9 +174,19 @@
   --academy:      #425f7f;
   --academy-soft: #e6edee;
   --skill:        #ff8f01;
+  --skill-hover:  #f08400;
   --skill-ink:    #d97706;
   --skill-soft:   #fff8f0;
   --skill-border: #f3d9bd;
+
+  /* ── Skill Dev design-handoff palette (design_handoff_skilldev/README.md) ── */
+  --sk-accent-text-on-tint: #92400e;
+  --sk-accent-light:        #ffb968;
+  --sk-meta:                #9ca3af;
+  --sk-meta-faint:          #b0bcc3;
+  --sk-success-deep:        #2f7d3f;
+  --sk-avatar-1: #7c3aed; --sk-avatar-2: #2f9d42; --sk-avatar-3: #13899b;
+  --sk-avatar-4: #425f7f; --sk-avatar-5: #dc2626; --sk-avatar-6: #d97706;
   --live:           var(--teal);
   --success-border: #bfe6c8;
   --warning-ink:    var(--warning-hover);
@@ -206,13 +216,24 @@
   --acc-border: var(--border-strong);
 }
 [data-track="skill"] {
-  /* Teacher app: the Expert (Skill-Dev) track's accent is teal, not the
-     learner orange. --skill / --skill-ink stay orange — they still drive the
-     shared "requested" booking chips. Only the --acc family is remapped. */
-  --acc:        #13899b;   /* teal — Expert teacher accent */
-  --acc-ink:    #0a808a;   /* darker teal for text/links on white */
-  --acc-soft:   #e6f4f6;
-  --acc-border: #cfe0e3;
+  /* SUPERSEDED 2026-08-05 by the design_handoff_skilldev redesign: the new
+     handoff uses ONE brand accent (#ff8f01) identically on student + expert
+     dashboards, replacing the 2026-07-16 decision below to give the Expert
+     track its own teal. (Old teal values, kept only as a paper trail:
+     --acc #13899b / --acc-ink #0a808a / --acc-soft #e6f4f6 / --acc-border
+     #cfe0e3.) */
+  --acc:        var(--skill);
+  --acc-ink:    var(--skill-ink);
+  --acc-soft:   var(--skill-soft);
+  --acc-border: var(--skill-border);
+
+  /* academyScreens.css's shared row/card/button vocabulary keys off
+     --action/--primary, which are NOT part of the --acc family — retarget
+     them here too, scoped to this track only (mirrors the student app). */
+  --action:       var(--skill);
+  --action-hover: var(--skill-hover);
+  --primary:      var(--skill);
+  --primary-dark: var(--skill-ink);
 }
 
 /* ── Motion ───────────────────────────────────────────────────────────── */

@@ -1,8 +1,10 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    skillDev.css  ·  Shared styles for all Skill Dev / Expert pages
    Ported from the prototype's rd-* / sp-* / slot / pack classes.
-   Cards sit on the Expert body bg (#f3e2da). Accent = teal #13899b for the
-   teacher side (matching the prototype), orange #ff8f01 for learner-facing bits.
+   Cards sit on the Expert body bg (#f3e2da). Accent is var(--acc) — the
+   design_handoff_skilldev redesign flipped this from teal to the shared
+   brand orange (#ff8f01) for both student and expert, see shared/tokens.css's
+   [data-track="skill"] block.
 ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── Page wrapper (fills the teacher-content area) ── */
@@ -82,7 +84,7 @@
   color: #1a2c33;
   line-height: 1;
 }
-.rd-stat .v small { font-size: 14px; color: #13899b; }
+.rd-stat .v small { font-size: 14px; color: var(--acc); }
 .rd-stat .l {
   font-size: 11.5px;
   color: #6b7c83;
@@ -138,7 +140,7 @@
 .rd-book__icon-btn {
   background: #fff;
   border: 1px solid #cdd6e0;
-  color: #0a808a;
+  color: var(--acc-ink);
   border-radius: 9px;
   width: 38px; height: 38px;
   cursor: pointer;
@@ -159,7 +161,7 @@
   font-family: inherit;
 }
 .rd-book__accept {
-  background: #13899b;
+  background: var(--acc);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -204,9 +206,9 @@
   color: #bbb;
 }
 .slot.on {
-  background: var(--acc, #13899b);
+  background: var(--acc);
   color: #fff;
-  border-color: var(--acc, #13899b);
+  border-color: var(--acc);
 }
 .slot.booked {
   background: #f0a23b;
@@ -230,14 +232,14 @@
   font-family: inherit;
 }
 .pack.on {
-  border-color: var(--acc, #13899b);
-  background: var(--acc-bg, #eef6f7);
-  box-shadow: 0 4px 14px rgba(19,137,155,.16);
+  border-color: var(--acc);
+  background: var(--acc-soft, var(--skill-soft));
+  box-shadow: 0 4px 14px rgba(255,143,1,.16);
 }
 
 /* ── Generic teal CTA used across Skill Dev pages ── */
 .sk-btn {
-  background: #13899b;
+  background: var(--acc);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -255,7 +257,7 @@
 .sk-btn--ghost {
   background: #fff;
   border: 1px solid #cfe0e3;
-  color: #0a808a;
+  color: var(--acc-ink);
 }
 .sk-btn--ghost:hover { background: #f0f6f7; }
 .sk-btn:disabled { opacity: .55; cursor: not-allowed; }
@@ -355,7 +357,7 @@
   background: #fff;
   color: #1a2c33;
 }
-.sk-input:focus { border-color: #13899b; box-shadow: 0 0 0 3px rgba(19,137,155,.12); }
+.sk-input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(255,143,1,.12); }
 
 .sk-seg {
   display: flex;
@@ -374,9 +376,9 @@
   font-family: inherit;
 }
 .sk-seg button.on {
-  border: 1.5px solid #13899b;
-  background: rgba(19,137,155,.08);
-  color: #0a808a;
+  border: 1.5px solid var(--acc);
+  background: rgba(255,143,1,.08);
+  color: var(--acc-ink);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

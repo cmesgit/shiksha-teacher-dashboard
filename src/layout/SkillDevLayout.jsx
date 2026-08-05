@@ -21,19 +21,27 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import { Icon } from "../components/SkillIcons";
 import logo from "../assets/Shiksha.svg";
 import { HOME_URL } from "../config/urls";
+import { SkillToastProvider } from "../components/SkillToast";
 import "./layout.css";
 import "../styles/skillDev.css";
 import "../styles/skillSidebar.css";
 
+// design_handoff_skilldev's own nav is flat: Dashboard, Bookings, Students,
+// Availability, My skills, Profile, Inbox, Promote. This app's "My Profile"
+// (profile+availability merged, from the 2026-07-16 merge decision) and the
+// Skills/Profile split are deliberately NOT re-separated here — that's a
+// bigger page-structure change tracked for the availability-grid-collapse
+// pass. Students is new this pass (the mastery tracker).
 const NAV = [
   { to: "/teacher/expert",              label: "Dashboard",  icon: <Icon.cap size={15} />,   end: true },
 
   { group: "Live 1-on-1" },
+  { to: "/teacher/expert/bookings",     label: "Bookings",   icon: <Icon.cal size={15} /> },
+  { to: "/teacher/expert/students",     label: "Students",   icon: <Icon.users size={15} /> },
   // "My Profile" = the expert's single 1-on-1 teaching profile + weekly
   // availability (merged). The "courses" product concept has been scrapped for
   // launch; this page is the expert's public profile + availability hub only.
   { to: "/teacher/expert/course",       label: "My Profile", icon: <Icon.cap size={15} /> },
-  { to: "/teacher/expert/bookings",     label: "Bookings",   icon: <Icon.cal size={15} /> },
   // Earnings + Courses scrapped for launch — booking is free (toggled globally
   // from admin via GlobalSettings), so there is no earnings bar or rate UI.
   { other: true },
@@ -96,7 +104,9 @@ export default function SkillDevLayout() {
         <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
         <main className="teacher-content teacher-content--expert page-fade" key={pathname}>
           <Breadcrumbs />
-          <Outlet />
+          <SkillToastProvider>
+            <Outlet />
+          </SkillToastProvider>
         </main>
       </div>
     </div>

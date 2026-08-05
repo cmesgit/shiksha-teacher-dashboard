@@ -62,6 +62,7 @@ import BatchProgressDetail from "../pages/BatchProgressDetail";
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
 import ExpertCourse from "../pages/skill/ExpertCourse";      // "My Course" — 1-on-1 profile + availability
 import ExpertBookings from "../pages/skill/ExpertBookings";
+import ExpertStudents from "../pages/skill/ExpertStudents";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
 // Earnings removed — guest experts settle payment directly with learners.
 import ExpertPromote from "../pages/skill/ExpertPromote";       // subscription (reached from dashboard)
@@ -129,6 +130,7 @@ export default function TeacherRoutes() {
         <Route index element={<ExpertDashboard />} />
         <Route path="course" element={<ExpertCourse />} />       {/* My Course — 1-on-1 profile + availability */}
         <Route path="bookings" element={<ExpertBookings />} />
+        <Route path="students" element={<ExpertStudents />} />
         {/* availability kept as a deep link; it now lives inside "My Course" */}
         <Route path="availability" element={<ExpertAvailability />} />
         <Route path="promote" element={<ExpertPromote />} />

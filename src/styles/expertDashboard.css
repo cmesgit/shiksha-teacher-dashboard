@@ -1,0 +1,92 @@
+/* src/styles/expertDashboard.css — design_handoff_skilldev Expert "1. Dashboard" */
+
+.ed-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.ed-greet {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-page-title);
+  color: var(--ink);
+  margin: 0;
+}
+.ed-badge {
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+}
+
+.ed-statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ed-statTile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 15px 17px;
+}
+.ed-statValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 21px;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ed-delta { font-size: 11px; font-weight: 700; }
+.ed-delta.is-up { color: var(--success); }
+.ed-delta.is-down { color: var(--danger); }
+.ed-statLabel { font-size: 11px; color: var(--ink-muted); margin-top: 4px; }
+.ed-statSub { font-size: 10.5px; color: var(--ink-faint); margin-top: 1px; }
+
+.ed-twoCol { display: grid; grid-template-columns: 1fr 300px; gap: 14px; }
+@media (max-width: 900px) { .ed-twoCol { grid-template-columns: 1fr; } }
+
+.ed-link { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--skill-ink); }
+
+/* ── 7-day chart ── */
+.ed-chart { display: flex; justify-content: space-between; gap: 8px; padding-top: 8px; }
+.ed-chartCol { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.ed-chartCount { font-size: 11px; font-weight: 700; color: var(--ink-muted); }
+.ed-chartBarTrack { width: 100%; max-width: 28px; height: 70px; display: flex; align-items: flex-end; background: var(--surface-muted); border-radius: 4px; overflow: hidden; }
+.ed-chartBar { width: 100%; background: var(--skill); border-radius: 4px 4px 0 0; min-height: 3px; transition: height .3s ease; }
+.ed-chartLabel { font-size: 10.5px; color: var(--ink-muted); }
+
+/* ── Today's schedule ── */
+.ed-scheduleRow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.ed-scheduleRow:last-child { border-bottom: none; }
+.ed-scheduleTime { font-size: 12px; font-weight: 700; color: var(--skill-ink); width: 56px; flex-shrink: 0; }
+.ed-scheduleTopic { font-size: 13px; font-weight: 700; color: var(--ink); }
+.ed-scheduleWith { font-size: 11.5px; color: var(--ink-muted); margin-top: 1px; }
+.ed-startBtn {
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--skill);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 7px 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ed-startBtn:hover { background: var(--skill-hover); }
+
+/* ── Reviews ── */
+.ed-reviewRow { display: flex; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.ed-reviewRow:last-child { border-bottom: none; }
+.ed-reviewAvatar {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--skill); color: #fff;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 13px; flex-shrink: 0;
+}
+.ed-reviewName { font-size: 13px; font-weight: 700; color: var(--ink); }
+.ed-reviewDate { font-size: 11px; color: var(--ink-faint); flex-shrink: 0; }
+.ed-reviewBody { font-size: 12.5px; color: var(--ink-muted); line-height: 1.55; margin-top: 3px; }
+.ed-stars { color: var(--skill); font-size: 12px; letter-spacing: 1px; }
+.ed-starsEmpty { color: var(--border-strong); }
