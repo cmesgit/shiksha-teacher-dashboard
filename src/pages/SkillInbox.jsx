@@ -29,7 +29,7 @@ export default function SkillInbox() {
     : undefined;
 
   return (
-    <div style={{ padding: "20px", height: "calc(100vh - 80px)", boxSizing: "border-box" }}>
+    <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
       <ChatPanel directTo={directTo} />
     </div>
   );

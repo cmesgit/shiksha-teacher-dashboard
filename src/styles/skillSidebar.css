@@ -5,7 +5,7 @@
 ───────────────────────────────────────────────────────────────────────────── */
 
 .sk-side {
-  width: 240px;
+  width: var(--sidebar-w);
   flex-shrink: 0;
   background: var(--nav-bg);
   color: #fff;
