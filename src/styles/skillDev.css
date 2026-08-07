@@ -7,16 +7,28 @@
    [data-track="skill"] block.
 ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Page wrapper (fills the teacher-content area) ── */
+/* ── Page wrapper (fills the teacher-content area) ──
+   design_handoff_skilldev: "content max-width 1080px". Every Expert screen
+   roots at .sk-page, so capping + centering it here is what keeps card/grid
+   proportions matching the student app's per-screen 1080px column instead of
+   stretching edge-to-edge of whatever width the sidebar leaves — that
+   mismatch is what made the two dashboards feel like different sizes when
+   switching between them. */
 .sk-page {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  font-family: "Poppins", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-body);
+  animation: fadeUp .35s ease both;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 22px 40px;
+  box-sizing: border-box;
 }
 
-.sk-page::-webkit-scrollbar { width: 5px; }
-.sk-page::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 10px; }
+.sk-page::-webkit-scrollbar { width: 8px; }
+.sk-page::-webkit-scrollbar-thumb { background: #c8d0d8; border-radius: 8px; }
 
 /* ── Page header ── */
 .sk-head {
@@ -28,48 +40,47 @@
   gap: 10px;
 }
 .sk-head__title {
-  font-family: "Montserrat", system-ui, sans-serif;
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: 22px;
   font-weight: 800;
-  color: #1a2c33;
+  color: var(--ink);
   letter-spacing: -0.3px;
 }
 .sk-head__sub {
   font-size: 12.5px;
-  color: #6b7c83;
+  color: var(--ink-muted);
   margin-top: 2px;
 }
 
 /* ── Card ── */
 .rd-card {
-  background: #f4f7f8;
+  background: var(--surface);
   border-radius: 18px;
-  border: none;
-  box-shadow: 0 6px 14px rgba(0,0,0,.10);
-  padding: 16px;
+  border: 1px solid var(--border);
+  padding: 18px;
   margin-bottom: 14px;
 }
 .rd-card:last-child { margin-bottom: 0; }
 .rd-card h4 {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   font-size: 15px;
   font-weight: 800;
-  color: #111827;
-  font-family: "Montserrat", system-ui, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-display);
 }
 
 /* ── Stat grid + cards ── */
 .rd-statgrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
   margin-bottom: 14px;
 }
 .rd-stat {
-  background: #f4f7f8;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 15px 16px;
-  box-shadow: 0 6px 14px rgba(0,0,0,.07);
+  padding: 15px 17px;
 }
 .rd-stat .ic {
   width: 32px; height: 32px;
@@ -78,16 +89,16 @@
   margin-bottom: 10px;
 }
 .rd-stat .v {
-  font-family: "Montserrat", system-ui, sans-serif;
+  font-family: var(--font-display);
   font-weight: 800;
-  font-size: 26px;
-  color: #1a2c33;
+  font-size: 21px;
+  color: var(--ink);
   line-height: 1;
 }
 .rd-stat .v small { font-size: 14px; color: var(--acc); }
 .rd-stat .l {
   font-size: 11.5px;
-  color: #6b7c83;
+  color: var(--ink-muted);
   margin-top: 6px;
   font-weight: 600;
 }
@@ -97,11 +108,11 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 13px 15px;
-  border: 1px solid #e3eaec;
-  border-radius: 13px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   margin-bottom: 10px;
-  background: #fff;
+  background: var(--surface);
 }
 .rd-book:last-child { margin-bottom: 0; }
 .rd-book .bt {
@@ -115,43 +126,44 @@
 }
 .rd-book .start {
   margin-left: auto;
-  background: #ff8f01;
+  background: var(--acc);
   color: #fff;
   border: none;
   border-radius: 9px;
   padding: 10px 18px;
   font-size: 12.5px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex; align-items: center; gap: 7px;
-  box-shadow: 0 4px 12px rgba(255,143,1,.32);
   font-family: inherit;
+  transition: all .15s ease;
 }
-.rd-book .start:hover { background: #e88001; }
+.rd-book .start:hover { background: var(--skill-hover); transform: translateY(-2px); }
 .rd-book .soon {
   margin-left: auto;
   font-size: 11.5px;
-  color: #6b7c83;
+  color: var(--ink-muted);
   font-weight: 600;
-  border: 1px solid #e3eaec;
+  border: 1px solid var(--border);
   border-radius: 9px;
   padding: 9px 14px;
 }
 .rd-book__icon-btn {
-  background: #fff;
-  border: 1px solid #cdd6e0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--acc-ink);
   border-radius: 9px;
   width: 38px; height: 38px;
   cursor: pointer;
   display: grid; place-items: center;
   flex-shrink: 0;
+  transition: all .15s ease;
 }
-.rd-book__icon-btn:hover { background: #f0f6f7; }
+.rd-book__icon-btn:hover { background: var(--surface-alt); }
 .rd-book__ghost {
-  background: #fff;
-  border: 1px solid #e3eaec;
-  color: #6b7c83;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
   border-radius: 9px;
   padding: 9px 13px;
   font-size: 12px;
@@ -159,6 +171,7 @@
   cursor: pointer;
   flex-shrink: 0;
   font-family: inherit;
+  transition: all .15s ease;
 }
 .rd-book__accept {
   background: var(--acc);
@@ -172,38 +185,41 @@
   display: inline-flex; align-items: center; gap: 6px;
   flex-shrink: 0;
   font-family: inherit;
+  transition: all .15s ease;
 }
-.rd-book__accept:hover { background: #0f7384; }
+.rd-book__accept:hover { background: var(--skill-hover); }
 
 .rd-daygroup {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: .5px;
+  letter-spacing: .8px;
   text-transform: uppercase;
-  color: #9aa9af;
+  color: var(--sk-meta);
   margin: 16px 0 9px;
 }
 .rd-daygroup:first-child { margin-top: 4px; }
 
 /* ── Availability / booking slots ── */
 .slot {
-  border: 1px solid #e3dccf;
-  border-radius: 8px;
-  padding: 9px 0;
+  border: 1px solid var(--acc-border);
+  border-radius: 10px;
+  padding: 8px 14px;
   text-align: center;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  background: #fff;
-  color: #1a2c33;
+  background: var(--acc-soft);
+  color: var(--sk-accent-text-on-tint);
   font-family: inherit;
   min-height: 34px;
+  transition: all .15s ease;
 }
 .slot.off {
-  opacity: .4;
+  opacity: 1;
   cursor: not-allowed;
-  background: #f5f1ea;
-  color: #bbb;
+  background: var(--surface-muted);
+  border-color: var(--divider);
+  color: var(--sk-meta-faint);
 }
 .slot.on {
   background: var(--acc);
@@ -211,9 +227,9 @@
   border-color: var(--acc);
 }
 .slot.booked {
-  background: #f0a23b;
+  background: var(--ink);
   color: #fff;
-  border-color: #f0a23b;
+  border-color: var(--ink);
   cursor: not-allowed;
   display: grid;
   place-items: center;
@@ -221,23 +237,23 @@
 
 /* ── Package picker (learner book; reused styling) ── */
 .pack {
-  border: 1.5px solid #e3dccf;
+  border: 1.5px solid var(--border);
   border-radius: 12px;
   padding: 12px 13px;
-  background: #fff;
+  background: var(--surface);
   box-sizing: border-box;
   cursor: pointer;
   width: 100%;
   text-align: left;
   font-family: inherit;
+  transition: all .15s ease;
 }
 .pack.on {
   border-color: var(--acc);
-  background: var(--acc-soft, var(--skill-soft));
-  box-shadow: 0 4px 14px rgba(255,143,1,.16);
+  background: var(--acc-soft);
 }
 
-/* ── Generic teal CTA used across Skill Dev pages ── */
+/* ── Generic accent CTA used across Skill Dev pages ── */
 .sk-btn {
   background: var(--acc);
   color: #fff;
@@ -251,43 +267,47 @@
   align-items: center;
   gap: 7px;
   font-family: inherit;
-  transition: background .15s;
+  transition: all .15s ease;
 }
-.sk-btn:hover { background: #0f7384; }
+.sk-btn:hover { background: var(--skill-hover); transform: translateY(-2px); }
 .sk-btn--ghost {
-  background: #fff;
-  border: 1px solid #cfe0e3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--acc-ink);
 }
-.sk-btn--ghost:hover { background: #f0f6f7; }
+.sk-btn--ghost:hover { background: var(--surface-alt); }
 .sk-btn:disabled { opacity: .55; cursor: not-allowed; }
 
 /* ── Empty state ── */
 .sk-empty {
   text-align: center;
   padding: 26px 0;
-  color: #6b7c83;
-  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  color: var(--sk-meta);
+  font-size: 12.5px;
 }
 
 /* ── Modal (Edit course / Edit rates) ── */
 .sk-modal-bg {
   position: fixed;
   inset: 0;
-  background: rgba(16,40,46,.45);
+  background: rgba(26,44,51,.5);
   z-index: 2000;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 40px 20px;
   overflow: auto;
+  animation: overlayIn .15s ease both;
 }
 .sk-modal {
-  background: #f4f7f8;
+  background: var(--surface);
   border-radius: 16px;
   width: min(680px, 100%);
-  box-shadow: 0 24px 60px rgba(0,0,0,.3);
+  box-shadow: var(--sh-modal);
   overflow: hidden;
+  animation: popIn .25s ease both;
 }
 .sk-modal--sm { width: min(520px, 100%); }
 .sk-modal__head {
@@ -295,35 +315,36 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e6edee;
+  background: var(--surface);
+  border-bottom: 1px solid var(--divider);
 }
 .sk-modal__head h3 {
-  font-family: "Montserrat", system-ui, sans-serif;
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 800;
-  color: #1a2c33;
+  color: var(--ink);
   margin: 0;
 }
-.sk-modal__head p { font-size: 12px; color: #6b7c83; margin: 2px 0 0; }
+.sk-modal__head p { font-size: 12px; color: var(--ink-muted); margin: 4px 0 0; }
 .sk-modal__x {
-  background: #eef3f4;
+  background: var(--surface-alt);
   border: none;
   width: 32px; height: 32px;
   border-radius: 8px;
   cursor: pointer;
-  color: #6b7c83;
+  color: var(--ink-muted);
   display: grid; place-items: center;
+  transition: all .15s ease;
 }
-.sk-modal__x:hover { background: #e2e9ea; }
+.sk-modal__x:hover { background: var(--border); }
 .sk-modal__body { padding: 20px; max-height: 62vh; overflow: auto; }
 .sk-modal__foot {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 20px;
-  background: #fff;
-  border-top: 1px solid #e6edee;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
 }
 .sk-modal__panel {
   background: #fff;
@@ -340,22 +361,23 @@
   display: block;
   font-size: 11.5px;
   font-weight: 700;
-  color: #6b7c83;
+  color: var(--ink-muted);
   margin-bottom: 5px;
   text-transform: uppercase;
   letter-spacing: .3px;
 }
 .sk-input {
   width: 100%;
-  border: 1px solid #d7e3e5;
+  border: 1px solid var(--border);
   border-radius: 9px;
   padding: 10px 12px;
   font-size: 13px;
   font-family: inherit;
   box-sizing: border-box;
   outline: none;
-  background: #fff;
-  color: #1a2c33;
+  background: var(--surface);
+  color: var(--ink);
+  transition: all .15s ease;
 }
 .sk-input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(255,143,1,.12); }
 
@@ -367,17 +389,18 @@
   flex: 1;
   padding: 9px;
   border-radius: 9px;
-  border: 1px solid #d7e3e5;
-  background: #fff;
-  color: #6b7c83;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+  transition: all .15s ease;
 }
 .sk-seg button.on {
   border: 1.5px solid var(--acc);
-  background: rgba(255,143,1,.08);
+  background: var(--acc-soft);
   color: var(--acc-ink);
 }
 

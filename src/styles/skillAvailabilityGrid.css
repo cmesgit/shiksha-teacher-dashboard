@@ -20,16 +20,17 @@
   color: var(--ink-muted);
   font-size: 11.5px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: var(--r-pill);
+  padding: 8px 14px;
+  border-radius: var(--r-md);
   cursor: pointer;
+  transition: all .15s ease;
 }
-.sag-slot--open { background: var(--skill-soft); border-color: var(--skill-border); color: var(--skill-ink); }
-.sag-slot--booked { background: var(--warning-soft); border-color: var(--warning); color: var(--warning); cursor: not-allowed; }
+.sag-slot--open { background: var(--skill-soft); border-color: var(--skill-border); color: var(--sk-accent-text-on-tint); }
+.sag-slot--booked { background: var(--ink); border-color: var(--ink); color: #fff; cursor: not-allowed; }
 .sag-dayFooter { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .sag-freeCount { font-size: 11px; color: var(--skill-ink); font-weight: 600; }
 .sag-notFree { font-size: 11px; color: var(--sk-meta-faint); font-style: italic; }
-.sag-dayLink { all: unset; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--ink-muted); }
+.sag-dayLink { all: unset; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--ink-muted); transition: color .15s ease; }
 .sag-dayLink:hover { color: var(--ink); }
 
 .sag-blackoutRow {

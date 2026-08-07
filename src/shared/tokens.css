@@ -227,6 +227,13 @@
   --acc-soft:   var(--skill-soft);
   --acc-border: var(--skill-border);
 
+  /* design_handoff_skilldev: sidebar/ink is #425f7f on both dashboards. Never
+     overridden here before, so the Expert Skill Dev sidebar was silently
+     falling through to the Academy role-chrome maroon (--side-bg #7a1c1c) —
+     kept in step with the student app's copy of this block. */
+  --side-bg:     #425f7f;
+  --side-accent: #ff8f01;
+
   /* academyScreens.css's shared row/card/button vocabulary keys off
      --action/--primary, which are NOT part of the --acc family — retarget
      them here too, scoped to this track only (mirrors the student app). */
