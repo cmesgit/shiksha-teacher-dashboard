@@ -30,7 +30,7 @@ export default function SkillInbox() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-      <ChatPanel directTo={directTo} />
+      <ChatPanel directTo={directTo} theme="skill" />
     </div>
   );
 }
