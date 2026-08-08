@@ -59,7 +59,7 @@ export default function Header({ onMenuClick, isExpertPage }) {
         quickActions={[
           { label: "Dashboard", icon: <RiDashboardLine />, onClick: () => navigate(isSkillActive ? "/teacher/expert" : "/teacher/dashboard") },
           isSkillActive
-            ? { label: "My course", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/expert/course") }
+            ? { label: "My skills", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/expert/skills") }
             : { label: "My classes", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/classes") },
         ]}
       />

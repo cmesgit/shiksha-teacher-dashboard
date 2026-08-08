@@ -1,8 +1,8 @@
-// src/pages/skill/ExpertAvailability.jsx — standalone deep link.
-// The grid itself now lives in one place, shared with the embedded copy on
-// "My Profile" (ExpertCourse.jsx) — see components/SkillAvailabilityGrid.jsx.
-// This page used to carry its own full copy of the Row/Legend/toggle/save
-// code, near-duplicated with ExpertCourse's; that duplication is gone.
+// src/pages/skill/ExpertAvailability.jsx — its own sidebar nav item, matching
+// design_handoff_skilldev's flat nav (see SkillDevLayout.jsx). The grid itself
+// lives in components/SkillAvailabilityGrid.jsx, shared with the old merged
+// "My Profile" page before that was split back apart into this page +
+// ExpertSkills.jsx + ExpertProfileEdit.jsx.
 import SkillAvailabilityGrid from "../../components/SkillAvailabilityGrid";
 import "../../styles/skillDev.css";
 

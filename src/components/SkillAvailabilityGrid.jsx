@@ -1,11 +1,14 @@
 /**
  * src/components/SkillAvailabilityGrid.jsx
  *
- * The weekly-availability grid was duplicated near-verbatim between
- * ExpertCourse.jsx (embedded) and ExpertAvailability.jsx (standalone deep
- * link) — same Row/Legend/toggle/save code, copy-pasted. This is the one
- * shared implementation both pages now render; self-contained (owns its own
- * fetch/save calls) so neither caller needs to prop-drill availability state.
+ * The weekly-availability grid used to be duplicated near-verbatim between
+ * the old merged "My Profile" page (ExpertCourse.jsx, since retired — the
+ * sidebar nav now matches design_handoff_skilldev's flat Dashboard/Bookings/
+ * Students/Availability/My skills/Profile/Inbox/Promote list, so Availability
+ * is its own page again) and ExpertAvailability.jsx — same Row/Legend/toggle/
+ * save code, copy-pasted. This is the one shared implementation
+ * ExpertAvailability.jsx renders; self-contained (owns its own fetch/save
+ * calls) so the caller doesn't need to prop-drill availability state.
  *
  * Adds two things neither old copy had, per design_handoff_skilldev README
  * "6. Availability publishing":

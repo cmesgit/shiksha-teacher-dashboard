@@ -26,26 +26,25 @@ import "./layout.css";
 import "../styles/skillDev.css";
 import "../styles/skillSidebar.css";
 
-// design_handoff_skilldev's own nav is flat: Dashboard, Bookings, Students,
-// Availability, My skills, Profile, Inbox, Promote. This app's "My Profile"
-// (profile+availability merged, from the 2026-07-16 merge decision) and the
-// Skills/Profile split are deliberately NOT re-separated here — that's a
-// bigger page-structure change tracked for the availability-grid-collapse
-// pass. Students is new this pass (the mastery tracker).
+// Matches design_handoff_skilldev's own flat nav order exactly: Dashboard,
+// Bookings, Students, Availability, My skills, Profile, Inbox, Promote.
+// The prior "My Profile" merged item (profile+availability combined) has
+// been split back apart — Availability and Profile were always separately
+// routed pages underneath it; My skills is new (see ExpertSkills.jsx).
 const NAV = [
-  { to: "/teacher/expert",              label: "Dashboard",  icon: <Icon.cap size={15} />,   end: true },
+  { to: "/teacher/expert",              label: "Dashboard",     icon: <Icon.cap size={15} />,   end: true },
 
   { group: "Live 1-on-1" },
-  { to: "/teacher/expert/bookings",     label: "Bookings",   icon: <Icon.cal size={15} /> },
-  { to: "/teacher/expert/students",     label: "Students",   icon: <Icon.users size={15} /> },
-  // "My Profile" = the expert's single 1-on-1 teaching profile + weekly
-  // availability (merged). The "courses" product concept has been scrapped for
-  // launch; this page is the expert's public profile + availability hub only.
-  { to: "/teacher/expert/course",       label: "My Profile", icon: <Icon.cap size={15} /> },
+  { to: "/teacher/expert/bookings",     label: "Bookings",      icon: <Icon.cal size={15} /> },
+  { to: "/teacher/expert/students",     label: "Students",      icon: <Icon.users size={15} /> },
+  { to: "/teacher/expert/availability", label: "Availability",  icon: <Icon.clock size={15} /> },
+  { to: "/teacher/expert/skills",       label: "My skills",     icon: <Icon.spark size={15} /> },
+  { to: "/teacher/expert/profile",      label: "Profile",       icon: <Icon.user size={15} /> },
   // Earnings + Courses scrapped for launch — booking is free (toggled globally
   // from admin via GlobalSettings), so there is no earnings bar or rate UI.
   { other: true },
-  { to: "/teacher/expert/inbox",        label: "Messages",   icon: <Icon.msg size={15} /> },
+  { to: "/teacher/expert/inbox",        label: "Messages",      icon: <Icon.msg size={15} /> },
+  { to: "/teacher/expert/promote",      label: "Promote",       icon: <Icon.award size={15} /> },
 ];
 
 export default function SkillDevLayout() {

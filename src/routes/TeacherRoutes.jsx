@@ -60,13 +60,13 @@ import BatchProgressDetail from "../pages/BatchProgressDetail";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
-import ExpertCourse from "../pages/skill/ExpertCourse";      // "My Course" — 1-on-1 profile + availability
+import ExpertSkills from "../pages/skill/ExpertSkills";       // "My skills" — read-only subject/skills summary
 import ExpertBookings from "../pages/skill/ExpertBookings";
 import ExpertStudents from "../pages/skill/ExpertStudents";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
 // Earnings removed — guest experts settle payment directly with learners.
-import ExpertPromote from "../pages/skill/ExpertPromote";       // subscription (reached from dashboard)
-import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // profile + location + UPI ("Edit Course")
+import ExpertPromote from "../pages/skill/ExpertPromote";       // subscription
+import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // profile + location + UPI
 import SkillInbox from "../pages/SkillInbox";
 import SkillSessionLive from "../pages/skill/SkillSessionLive"; // skill LiveKit room
 
@@ -128,13 +128,12 @@ export default function TeacherRoutes() {
         element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
       >
         <Route index element={<ExpertDashboard />} />
-        <Route path="course" element={<ExpertCourse />} />       {/* My Course — 1-on-1 profile + availability */}
         <Route path="bookings" element={<ExpertBookings />} />
         <Route path="students" element={<ExpertStudents />} />
-        {/* availability kept as a deep link; it now lives inside "My Course" */}
         <Route path="availability" element={<ExpertAvailability />} />
+        <Route path="skills" element={<ExpertSkills />} />
+        <Route path="profile" element={<ExpertProfileEdit />} />
         <Route path="promote" element={<ExpertPromote />} />
-        <Route path="profile" element={<ExpertProfileEdit />} /> {/* opened via "Edit Course" */}
         <Route path="inbox" element={<SkillInbox />} />
       </Route>
 

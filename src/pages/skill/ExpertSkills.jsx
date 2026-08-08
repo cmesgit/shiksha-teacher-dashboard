@@ -1,33 +1,35 @@
 /**
- * src/pages/skill/ExpertCourse.jsx  —  "My Profile" (Expert / Skill Dev)
+ * src/pages/skill/ExpertSkills.jsx
  *
- * The guest expert's single 1-on-1 teaching profile. The "courses" product
- * concept is scrapped for launch, so this is purely the public teaching
- * profile + weekly availability that learners see and book against — no rate
- * or pricing (booking is free at launch, toggled globally from admin).
+ * "My skills" — split out of the old merged ExpertCourse.jsx ("My Profile")
+ * so the sidebar matches design_handoff_skilldev's flat nav (Dashboard,
+ * Bookings, Students, Availability, My skills, Profile, Inbox, Promote).
+ * Availability moved to its own already-existing page; this keeps the
+ * read-only subject/skills/about/languages summary that page also showed.
  *
- * It merges two things that used to be separate screens:
- *   1. the teaching profile (subject, skills, about, languages) and
- *   2. the weekly availability grid — now the shared
- *      components/SkillAvailabilityGrid.jsx (also used by the standalone
- *      ExpertAvailability.jsx deep link, so the grid code isn't duplicated).
+ * The handoff's README describes this screen as "skill listing with
+ * intro-video upload state" — the intro-video upload field actually lives on
+ * ExpertProfileEdit.jsx ("Profile"), not here; this page covers the read-only
+ * "skill listing" half. No pixel-exact mockup for this screen is interactive
+ * in the standalone HTML to verify layout against (only Dashboard/Bookings/
+ * Students/Inbox are — Availability/My skills/Profile/Promote are static
+ * sidebar labels there), so this reuses the old merged page's already-real,
+ * already-wired layout rather than inventing a new one from a one-line spec.
  *
- * Wired to:
- *   GET  /skill/teacher/profile/       → headline, skills, about, languages
- *   GET  /skill/teacher/dashboard/     → rating / students / sessions stats
- * "Edit Profile" opens the full profile editor (ExpertProfileEdit).
+ * Wired to the same two endpoints the old merged page used:
+ *   GET /skill/teacher/profile/    → headline, skills, about, languages
+ *   GET /skill/teacher/dashboard/  → rating / students / sessions stats
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
-import SkillAvailabilityGrid from "../../components/SkillAvailabilityGrid";
 import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
 import { LoadingState } from "../../components/StateViews";
 
 const MODE_LABEL = { online: "Online", home: "At my place", travel: "I travel" };
 
-export default function ExpertCourse() {
+export default function ExpertSkills() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
@@ -57,7 +59,7 @@ export default function ExpertCourse() {
   }, []);
 
   if (loading) {
-    return <LoadingState label="Loading your profile" />;
+    return <LoadingState label="Loading your skills" />;
   }
 
   const subject   = profile?.headline || profile?.subject_description || "Your 1-on-1 course";
@@ -71,8 +73,8 @@ export default function ExpertCourse() {
     <div className="sk-page">
       <div className="sk-head">
         <div>
-          <div className="sk-head__title">My Profile</div>
-          <div className="sk-head__sub">Your 1-on-1 teaching profile — what students see on your public listing.</div>
+          <div className="sk-head__title">My skills</div>
+          <div className="sk-head__sub">What students see on your public listing.</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="sk-btn sk-btn--ghost" onClick={() => navigate("/teacher/expert/profile")}>
@@ -81,7 +83,6 @@ export default function ExpertCourse() {
         </div>
       </div>
 
-      {/* ── Course header card ── */}
       <div className="rd-card teacher">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 240 }}>
@@ -142,10 +143,6 @@ export default function ExpertCourse() {
           </div>
         )}
       </div>
-
-      {/* ── Weekly availability + blackout dates (shared component — see
-          components/SkillAvailabilityGrid.jsx) ── */}
-      <SkillAvailabilityGrid />
     </div>
   );
 }
@@ -171,4 +168,3 @@ function Metric({ icon, value, label }) {
     </div>
   );
 }
-
