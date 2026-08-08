@@ -223,6 +223,7 @@
      --acc #13899b / --acc-ink #0a808a / --acc-soft #e6f4f6 / --acc-border
      #cfe0e3.) */
   --acc:        var(--skill);
+  --acc-hover:  var(--skill-hover);
   --acc-ink:    var(--skill-ink);
   --acc-soft:   var(--skill-soft);
   --acc-border: var(--skill-border);
