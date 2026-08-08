@@ -20,6 +20,8 @@ import { useLocation } from "react-router-dom";
 import ChatPanel from "../shared/ChatPanel";
 import "../shared/ChatPanel.css";
 
+const DIRECTORY_NOTE = "To reach a student, reply to their message or message them from a course room.";
+
 export default function SkillInbox() {
   const { state } = useLocation();
 
@@ -30,7 +32,7 @@ export default function SkillInbox() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-      <ChatPanel directTo={directTo} theme="skill" />
+      <ChatPanel directTo={directTo} theme="skill" directoryContactsNote={DIRECTORY_NOTE} />
     </div>
   );
 }
