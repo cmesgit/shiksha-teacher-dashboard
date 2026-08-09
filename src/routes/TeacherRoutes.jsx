@@ -60,7 +60,8 @@ import BatchProgressDetail from "../pages/BatchProgressDetail";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
-import ExpertSkills from "../pages/skill/ExpertSkills";       // "My skills" — read-only subject/skills summary
+import ExpertSkills from "../pages/skill/ExpertSkills";       // "My skills" — one row per SkillListing
+import SkillListingForm from "../pages/skill/SkillListingForm"; // add / edit one skill
 import ExpertBookings from "../pages/skill/ExpertBookings";
 import ExpertStudents from "../pages/skill/ExpertStudents";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
@@ -132,6 +133,9 @@ export default function TeacherRoutes() {
         <Route path="students" element={<ExpertStudents />} />
         <Route path="availability" element={<ExpertAvailability />} />
         <Route path="skills" element={<ExpertSkills />} />
+        {/* "new" must precede ":listingId" or it would be read as an id. */}
+        <Route path="skills/new" element={<SkillListingForm />} />
+        <Route path="skills/:id" element={<SkillListingForm />} />
         <Route path="profile" element={<ExpertProfileEdit />} />
         <Route path="promote" element={<ExpertPromote />} />
         <Route path="inbox" element={<SkillInbox />} />
