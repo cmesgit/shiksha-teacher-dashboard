@@ -4,20 +4,20 @@
  * The whole point of multi-skill is that a guitar clip does not advertise a
  * welding class, so the video hangs off the LISTING, not the expert.
  *
- *   POST /skill/teacher/listings/<id>/intro-video/         → {video_id, upload_url, access_key}
- *   PUT  <upload_url>  (AccessKey header)                  → the file, direct to Bunny
+ *   POST /skill/teacher/listings/<id>/intro-video/         → {video_id, library_id, expire, signature}
+ *   TUS  Bunny's resumable endpoint, signed with that ticket → the file, direct to Bunny
  *   POST /skill/teacher/listings/<id>/intro-video/save/     ← {video_id}
  *   GET  /skill/teacher/listings/<id>/intro-video/status/   poll until status 4
  *
- * The PUT goes through this app's existing XHR upload path rather than fetch()
- * — Bunny rejects an upload with no AccessKey header, and only XHR reports
- * progress.
+ * The upload goes through tus-js-client (see src/shared/bunnyUpload.js) —
+ * the per-video signed ticket keeps the library's master AccessKey server-side.
  *
  * Statuses (ExpertProfile.INTRO_VIDEO_STATUS_CHOICES, reused verbatim):
  *   0 Created · 1 Uploaded · 2 Processing · 3 Transcoding · 4 Finished · 5 Error
  */
 import { useEffect, useRef, useState } from "react";
 import api from "../../shared/apiClient";
+import { uploadToBunny } from "../../shared/bunnyUpload";
 
 const POLL_MS = 4000;
 
@@ -52,20 +52,7 @@ export default function IntroVideoUpload({ listingId, status }) {
       const { data } = await api.post(`/skill/teacher/listings/${listingId}/intro-video/`, {
         title: file.name,
       });
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", data.upload_url, true);
-        xhr.setRequestHeader("AccessKey", data.access_key);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () => ((xhr.status === 200 || xhr.status === 201)
-          ? resolve()
-          : reject(new Error(`Upload failed (${xhr.status})`)));
-        xhr.onerror = () => reject(new Error("Network error during upload."));
-        xhr.send(file);
-      });
+      await uploadToBunny(file, data, { onProgress: setProgress });
       await api.post(`/skill/teacher/listings/${listingId}/intro-video/save/`, {
         video_id: data.video_id,
       });

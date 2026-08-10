@@ -3,6 +3,7 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import { useState, useEffect, useRef } from "react";
+import { useToast } from "../../contexts/ToastContext";
 
 export default function ControlBar({
   onLeave,
@@ -33,6 +34,7 @@ export default function ControlBar({
     isScreenShareEnabled,
   } = useLocalParticipant();
 
+  const { showToast } = useToast();
   const [micOn, setMicOn] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
   const [screenOn, setScreenOn] = useState(false);
@@ -193,7 +195,7 @@ export default function ControlBar({
           setVideoOn(false);
         }
         if (msg.type === "kick") {
-          alert("You have been removed from the session by the teacher.");
+          showToast({ type: "error", message: "You have been removed from the session by the teacher.", duration: 6000 });
           room.disconnect();
           if (onLeave) onLeave();
         }
@@ -204,7 +206,7 @@ export default function ControlBar({
     };
     room.on("dataReceived", handleData);
     return () => room.off("dataReceived", handleData);
-  }, [room, localParticipant, isStudent, onLeave]);
+  }, [room, localParticipant, isStudent, onLeave, showToast]);
 
   const leaveRoom = async () => {
     await room.disconnect();

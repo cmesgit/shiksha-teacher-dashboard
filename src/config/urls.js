@@ -64,6 +64,13 @@ export const TEACHER_DASHBOARD_URL = TEACHER_URL + "/teacher/dashboard";
 export const API_URL     = import.meta.env.VITE_API_URL     || ENV.API + "/api";
 export const WS_HOST     = import.meta.env.VITE_WS_HOST     || ENV.WS;
 
+// Bunny Stream library ID — genuinely different per real environment (no
+// hostname-based default makes sense here, unlike the URLs above). Must
+// come from VITE_BUNNY_LIBRARY_ID; deliberately no hardcoded fallback —
+// call sites should treat an empty string as "playback not configured"
+// rather than silently embedding from the wrong library.
+export const BUNNY_LIBRARY_ID = import.meta.env.VITE_BUNNY_LIBRARY_ID || "";
+
 // Convenience composites
 export const LOGIN_URL        = HOME_URL + "/login";
 export const PICK_PROFILE_URL = HOME_URL + "/pick-profile";

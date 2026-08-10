@@ -65,7 +65,6 @@ export default function useLiveSessionChat(sessionId) {
             },
           ]);
         } else if (data.type === "chat_history") {
-          console.log('📜 Chat history received:', data.data.length, 'messages');
           setRawHistory(data.data);
           setMessages(data.data.map((msg, i) => ({
             id: i,

@@ -6,6 +6,7 @@ import api from "../api/apiClient";
 import "../styles/academyScreens.css";
 import "../styles/liveSessions.css";
 import { LoadingState, EmptyState, ErrorState } from "../components/StateViews";
+import { useToast } from "../contexts/ToastContext";
 import { subjectChipPalette } from "../utils/subjectChips";
 import { fmtClockTime, dayLabel, startsInText } from "../utils/sessionTime";
 import ScheduleSessionModal from "../components/live/ScheduleSessionModal";
@@ -213,6 +214,7 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
 export default function LiveSessions() {
   const navigate = useNavigate();
   const { subjectId } = useParams();
+  const { showToast } = useToast();
 
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -345,7 +347,7 @@ export default function LiveSessions() {
       fetchSessions();
     } catch (err) {
       console.error("Failed to cancel session:", err);
-      alert(err.response?.data?.detail || "Failed to cancel session.");
+      showToast({ type: "error", message: err.response?.data?.detail || "Failed to cancel session." });
     }
   };
 
@@ -356,7 +358,7 @@ export default function LiveSessions() {
     } catch (err) {
       console.error("Failed to end session:", err);
       const msg = err.response?.data?.detail || "";
-      if (msg && msg !== "Session already completed.") alert(msg);
+      if (msg && msg !== "Session already completed.") showToast({ type: "error", message: msg });
     } finally {
       fetchSessions();
     }
