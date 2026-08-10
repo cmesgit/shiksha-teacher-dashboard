@@ -502,14 +502,14 @@ export default function PrivateSessionsDashboard() {
         onClose={() => setConfirmDlg(null)}
       />
       <RescheduleModal
-        key={rescheduleTarget?.id || "closed"}
+        key={rescheduleTarget?.id || "reschedule-closed"}
         session={rescheduleTarget}
         busy={actionBusy}
         onClose={() => setRescheduleTarget(null)}
         onSubmit={submitReschedule}
       />
       <ReasonModal
-        key={rejectTarget?.id || "closed"}
+        key={rejectTarget?.id || "reject-closed"}
         session={rejectTarget}
         title="Decline request"
         sub={rejectTarget ? `${rejectTarget._student || "This student"}'s request will be declined and they'll be notified.` : ""}
