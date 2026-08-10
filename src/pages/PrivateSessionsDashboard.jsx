@@ -1,6 +1,19 @@
 /**
  * FILE: teacher_ui/src/pages/PrivateSessionsDashboard.jsx
- * DEPLOYMENT READY — handles both real API and graceful errors
+ *
+ * Private Sessions (teacher) — the design's shared Academy list screen
+ * (Academy Dashboard.dc.html, `data-screen-label="Private Sessions"`, lines
+ * 1616–1727): head, an underline Scheduled/Requests/History tab bar, and one
+ * ac-listCard of standard ac-rows per tab. Teacher branch per README section 6:
+ *
+ *   - Scheduled: confirmed bookings + accepted requests (chip "Confirmed"),
+ *     reschedules the teacher sent and is waiting on (chip "Reschedule sent").
+ *   - Requests: pending student requests ("Requested by {name}"), with THREE
+ *     inline row actions — Reject / Reschedule / Accept — straight from the
+ *     list (dc.html lines 1663–1667), not behind a click-through.
+ *   - History: completed + declined/cancelled sessions, with a Newest/Oldest
+ *     sort (dc.html line 1706) alongside the existing status filter.
+ *   - No "Request session" button — that's student-only.
  *
  * Field names aligned to backend model:
  *   date, time, duration, subject, course, topic, status,
@@ -11,9 +24,17 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
 import * as privateSessionService from "../api/privateSessionService";
+import "../styles/academyScreens.css";
 import "../styles/privateSessions.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState } from "../components/StateViews";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { RescheduleModal, ReasonModal } from "../components/PrivateSessionModals";
+import NotesViewModal from "../components/live/NotesViewModal";
+import { statusLabel, statusTone } from "../utils/sessionStatus";
+import { subjectChipSlot } from "../utils/subjectChips";
+import { fmtClockTime, dayLabel } from "../utils/sessionTime";
 
 /* ── Helpers ── */
 
@@ -33,29 +54,17 @@ function fmtTime(t) {
   return `${hr % 12 || 12}:${m} ${hr >= 12 ? "p.m." : "a.m."}`;
 }
 
-function calcEnd(t, dur) {
-  if (!t || !dur) return "";
-  let mins = parseInt(dur, 10);
-  if (isNaN(mins)) return "";
-  if (t.includes("AM") || t.includes("PM") || t.includes("a.m") || t.includes("p.m")) return "";
-  const [h, m] = t.split(":").map(Number);
-  if (isNaN(h)) return "";
-  const tot = h * 60 + (m || 0) + mins;
-  const eh = Math.floor(tot / 60) % 24;
-  const em = tot % 60;
-  return `${eh % 12 || 12}:${String(em).padStart(2, "0")} ${eh >= 12 ? "p.m." : "a.m."}`;
-}
-
-function statusLabel(st) {
-  const m = {
-    approved: "Approved", ongoing: "On Going", pending: "Pending",
-    needs_reconfirmation: "Reconfirmation", proposed_changes: "Proposed Changes",
-    completed: "Completed", declined: "Declined",
-    cancelled: "Cancelled", cancelled_by_student: "Cancelled",
-    cancelled_by_teacher: "Cancelled", teacher_no_show: "Teacher No-Show",
-    student_no_show: "Student No-Show", expired: "Expired", withdrawn: "Withdrawn",
-  };
-  return m[st] || st;
+// The design's row wants a real Date for its time/day block (ac-row__when).
+// Session date/time are stored as separate strings, one of which may already
+// be a presentation string ("2:30 PM") rather than "14:30" — Date can't parse
+// that, so this falls back to null and callers use the old fmtDate/fmtTime
+// formatters instead, same as GroupSessions.jsx's groupStartDate().
+function rowStartDate(dateStr, timeStr) {
+  if (!dateStr) return null;
+  const t = timeStr || "";
+  if (/am|pm/i.test(t)) return null;
+  const d = new Date(`${dateStr}T${t || "00:00"}`);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 /* Normalize a session object — handles both old mock fields and real API fields */
@@ -76,6 +85,43 @@ function norm(s) {
   };
 }
 
+/* ── Row ── */
+function SessionRow({ r, subLabel, actionLabel, onAction, actionDisabled, extraActions }) {
+  const start = rowStartDate(r._date, r._time);
+  return (
+    <div className="ac-row" onClick={() => onAction?.(r)} style={{ cursor: onAction ? "pointer" : "default" }}>
+      <div className="ac-row__when">
+        <div className="ac-row__time">{start ? fmtClockTime(start) : fmtTime(r._time)}</div>
+        <div className="ac-row__day">{start ? dayLabel(start) : fmtDate(r._date)}</div>
+      </div>
+      <div className="ac-row__divider" />
+      <div className="ac-row__body">
+        <div className="ac-row__meta">
+          {r.subject && (
+            <span className={`subj-chip subj-chip--${subjectChipSlot(r.subject)}`}>{r.subject}</span>
+          )}
+          {subLabel}
+        </div>
+        <div className="ac-row__topic">{r.topic || `1-on-1 — ${r.subject || "Session"}`}</div>
+        <div className="ac-row__sub">
+          {r._student}{r._groupSize > 1 ? ` · ${r._groupSize} students` : ""}
+        </div>
+      </div>
+      {extraActions}
+      {actionLabel && (
+        <button
+          type="button"
+          className="ac-btn ac-btn--primary"
+          disabled={actionDisabled}
+          onClick={(e) => { e.stopPropagation(); onAction?.(r); }}
+        >
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ── Component ── */
 
 export default function PrivateSessionsDashboard() {
@@ -91,15 +137,26 @@ export default function PrivateSessionsDashboard() {
 
   // Filters
   const [historyFilter, setHistoryFilter] = useState("all");
+  const [historySort, setHistorySort] = useState("newest"); // README: Newest/Oldest, both roles.
   const [reqStatusFilter, setReqStatusFilter] = useState("all");
   const [reqSubjectFilter, setReqSubjectFilter] = useState("all");
 
-  // ✅ FIX 2: Auto-refresh + switch tab when navigated back with refresh flag
+  // Requests-tab inline row actions (dc.html lines 1663–1667 — Reject /
+  // Reschedule / Accept live on the row itself, no click-through required).
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [confirmDlg, setConfirmDlg] = useState(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [notesSession, setNotesSession] = useState(null);
+
+  const reload = () => setRefreshKey((k) => k + 1);
+
+  // Auto-refresh + switch tab when navigated back with refresh flag
   useEffect(() => {
     if (loc.state?.refresh) {
       setRefreshKey((k) => k + 1);
-      setTab(loc.state?.tab || "scheduled");   // ✅ actually switch to correct tab
-      nav(loc.pathname, { replace: true, state: {} }); // ✅ clear state completely
+      setTab(loc.state?.tab || "scheduled");
+      nav(loc.pathname, { replace: true, state: {} });
     }
   }, [loc.state?.refresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -109,7 +166,7 @@ export default function PrivateSessionsDashboard() {
       setError(null);
       try {
         const [s, r] = await Promise.all([
-          privateSessionService.getTeacherSessions().catch(() => []),  // ✅ FIX 1: was getSessions()
+          privateSessionService.getTeacherSessions().catch(() => []),
           privateSessionService.getRequests().catch(() => []),
         ]);
         setScheduled(s || []);
@@ -118,7 +175,6 @@ export default function PrivateSessionsDashboard() {
         console.error("Failed to load sessions:", err);
         setError("Failed to load sessions. Please try again.");
       }
-      // History — may not have endpoint yet
       try {
         const h = await privateSessionService.getHistory();
         setHistory(h || []);
@@ -130,49 +186,128 @@ export default function PrivateSessionsDashboard() {
     load();
   }, [refreshKey]);
 
-  const pendingCount = requests.filter(r =>
+  const pendingCount = requests.filter((r) =>
     r.status === "pending" ||
     r.status === "proposed_changes" ||
     r.status === "needs_reconfirmation"
   ).length;
 
   const reqSubjects = useMemo(() => {
-    const set = new Set(requests.map(r => r.subject));
+    const set = new Set(requests.map((r) => r.subject));
     return [...set].sort();
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
     let f = requests;
-    if (reqStatusFilter !== "all") f = f.filter(r => r.status === reqStatusFilter);
-    if (reqSubjectFilter !== "all") f = f.filter(r => r.subject === reqSubjectFilter);
+    if (reqStatusFilter !== "all") f = f.filter((r) => r.status === reqStatusFilter);
+    if (reqSubjectFilter !== "all") f = f.filter((r) => r.subject === reqSubjectFilter);
     return f;
   }, [requests, reqStatusFilter, reqSubjectFilter]);
 
-  const filteredHistory =
-    historyFilter === "all" ? history : history.filter(h => h.status === historyFilter);
+  const filteredHistory = useMemo(() => {
+    const base = historyFilter === "all" ? history : history.filter((h) => h.status === historyFilter);
+    const sorted = [...base].sort((a, b) => {
+      const av = norm(a), bv = norm(b);
+      const at = new Date(`${av._date || "1970-01-01"}T${/am|pm/i.test(av._time) ? "00:00" : (av._time || "00:00")}`).getTime();
+      const bt = new Date(`${bv._date || "1970-01-01"}T${/am|pm/i.test(bv._time) ? "00:00" : (bv._time || "00:00")}`).getTime();
+      const aVal = Number.isNaN(at) ? 0 : at;
+      const bVal = Number.isNaN(bt) ? 0 : bt;
+      return historySort === "newest" ? bVal - aVal : aVal - bVal;
+    });
+    return sorted;
+  }, [history, historyFilter, historySort]);
 
   const filteredScheduled = scheduled;
 
-  return (
-    <div className="tps">
-      <h1 className="tps__title">Private Sessions</h1>
+  /* ── Row actions ── */
+  const openDetail = (r, bucket) => nav(`/teacher/private-sessions/${bucket}/${r.id}`);
 
-      {/* Tabs */}
-      <div className="tps__tabs">
+  const askAccept = (r) => setConfirmDlg({
+    title: "Accept this request?",
+    message: `${r._student || "The student"}'s 1-on-1 request${r.topic ? ` — "${r.topic}"` : ""} will be scheduled${r._date ? ` for ${fmtDate(r._date)}${r._time ? ` at ${fmtTime(r._time)}` : ""}` : ""}. They'll be notified immediately.`,
+    confirmLabel: "Accept",
+    onConfirm: () => doAccept(r.id),
+  });
+
+  const doAccept = async (id) => {
+    setActionBusy(true);
+    try {
+      await privateSessionService.acceptRequest(id);
+      toast.success("Request accepted.");
+      setConfirmDlg(null);
+      reload();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Could not accept this request.");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const submitReject = async (reason) => {
+    if (!rejectTarget) return;
+    setActionBusy(true);
+    try {
+      await privateSessionService.declineRequest(rejectTarget.id, reason);
+      toast.success("Request declined.");
+      setRejectTarget(null);
+      reload();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Could not decline this request.");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const submitReschedule = async ({ new_date, new_time, note }) => {
+    if (!rescheduleTarget) return;
+    setActionBusy(true);
+    try {
+      await privateSessionService.rescheduleRequest(rescheduleTarget.id, { new_date, new_time, note });
+      toast.success("New time sent to student.");
+      setRescheduleTarget(null);
+      reload();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Could not send the new time.");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  return (
+    <div className="ac-screen">
+      <div className="ac-head">
+        <div>
+          <h1 className="ac-head__title">Private Sessions</h1>
+          <p className="ac-head__sub">Manage 1-on-1 session requests from your students.</p>
+        </div>
+        {/* No "+ Request session" button here — student-only (README section 6). */}
+      </div>
+
+      <div className="ac-tabs" role="tablist" aria-label="Private session view">
         <button
-          className={`tps__tab ${tab === "scheduled" ? "tps__tab--active" : ""}`}
+          type="button"
+          role="tab"
+          aria-selected={tab === "scheduled"}
+          className={`ac-tab${tab === "scheduled" ? " is-active" : ""}`}
           onClick={() => setTab("scheduled")}
         >
           Scheduled
         </button>
         <button
-          className={`tps__tab ${tab === "requests" ? "tps__tab--active" : ""}`}
+          type="button"
+          role="tab"
+          aria-selected={tab === "requests"}
+          className={`ac-tab${tab === "requests" ? " is-active" : ""}`}
           onClick={() => setTab("requests")}
         >
-          Requests{pendingCount > 0 && <span className="tps__tab-badge">{pendingCount}</span>}
+          Requests
+          {pendingCount > 0 && <span className="ac-tab__count">{pendingCount}</span>}
         </button>
         <button
-          className={`tps__tab ${tab === "history" ? "tps__tab--active" : ""}`}
+          type="button"
+          role="tab"
+          aria-selected={tab === "history"}
+          className={`ac-tab${tab === "history" ? " is-active" : ""}`}
           onClick={() => setTab("history")}
         >
           History
@@ -180,178 +315,212 @@ export default function PrivateSessionsDashboard() {
       </div>
 
       {loading && <LoadingState plain label="Loading sessions" />}
-      {error && <div className="tps__empty" style={{ color: "#ef4444" }}>{error}</div>}
+      {error && !loading && <ErrorState message={error} />}
 
       {/* ═══ SCHEDULED ═══ */}
-      {!loading && tab === "scheduled" && (
-        <div className="tps__grid">
-          {filteredScheduled.length === 0 && (
-            <p className="tps__empty">No scheduled sessions yet.</p>
+      {!loading && !error && tab === "scheduled" && (
+        <section className="ac-listCard">
+          {filteredScheduled.length === 0 ? (
+            <div className="ac-emptyRow">No sessions scheduled.</div>
+          ) : (
+            <div className="ac-list">
+              {filteredScheduled.map((raw) => {
+                const r = norm(raw);
+                const tone = statusTone(r.status);
+                const label = statusLabel(r.status);
+                const isLive = r.status === "ongoing";
+                const isPendingReconfirm = r.status === "needs_reconfirmation";
+                // README: a reschedule-sent row's button reads "Pending". The
+                // existing Detail page (isProposed) actually still offers
+                // Accept/Decline for this exact status — that's preserved
+                // real functionality this redesign must not remove — so the
+                // row stays clickable ("Review") into the detail page rather
+                // than a dead disabled "Pending" label that would hide it.
+                const actionLabel = isLive ? "Join live"
+                  : isPendingReconfirm || r.status === "proposed_changes" ? "Review"
+                  : "View details";
+                const onAction = isLive
+                  ? () => nav(`/teacher/private-session/live/${r.id}`)
+                  : () => openDetail(r, "scheduled");
+                return (
+                  <SessionRow
+                    key={r.id}
+                    r={r}
+                    onAction={onAction}
+                    actionLabel={actionLabel}
+                    subLabel={<span className={`ac-tag ac-tag--${tone}`}>{label}</span>}
+                  />
+                );
+              })}
+            </div>
           )}
-          {filteredScheduled.map((raw) => {
-            const s = norm(raw);
-            return (
-              <div
-                key={s.id}
-                className="tps__scard"
-                onClick={() => nav(`/teacher/private-sessions/scheduled/${s.id}`)}
-              >
-                <div className="tps__scard-body">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <h3 className="tps__scard-subject">{s.subject}</h3>
-                    <span className={`tps__pill tps__pill--${s.status}`}>{statusLabel(s.status)}</span>
-                  </div>
-                  <p className="tps__scard-course">{s.course}</p>
-                  {s.topic && <p className="tps__scard-topic">{s.topic}</p>}
-                  {s._student && (
-                    <p className="tps__scard-student">
-                      👤 {s._student}{s._groupSize > 0 ? ` · ${s._groupSize} students` : ""}
-                    </p>
-                  )}
-                </div>
-                <div className="tps__scard-footer">
-                  <span className="tps__scard-date">📅 {fmtDate(s._date)}</span>
-                  <span className="tps__scard-time">
-                    🕐 {fmtTime(s._time)}{calcEnd(s._time, s._duration) ? ` – ${calcEnd(s._time, s._duration)}` : ""}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        </section>
       )}
 
       {/* ═══ REQUESTS ═══ */}
-      {!loading && tab === "requests" && (
+      {!loading && !error && tab === "requests" && (
         <>
-          <div className="tps__filters">
-            <div className="tps__select-wrap">
-              <select
-                className="tps__select"
-                value={reqStatusFilter}
-                onChange={e => setReqStatusFilter(e.target.value)}
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="proposed_changes">Proposed Changes</option>
-                <option value="needs_reconfirmation">Reconfirmation</option>
-              </select>
-              <span className="tps__select-arrow">▾</span>
-            </div>
-            <div className="tps__select-wrap">
-              <select
-                className="tps__select"
-                value={reqSubjectFilter}
-                onChange={e => setReqSubjectFilter(e.target.value)}
-              >
-                <option value="all">All Subjects</option>
-                {reqSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <span className="tps__select-arrow">▾</span>
-            </div>
+          <div className="ac-sortRow" style={{ gap: 8 }}>
+            <select
+              className="ac-select"
+              value={reqStatusFilter}
+              onChange={(e) => setReqStatusFilter(e.target.value)}
+              aria-label="Filter requests by status"
+            >
+              <option value="all">All status</option>
+              <option value="pending">Pending</option>
+              <option value="proposed_changes">Proposed changes</option>
+              <option value="needs_reconfirmation">Reconfirmation</option>
+            </select>
+            <select
+              className="ac-select"
+              value={reqSubjectFilter}
+              onChange={(e) => setReqSubjectFilter(e.target.value)}
+              aria-label="Filter requests by subject"
+            >
+              <option value="all">All subjects</option>
+              {reqSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
-          <div className="tps__grid">
-            {filteredRequests.length === 0 && (
-              <p className="tps__empty">No requests match your filters.</p>
+
+          <section className="ac-listCard">
+            {filteredRequests.length === 0 ? (
+              <div className="ac-emptyRow">No requests match your filters.</div>
+            ) : (
+              <div className="ac-list">
+                {filteredRequests.map((raw) => {
+                  const r = norm(raw);
+                  return (
+                    <SessionRow
+                      key={r.id}
+                      r={r}
+                      onAction={() => openDetail(r, "request")}
+                      subLabel={<span className="ac-when">Requested by {r._student || "a student"}</span>}
+                      extraActions={
+                        <div className="ac-row__actions">
+                          <button
+                            type="button"
+                            className="ac-btn ac-btn--danger"
+                            onClick={(e) => { e.stopPropagation(); setRejectTarget(r); }}
+                          >
+                            Reject
+                          </button>
+                          <button
+                            type="button"
+                            className="ac-btn ac-btn--warning"
+                            onClick={(e) => { e.stopPropagation(); setRescheduleTarget(r); }}
+                          >
+                            Reschedule
+                          </button>
+                          <button
+                            type="button"
+                            className="ac-btn ac-btn--primary"
+                            onClick={(e) => { e.stopPropagation(); askAccept(r); }}
+                          >
+                            Accept
+                          </button>
+                        </div>
+                      }
+                    />
+                  );
+                })}
+              </div>
             )}
-            {filteredRequests.map((raw) => {
-              const r = norm(raw);
-              return (
-                <div
-                  key={r.id}
-                  className="tps__scard"
-                  onClick={() => nav(`/teacher/private-sessions/request/${r.id}`)}
-                >
-                  <div className="tps__scard-body">
-                    <span className={`tps__pill tps__pill--${r.status}`}>{statusLabel(r.status)}</span>
-                    <h3 className="tps__scard-subject" style={{ marginTop: 6 }}>{r.subject}</h3>
-                    <p className="tps__scard-course">{r.course}</p>
-                    {r.topic && <p className="tps__scard-topic">{r.topic}</p>}
-                    <p className="tps__scard-student">
-                      👤 {r._student}{r._groupSize > 0 ? ` · ${r._groupSize} students` : ""}
-                    </p>
-                    {r.note && (
-                      <p className="tps__scard-topic" style={{ fontStyle: "italic", marginTop: 4 }}>
-                        "{r.note}"
-                      </p>
-                    )}
-                  </div>
-                  <div className="tps__scard-footer">
-                    <span className="tps__scard-date">📅 {fmtDate(r._date)}</span>
-                    <span className="tps__scard-time">
-                      🕐 {fmtTime(r._time)}{calcEnd(r._time, r._duration) ? ` – ${calcEnd(r._time, r._duration)}` : ""}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          </section>
         </>
       )}
 
       {/* ═══ HISTORY ═══ */}
-      {!loading && tab === "history" && (
+      {!loading && !error && tab === "history" && (
         <>
-          <div className="tps__filters tps__filters--right">
-            <div className="tps__select-wrap">
-              <select
-                className="tps__select"
-                value={historyFilter}
-                onChange={e => setHistoryFilter(e.target.value)}
-              >
-                <option value="all">All History</option>
-                <option value="completed">Completed</option>
-                <option value="withdrawn">Withdrawn</option>
-                <option value="teacher_no_show">Teacher/Student No-Show</option>
-                <option value="student_no_show">Student No-Show</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="cancelled_by_student">Cancelled by Student</option>
-                <option value="declined">Declined</option>
-                <option value="expired">Expired</option>
-              </select>
-              <span className="tps__select-arrow">▾</span>
-            </div>
+          <div className="ac-sortRow" style={{ gap: 8 }}>
+            <select
+              className="ac-select"
+              value={historyFilter}
+              onChange={(e) => setHistoryFilter(e.target.value)}
+              aria-label="Filter history by status"
+            >
+              <option value="all">All history</option>
+              <option value="completed">Completed</option>
+              <option value="withdrawn">Withdrawn</option>
+              <option value="teacher_no_show">Teacher/Student no-show</option>
+              <option value="student_no_show">Student no-show</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="cancelled_by_student">Cancelled by student</option>
+              <option value="declined">Declined</option>
+              <option value="expired">Expired</option>
+            </select>
+            {/* README: "History tab (both roles) has a Newest / Oldest filter." */}
+            <select
+              className="ac-select"
+              value={historySort}
+              onChange={(e) => setHistorySort(e.target.value)}
+              aria-label="Sort history"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
           </div>
-          <div className="tps__hlist">
-            {filteredHistory.length === 0 && (
-              <p className="tps__empty">
-                No history found.
-                {history.length === 0 ? " History endpoint may not be set up yet." : ""}
-              </p>
+
+          <section className="ac-listCard">
+            {filteredHistory.length === 0 ? (
+              <div className="ac-emptyRow">
+                {history.length === 0 ? "No history yet — the history endpoint may not be set up yet." : "No sessions match this filter."}
+              </div>
+            ) : (
+              <div className="ac-list">
+                {filteredHistory.map((raw) => {
+                  const h = norm(raw);
+                  const tone = statusTone(h.status);
+                  const label = statusLabel(h.status);
+                  return (
+                    <SessionRow
+                      key={h.id}
+                      r={h}
+                      onAction={() => openDetail(h, "history")}
+                      subLabel={<span className={`ac-tag ac-tag--${tone}`}>{label}</span>}
+                      extraActions={h.status === "completed" ? (
+                        <button
+                          type="button"
+                          className="ac-btn"
+                          onClick={(e) => { e.stopPropagation(); setNotesSession(h); }}
+                        >
+                          Notes
+                        </button>
+                      ) : null}
+                    />
+                  );
+                })}
+              </div>
             )}
-            {filteredHistory.map((raw) => {
-              const h = norm(raw);
-              return (
-                <div
-                  key={h.id}
-                  className="tps__hrow"
-                  onClick={() => nav(`/teacher/private-sessions/history/${h.id}`)}
-                >
-                  <div className="tps__hrow-avatar">
-                    <div className="tps__hrow-ph">{(h._student || "?")[0].toUpperCase()}</div>
-                  </div>
-                  <div className="tps__hrow-info">
-                    <p className="tps__hrow-name">
-                      {h._student}{h._studentId ? ` [${h._studentId}]` : ""}
-                    </p>
-                    <p className="tps__hrow-meta">
-                      {h.course}{h._courseId ? `(${h._courseId})` : ""} – {h.subject}{h._subjectCode ? `(${h._subjectCode})` : ""}
-                    </p>
-                  </div>
-                  <div className="tps__hrow-dt">
-                    <p>📅 {fmtDate(h._date)}</p>
-                    <p>🕐 {fmtTime(h._time)}{calcEnd(h._time, h._duration) ? ` to ${calcEnd(h._time, h._duration)}` : ""}</p>
-                    <p>⏱ {h._actualDuration ? `${h._actualDuration} mins` : h._durationLabel || `${h._duration} mins`}</p>
-                  </div>
-                  <div className="tps__hrow-gs">👥 {h._groupSize}</div>
-                  <div className="tps__hrow-st">
-                    <span className={`tps__pill tps__pill--${h.status}`}>{statusLabel(h.status)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          </section>
         </>
+      )}
+
+      <ConfirmDialog
+        dialog={confirmDlg && { ...confirmDlg, busy: actionBusy }}
+        onClose={() => setConfirmDlg(null)}
+      />
+      <RescheduleModal
+        key={rescheduleTarget?.id || "reschedule-closed"}
+        session={rescheduleTarget}
+        busy={actionBusy}
+        onClose={() => setRescheduleTarget(null)}
+        onSubmit={submitReschedule}
+      />
+      <ReasonModal
+        key={rejectTarget?.id || "reject-closed"}
+        session={rejectTarget}
+        title="Decline request"
+        sub={rejectTarget ? `${rejectTarget._student || "This student"}'s request will be declined and they'll be notified.` : ""}
+        confirmLabel="Decline"
+        tone="danger"
+        busy={actionBusy}
+        onClose={() => setRejectTarget(null)}
+        onSubmit={submitReject}
+      />
+      {notesSession && (
+        <NotesViewModal sessionId={notesSession.id} sessionType="private" onClose={() => setNotesSession(null)} />
       )}
     </div>
   );

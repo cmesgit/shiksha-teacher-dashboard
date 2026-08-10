@@ -1,18 +1,17 @@
-/**
- * teacher_dashboard/src/pages/Chat.jsx
- *
- * Teacher inbox. Identity = the teacher profile (resolved server-side
- * from JWT context=teacher claim). All course rooms the teacher is in,
- * plus all 1:1 messages with students.
- *
- * Navigation:
- *   navigate("/teacher/chat")                                            → inbox
- *   navigate("/teacher/chat", { state: { learnerId } })                 → DM a student
- *   navigate("/teacher/chat", { state: { courseId, courseTitle } })     → a course room
- */
+// teacher_dashboard/src/pages/Chat.jsx
+//
+// Teacher Messages. Full Communication Center hub (categories, Directory,
+// Notifications, Settings, Support, pin/mute/archive/report, reactions,
+// attachments, read receipts — see shared/ChatPanel.jsx), repainted onto the
+// Academy design tokens via `theme="academy"` (shared/ChatPanel.css's
+// `.cc-theme-academy` block) instead of the hub's original terracotta/teal
+// theme. pages/SkillInbox.jsx mounts the exact same component with
+// `theme="skill"` instead.
 import { useLocation } from "react-router-dom";
 import ChatPanel from "../shared/ChatPanel";
 import "../shared/ChatPanel.css";
+
+const DIRECTORY_NOTE = "To reach a student, reply to their message or message them from a course room.";
 
 export default function Chat() {
   const { state } = useLocation();
@@ -26,8 +25,8 @@ export default function Chat() {
     : undefined;
 
   return (
-    <div style={{ padding: "20px", height: "calc(100vh - 80px)", boxSizing: "border-box" }}>
-      <ChatPanel directTo={directTo} courseRoom={courseRoom} />
+    <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+      <ChatPanel directTo={directTo} courseRoom={courseRoom} theme="academy" directoryContactsNote={DIRECTORY_NOTE} />
     </div>
   );
 }

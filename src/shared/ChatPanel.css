@@ -415,3 +415,82 @@
 @media (prefers-reduced-motion: reduce) {
   .cc-spinner, .cc-skel-avatar, .cc-skel-line, .cc-msg-highlight .cc-bubble, .cc-bubble-file-pending { animation: none; }
 }
+
+/* ── Academy theme override ────────────────────────────────────────────
+   Applied via <ChatPanel theme="academy" /> on both apps' real Messages
+   screens (pages/Chat.jsx). SkillInbox.jsx/SkillMessages.jsx now pass
+   theme="skill" instead — see that block below — so nothing on either
+   track falls back to this file's original terracotta→teal default anymore.
+
+   Values confirmed against Academy Dashboard.dc.html's Messages screen
+   (data-screen-label="Messages") AND its own reference screenshots
+   (student-12-messages.png / teacher-20-messages.png) — the design does
+   NOT role-tint this screen the way nearly everywhere else in the app is
+   role-tinted: bubbles/send button/avatars are the same flat blue
+   (#425f7f) in both screenshots, even the teacher one. Only the icon rail
+   below (which the design has no equivalent of at all) is themed to the
+   viewing app's own real sidebar color, for visual continuity with the
+   rest of that app rather than a fixed literal. */
+.cc-theme-academy {
+  --cc-grad: #425f7f;
+  --cc-border: #e5eaed;
+  --cc-bg-soft: #f9fafb;
+  --cc-ink: #1a2c33;
+  --cc-accent: #13899b;
+  --cc-teal: #13899b;
+  --cc-danger: #dc2626;
+  --cc-font-head: 'Montserrat', sans-serif;
+  --cc-font-body: 'Poppins', system-ui, sans-serif;
+  border-color: var(--cc-border);
+}
+.cc-theme-academy .cc-sidebar { background: var(--side-bg, #425f7f); border-right: 1px solid rgba(0,0,0,.12); }
+.cc-theme-academy .cc-sidebar-item-active { background: rgba(255,255,255,.18); }
+.cc-theme-academy .cc-card-active { background: #eef1f2; }
+.cc-theme-academy .cc-bubble { background: #fff; border: 1px solid var(--cc-border); color: var(--cc-ink); }
+.cc-theme-academy .cc-msg-mine .cc-bubble { background: var(--cc-grad); border-color: var(--cc-grad); color: #fff; }
+.cc-theme-academy .cc-search-bar { background: #f9fafb; }
+.cc-theme-academy .cc-card-unread-badge,
+.cc-theme-academy .cc-count-pill { background: var(--cc-accent); }
+.cc-theme-academy .cc-muted-icon,
+.cc-theme-academy .cc-announcement-tag { color: var(--cc-accent); }
+
+/* ── Skill Dev theme override ──────────────────────────────────────────
+   Applied via <ChatPanel theme="skill" /> on SkillInbox.jsx (teacher) and
+   SkillMessages.jsx (student) — the gap the academy block above used to
+   just document and leave open.
+
+   Hardcoded literals, like the academy block above — NOT var(--acc) etc.
+   Tried that first; broke on SkillMessages.jsx specifically, since that
+   route sits inside StudentLayout with data-track="academy" (the learner's
+   default track) rather than "skill", so var(--acc) resolved to the academy
+   blue even though this ChatPanel instance is explicitly Skill Dev. A theme
+   passed as an explicit prop must not depend on an ambient ancestor
+   attribute it can't control. Values from design_handoff_skilldev/README.md
+   (accent #ff8f01, accent-deep #d97706, amber tint #fff8f0/#f3d9bd,
+   sidebar #425f7f — identical on both tracks per that doc). */
+.cc-theme-skill {
+  --cc-grad: #ff8f01;
+  --cc-border: #e5eaed;
+  --cc-bg-soft: #f7f9fa;
+  --cc-ink: #1a2c33;
+  --cc-accent: #d97706;
+  --cc-teal: #d97706;
+  --cc-danger: #dc2626;
+  --cc-font-head: 'Montserrat', sans-serif;
+  --cc-font-body: 'Poppins', system-ui, sans-serif;
+  border-color: var(--cc-border);
+}
+.cc-theme-skill .cc-sidebar { background: #425f7f; border-right: 1px solid rgba(0,0,0,.12); }
+.cc-theme-skill .cc-sidebar-item-active { background: rgba(255,255,255,.18); }
+.cc-theme-skill .cc-card-active { background: #fff8f0; }
+/* Skill Dev Student.dc.html dc:1322-1323: incoming #f2f5f7 (no border),
+   mine #ff8f01/#fff; both 13px/1.45, radius 15 with a 5px tail corner. */
+.cc-theme-skill .cc-bubble { background: #f2f5f7; border: none; color: var(--cc-ink); font-size: 13px; line-height: 1.45; padding: 11px 15px; border-radius: 15px 15px 15px 5px; }
+.cc-theme-skill .cc-msg-mine .cc-bubble { background: var(--cc-grad); border-color: var(--cc-grad); color: #fff; border-radius: 15px 15px 5px 15px; }
+.cc-theme-skill .cc-search-bar { background: var(--cc-bg-soft); }
+.cc-theme-skill .cc-composer-input { background: var(--cc-bg-soft); border-color: var(--cc-border); }
+.cc-theme-skill .cc-composer-input:focus { border-color: var(--cc-grad); }
+.cc-theme-skill .cc-card-unread-badge,
+.cc-theme-skill .cc-count-pill { background: var(--cc-accent); }
+.cc-theme-skill .cc-muted-icon,
+.cc-theme-skill .cc-announcement-tag { color: var(--cc-accent); }

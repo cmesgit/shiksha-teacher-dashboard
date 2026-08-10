@@ -10,7 +10,7 @@ const optionLabels = ["a", "b", "c", "d"];
 
 export default function QuizView() {
   const navigate = useNavigate();
-  const { quizId, subjectId } = useParams();
+  const { quizId } = useParams();
 
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -56,7 +56,7 @@ export default function QuizView() {
     <div className="quiz-view-page">
       <button
         className="qv-back-btn"
-        onClick={() => navigate(`/teacher/classes/${subjectId}/quizzes`)}
+        onClick={() => navigate(-1)}
       >
         <IoChevronBack /> Back
       </button>
@@ -69,17 +69,9 @@ export default function QuizView() {
         <div className="qv-edit-row">
           <button
             className="qv-view-submission-btn"
-            onClick={() =>
-              navigate(`/teacher/classes/${subjectId}/quizzes/${quizId}/submissions`)
-            }
+            onClick={() => navigate(`/teacher/quizzes/${quizId}/submissions`)}
           >
             View Submission
-          </button>
-          <button
-            className="qv-edit-btn"
-            onClick={() => navigate("/teacher/classes/quizzes/create", { state: quiz })}
-          >
-            Edit
           </button>
         </div>
 

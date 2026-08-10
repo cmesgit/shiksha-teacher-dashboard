@@ -7,13 +7,11 @@ import { LoadingState } from "../components/StateViews";
 
 export default function SubmissionView() {
   const navigate = useNavigate();
-  const { subjectId, assignmentId } = useParams();
+  const { assignmentId } = useParams();
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | submitted | pending
-
-  const backPath = `/teacher/classes/${subjectId}/assignments`;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -71,7 +69,7 @@ export default function SubmissionView() {
   return (
     <div className="sv-page">
 
-      <button className="sv-back-btn" onClick={() => navigate(backPath)}>
+      <button className="sv-back-btn" onClick={() => navigate(-1)}>
         <IoChevronBack /> Back
       </button>
 

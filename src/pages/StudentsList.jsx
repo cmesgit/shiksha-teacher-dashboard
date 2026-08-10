@@ -5,6 +5,15 @@ import api from "../api/apiClient";
 import "../styles/students.css";
 import { LoadingState } from "../components/StateViews";
 
+// ONE ROW = ONE STUDENT, NOT ONE ACCOUNT. This app is multi-profile: a parent
+// with three enrolled children is one login and three students, so several rows
+// can share the same `email`/`account_id`/`username`. `student.id` is the
+// learner-profile id (the student) — full_name is optional on a profile, so
+// fall back to display_name (what the profile picker shows, and the only field
+// that distinguishes siblings) before the account-level `username`.
+const displayNameOf = (s) =>
+  s.full_name || s.display_name || s.username || "Unnamed student";
+
 export default function StudentsList() {
   const navigate = useNavigate();
   const { subjectId } = useParams();
@@ -69,7 +78,7 @@ export default function StudentsList() {
             <tbody>
               {filtered.map((student, idx) => (
                 <tr
-                  key={student.id}
+                  key={student.id || `account:${student.account_id}`}
                   className="students-row"
                   onClick={() =>
                     navigate(
@@ -87,10 +96,10 @@ export default function StudentsList() {
                         ) : student.avatar_type === "emoji" && student.avatar ? (
                           <span>{student.avatar}</span>
                         ) : (
-                          <span>{(student.full_name || "?")[0].toUpperCase()}</span>
+                          <span>{displayNameOf(student)[0].toUpperCase()}</span>
                         )}
                       </div>
-                      <span>{student.full_name || student.username}</span>
+                      <span>{displayNameOf(student)}</span>
                     </div>
                   </td>
                   <td>{student.email}</td>

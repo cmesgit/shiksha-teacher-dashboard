@@ -66,7 +66,13 @@ function useCompact() {
   return compact;
 }
 
-export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
+// directoryContactsNote: optional footer text for the "New message" picker,
+// explaining who ISN'T reachable via this directory (it only ever searches
+// faculty/experts, never students) and how to reach them instead. Only the
+// TEACHER-side callers (Chat.jsx, SkillInbox.jsx) pass this — the copy
+// ("To reach a student...") only makes sense from a teacher's perspective;
+// a student would never expect to find a student in a staff directory.
+export default function ChatPanel({ directTo, courseRoom, initialDraft = "", theme, directoryContactsNote }) {
   const [searchParams] = useSearchParams();
   const initialView = (() => {
     const v = searchParams.get("view");
@@ -196,7 +202,7 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
   const showThreadPane = view === "inbox" && (!compact || showThreadOnMobile);
 
   return (
-    <div className={"cc-root" + (compact ? " cc-root-compact" : "")}>
+    <div className={"cc-root" + (compact ? " cc-root-compact" : "") + (theme ? ` cc-theme-${theme}` : "")}>
       <nav className="cc-sidebar">
         {SIDEBAR_ITEMS.map((item) => {
           const isActive = item.kind === "category" ? (view === "inbox" && category === item.key) : view === item.key;
@@ -284,7 +290,7 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "" }) {
       </main>
 
       {newChatOpen && (
-        <PeopleDirectory mode="picker" onClose={() => setNewChatOpen(false)} onStart={startDirectWith} />
+        <PeopleDirectory mode="picker" onClose={() => setNewChatOpen(false)} onStart={startDirectWith} contactsNote={directoryContactsNote} />
       )}
 
       {profileIdentity && (

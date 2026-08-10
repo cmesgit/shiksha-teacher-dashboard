@@ -327,7 +327,7 @@ export default function ExpertProfileEdit() {
               ) : introUploading ? (
                 <div style={{ marginTop: 6 }}>
                   <div style={{ height: 8, borderRadius: 999, background: "#e9eef0", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${introProgress}%`, background: "#13899b", transition: "width .2s" }} />
+                    <div style={{ height: "100%", width: `${introProgress}%`, background: "var(--skill)", transition: "width .2s" }} />
                   </div>
                   <div style={{ fontSize: 11.5, color: "#9aa9af", marginTop: 4 }}>Uploading… {introProgress}%</div>
                 </div>
@@ -376,9 +376,9 @@ export default function ExpertProfileEdit() {
                         style={{
                           fontSize: 12.5, fontWeight: 700, padding: "7px 14px", borderRadius: 100,
                           cursor: "pointer", transition: "all .15s",
-                          border: on ? "1.5px solid #0a808a" : "1.5px solid #e3dccf",
+                          border: on ? "1.5px solid var(--skill-ink)" : "1.5px solid #e3dccf",
                           background: on ? "#e7f3f4" : "#fff",
-                          color: on ? "#0a808a" : "#6b7c83",
+                          color: on ? "var(--skill-ink)" : "#6b7c83",
                         }}>
                         {on ? "✓ " : ""}{c.label}
                       </button>

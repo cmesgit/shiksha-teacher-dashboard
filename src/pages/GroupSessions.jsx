@@ -1,22 +1,50 @@
 /**
- * FILE: TEACHER_UI/src/pages/GroupSessions.jsx
+ * FILE: src/pages/GroupSessions.jsx (teacher)
  *
- * Teacher Figma-style Group Sessions page.
+ * Group Sessions — the design's shared Academy list screen (Academy
+ * Dashboard.dc.html, `data-screen-label="Group Sessions"`, lines 1319–1360):
+ * head + Join/Host buttons, an underline Upcoming/Past tab bar, and one list
+ * card of standard rows. The shapes come from the shared styles/
+ * academyScreens.css — same file the student dashboard's already-converted
+ * GroupSessions.jsx uses, so both apps render this screen identically apart
+ * from the per-role accent color.
+ *
+ * This teacher variant keeps real differences from the student reference:
+ *   - Participants are TEACHERS, not students (ParticipantSearch/Step call
+ *     groupSessionService.getTeachers, not getCourseStudents).
+ *   - The create/edit payload sends `invited_teacher_id` (single-teacher
+ *     backend field) alongside `invited_user_ids` — the student payload has
+ *     no such field.
+ *   - SessionDetailsDialog reads `teacherId`/`hostTeacherId`, not `studentId`.
+ *   - HostSessionDialog keeps the teacher-only "pick a duration, then Start
+ *     instant session" flow (navigates straight into the room) instead of
+ *     the student app's ID-reveal-then-Copy/Share flow.
+ *   - Every live-room / join-by-code route is `/teacher/group-session/live/:id`.
+ *
  * Flow included:
- *   - Main Group Sessions cards page
+ *   - Main Group Sessions list screen (Upcoming / Past tabs)
  *   - Join Session dialog
  *   - Host Session dialog
  *   - Scheduled Session create dialog: Details → Participants → Summary
  *   - Scheduled Session details dialog for Host / Participant
  *   - Edit Session dialog for Host: Details → Participants → Summary
+ *   - Notes dialog (Past tab row action)
+ *
+ * The design specifies the list screen only. The dialogs below keep their
+ * existing structure and step logic; they've been re-pointed at the shared
+ * `sg__` dialog utility classes (now defined in teacherGroupSessions.css)
+ * so they stop rendering unstyled.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/apiClient";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
-import "../styles/teacherGroupSessions.css";
 import { LoadingState } from "../components/StateViews";
+import { subjectChipSlot } from "../utils/subjectChips";
+import { fmtClockTime, dayLabel, startsInText } from "../utils/sessionTime";
+import "../styles/academyScreens.css";
+import "../styles/teacherGroupSessions.css";
 
 /* ═══════════════════════════════════════════════════════════
    HELPERS
@@ -127,26 +155,10 @@ function shortId(id) {
   return s.length > 12 ? `${s.slice(0, 10)}…` : s;
 }
 
-function getUserInitial(user) {
-  return (
-    user?.full_name ||
-    user?.name ||
-    user?.username ||
-    user?.email ||
-    "U"
-  ).charAt(0).toUpperCase();
-}
-
-function getHostPhoto(group) {
-  return (
-    group?.hostPhoto ||
-    group?.host_photo ||
-    group?.host_profile_photo ||
-    group?.hostAvatar ||
-    group?.host_avatar ||
-    ""
-  );
-}
+/* getUserInitial() and getHostPhoto() used to feed the old unstyled card's
+   avatar. The design's row carries no avatar (it uses the time/day block in
+   that slot), so both are gone rather than left as dead code — mirrors the
+   student app's GroupSessions.jsx. */
 
 function isEndedNow(g) {
   if (!g) return false;
@@ -193,29 +205,16 @@ function uniqueByUserId(list) {
 }
 
 async function updateScheduledSession(sessionId, payload) {
-  // Your service file currently has create/cancel/decline/join APIs, but no
-  // update API. This helper tries the common backend routes. If your backend
-  // uses a different route, add it in groupSessionService.js later.
-  const candidates = [
-    { method: "patch", url: `/sessions/group-sessions/${sessionId}/` },
-    { method: "patch", url: `/sessions/group-sessions/${sessionId}/update/` },
-    { method: "post", url: `/sessions/group-sessions/${sessionId}/update/` },
-  ];
-
-  let lastErr = null;
-  for (const c of candidates) {
-    try {
-      const res = await api[c.method](c.url, payload);
-      if (res?.data) return res.data;
-    } catch (err) {
-      lastErr = err;
-      const status = err?.response?.status;
-      if (status && ![404, 405].includes(status)) throw err;
-    }
-  }
-  throw lastErr || new Error("Update endpoint not available.");
+  // PATCH group_session_detail (host-only, while status="scheduled"):
+  // topic/scheduled_date/scheduled_time/duration_minutes, plus additive-only
+  // invited_user_ids (new ids get invited; ids missing from the submission
+  // are left alone — this never revokes an existing invite).
+  const res = await api.patch(`/sessions/group-sessions/${sessionId}/`, payload);
+  return res.data;
 }
 
+// Teacher hosts get 5 duration choices (incl. 2h/3h) for both the scheduler
+// and the instant-session picker — kept wider than the student app's 3.
 const DURATIONS = [
   { label: "30 minutes", value: 30 },
   { label: "60 minutes", value: 60 },
@@ -228,66 +227,112 @@ const MAX_PARTICIPANTS = 10;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* ═══════════════════════════════════════════════════════════
-   SESSION CARD
+   SESSION ROW
 ═══════════════════════════════════════════════════════════ */
-function GroupSessionCard({ group, onOpen }) {
-  const status = isEndedNow(group) ? "completed" : (group.status || "scheduled");
+/* The design's row wants a Date for its time/day block. Group sessions store
+   date and time as separate strings, so combine them — and fall back to the
+   existing string formatters if the result isn't a valid Date, rather than
+   rendering "Invalid Date". */
+function groupStartDate(group) {
+  if (!group?.date) return null;
+  const d = new Date(`${group.date}T${group.time || "00:00"}`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+// Group-session status → shared .ac-tag--* variant.
+const GROUP_STATUS_TONE = {
+  scheduled: "info",
+  live: "live",
+  completed: "success",
+  cancelled: "danger",
+  expired: "neutral",
+};
+
+/* One row, shared by the Upcoming and Past tabs — the design uses the same row
+   shape for both, differing only in the trailing action. The design's own row
+   (dc.html line 1345) shows a subject chip alongside the status tag, and a
+   teacher's group session does carry a real subject (subjectName), so it gets
+   one here via the same subjectChipSlot() helper Assignments/Live Sessions use. */
+function GroupSessionRow({ group, status, actionLabel, onAction }) {
+  const start = groupStartDate(group);
+  const tone = GROUP_STATUS_TONE[status] || "neutral";
   const isLive = status === "live";
-  const isScheduled = status === "scheduled";
-  const hostPhoto = getHostPhoto(group);
-  const startedAt = group.roomStartedAt ? new Date(group.roomStartedAt) : null;
-  const startTime = startedAt && !Number.isNaN(startedAt.getTime())
-    ? startedAt.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
-    : formatTime(group.time);
   const participantCount = Math.max(1, 1 + Number(group.acceptedCount || 0));
 
   return (
-    <button
-      type="button"
-      className={`sg__sessionCard sg__sessionCard--${status}`}
-      onClick={() => onOpen(group)}
-    >
-      <div className="sg__sessionCardTop">
-        <div className="sg__sessionHostBlock">
-          <span className="sg__sessionAvatar">
-            {hostPhoto ? (
-              <img src={hostPhoto} alt={group.hostName || "Host"} />
-            ) : (
-              <span>{(group.hostName || "H").charAt(0).toUpperCase()}</span>
-            )}
-          </span>
-
-          <div className="sg__sessionHostText">
-            <span className="sg__sessionHostName">{group.hostName || "Host Name"}</span>
-            <span className="sg__sessionTitle">{group.topic || "Title (Only If Entered)"}</span>
-          </div>
+    <div className="ac-row">
+      <div className="ac-row__when">
+        <div className="ac-row__time">
+          {start ? fmtClockTime(start) : formatTime(group.time)}
         </div>
-
-        <span className={`sg__figmaStatus sg__figmaStatus--${status}`}>
-          {isLive ? "LIVE" : isScheduled ? "Scheduled" : statusLabel(status)}
-        </span>
+        <div className="ac-row__day">
+          {start ? dayLabel(start) : formatDate(group.date)}
+        </div>
       </div>
-
-      <div className="sg__sessionCardBottom">
-        {isLive ? (
-          <>
-            <span><strong>Duration</strong> {group.durationMinutes ? `${group.durationMinutes} min` : "—"}</span>
-            <span><strong>Start Time</strong> {startTime}</span>
-            <span><strong>Participants</strong> {participantCount}</span>
-          </>
-        ) : (
-          <>
-            <span><strong>Date</strong> {formatDate(group.date)}</span>
-            <span><strong>Session Timing</strong> {formatTiming(group.time, group.durationMinutes)}</span>
-          </>
-        )}
+      <div className="ac-row__divider" />
+      <div className="ac-row__body">
+        <div className="ac-row__meta">
+          {group.subjectName && (
+            <span className={`subj-chip subj-chip--${subjectChipSlot(group.subjectName)}`}>
+              {group.subjectName}
+            </span>
+          )}
+          <span className={`ac-tag ac-tag--${tone}`}>{statusLabel(status)}</span>
+          {isLive ? (
+            <span className="ac-when">{participantCount} in the room</span>
+          ) : start && status === "scheduled" ? (
+            <span className="ac-when">starts {startsInText(start)}</span>
+          ) : (
+            <span className="ac-when">{formatTiming(group.time, group.durationMinutes)}</span>
+          )}
+        </div>
+        <div className="ac-row__topic">{group.topic || "Untitled session"}</div>
+        <div className="ac-row__sub">
+          {group.hostName ? `Hosted by ${group.hostName}` : "Host unknown"}
+        </div>
       </div>
-    </button>
+      <button
+        type="button"
+        className="ac-btn ac-btn--primary"
+        onClick={() => onAction(group)}
+      >
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
+function GroupSessionCard({ group, onOpen }) {
+  const status = isEndedNow(group) ? "completed" : (group.status || "scheduled");
+  return (
+    <GroupSessionRow
+      group={group}
+      status={status}
+      actionLabel={status === "live" ? "Join" : "Open"}
+      onAction={onOpen}
+    />
   );
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PARTICIPANT SEARCH
+   PAST SESSION ROW (Past tab)
+   Same row as GroupSessionCard, but the action is "Notes" rather than
+   opening the live/scheduled details dialog — matching the student app's
+   already-approved pattern for this screen's Past tab.
+═══════════════════════════════════════════════════════════ */
+function PastSessionCard({ group, onNotes }) {
+  return (
+    <GroupSessionRow
+      group={group}
+      status={group.status === "cancelled" ? "cancelled" : "completed"}
+      actionLabel="Notes"
+      onAction={onNotes}
+    />
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PARTICIPANT SEARCH (teacher-invites-teacher — NOT the student search)
 ═══════════════════════════════════════════════════════════ */
 function ParticipantSearch({ subjectId, selected, onAdd, disabled, currentUserId }) {
   const [query, setQuery] = useState("");
@@ -426,7 +471,7 @@ function ParticipantsStep({ subjectId, participants, setParticipants, disabled, 
               <span style={styles.participantIndex}>{index + 1}.</span>
               <span style={styles.participantNameBox}>
                 {p.name || "Teacher"}
-                {(p.teacher_id || p.teacherId || p.teacher_id || p.teacherId) ? ` (${p.teacher_id || p.teacherId || p.teacher_id || p.teacherId})` : ""}
+                {(p.teacher_id || p.teacherId) ? ` (${p.teacher_id || p.teacherId})` : ""}
               </span>
               <button
                 type="button"
@@ -775,6 +820,8 @@ function SessionDetailsDialog({
       teacherId: i.teacherId,
       status: i.status,
       isHost: false,
+      declineCount: i.declineCount || 0,
+      joinedAt: i.joinedAt,
     })),
   ];
 
@@ -843,6 +890,12 @@ function SessionDetailsDialog({
               </span>
               {p.isHost && <span style={styles.hostLabel}>HOST</span>}
               {!p.isHost && p.status === "declined" && <span style={styles.declinedLabel}>DECLINED</span>}
+              {!p.isHost && p.status === "accepted" && p.joinedAt && <span style={styles.joinedLabel}>JOINED</span>}
+              {!p.isHost && p.declineCount > 0 && (
+                <span style={styles.reinvitedLabel} title="Number of times this invite was declined and resent">
+                  RE-INVITED ×{p.declineCount}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -888,6 +941,94 @@ function SessionDetailsDialog({
               </button>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NOTES DIALOG (Past tab row action)
+   Private per-user scratchpad for a since-ended group session —
+   /sessions/group-sessions/:id/notes/ (GET/PATCH), autosaved. Ported from
+   the student app's GroupSessions.jsx; the endpoint and shape are role-
+   agnostic.
+═══════════════════════════════════════════════════════════ */
+function NotesDialog({ session, open, onClose }) {
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | saving | saved
+  const saveTimer = useRef(null);
+
+  useEffect(() => {
+    if (!open || !session) return undefined;
+    let cancelled = false;
+    api
+      .get(`/sessions/group-sessions/${session.id}/notes/`)
+      .then((res) => {
+        if (!cancelled) setContent(res.data?.content || "");
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(saveTimer.current);
+    };
+  }, [open, session]);
+
+  if (!open || !session) return null;
+
+  const handleChange = (e) => {
+    const value = e.target.value;
+    setContent(value);
+    setSaveStatus("saving");
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      api
+        .patch(`/sessions/group-sessions/${session.id}/notes/`, { content: value })
+        .then(() => setSaveStatus("saved"))
+        .catch(() => setSaveStatus("idle"));
+    }, 800);
+  };
+
+  return (
+    <div className="sg__modalOverlay" onClick={onClose}>
+      <div className="sg__smallModal" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="sg__modalClose" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+
+        <h3 className="sg__modalTitle">Session Notes</h3>
+        <p className="sg__hint sg__modalHint">
+          {session.topic || "Group session"} · {formatDate(session.date)}
+        </p>
+
+        <div className="sg__notesBody">
+          {loading ? (
+            <p className="sg__hint">Loading…</p>
+          ) : (
+            <>
+              <textarea
+                className="sg__input"
+                style={{ width: "100%", minHeight: 140, resize: "vertical", boxSizing: "border-box" }}
+                value={content}
+                onChange={handleChange}
+                placeholder="No notes taken for this session yet — only you can see these."
+              />
+              <p className="sg__hint" style={{ textAlign: "right", marginTop: 4, minHeight: 16 }}>
+                {saveStatus === "saving" && "Saving…"}
+                {saveStatus === "saved" && "Saved"}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="sg__dialogFootEnd">
+          <button type="button" className="sg__idShareBtn" onClick={onClose}>
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -1010,23 +1151,24 @@ function HostSessionDialog({ open, busy, error, onClose, onInstant, onScheduled 
 ═══════════════════════════════════════════════════════════ */
 export default function GroupSessions() {
   const navigate = useNavigate();
-const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);
 
-useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  api.get("/accounts/me/")
-    .then((res) => {
-      if (!cancelled) setUser(res.data || null);
-    })
-    .catch(() => {
-      if (!cancelled) setUser(null);
-    });
+    api.get("/accounts/me/")
+      .then((res) => {
+        if (!cancelled) setUser(res.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null);
+      });
 
-  return () => {
-    cancelled = true;
-  };
-}, []);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [subjectGroups, setSubjectGroups] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [groups, setGroups] = useState([]);
@@ -1037,11 +1179,20 @@ useEffect(() => {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [detailsSession, setDetailsSession] = useState(null);
   const [editingSession, setEditingSession] = useState(null);
+  const [notesSession, setNotesSession] = useState(null);
 
   const [joinBusy, setJoinBusy] = useState(false);
   const [hostBusy, setHostBusy] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [hostError, setHostError] = useState("");
+
+  // Underline Upcoming / Past tab — the design shows this bar for Group
+  // Sessions (dc.html lines 1330–1332); the pre-redesign page had no tabs at
+  // all and only ever showed the "upcoming" merge below.
+  const [sessTab, setSessTab] = useState("upcoming"); // "upcoming" | "past"
+  const [pastGroups, setPastGroups] = useState([]);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [pastLoaded, setPastLoaded] = useState(false);
 
   // Small ticker so ended scheduled/live cards update without page reload.
   const [_tick, setTick] = useState(0);
@@ -1143,6 +1294,46 @@ useEffect(() => {
     });
   }, [groups, selectedCourseId, selectedCourse, _tick]);
 
+  // Past tab — backed by the real ?tab=history endpoint (completed /
+  // cancelled / expired sessions the teacher was part of). Lazy-loaded the
+  // first time the Past pill is opened, same as the student app's page.
+  const loadPastGroups = useCallback(async () => {
+    setPastLoading(true);
+    try {
+      const history = await groupSessionService.getMyGroupSessions("history");
+      setPastGroups(history || []);
+      setPastLoaded(true); // only latch "loaded" on success — a transient
+      // failure should retry next time the Past tab is opened, not get
+      // stuck showing an empty list forever.
+    } catch {
+      setPastGroups([]);
+    } finally {
+      setPastLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (sessTab === "past" && !pastLoaded) loadPastGroups();
+  }, [sessTab, pastLoaded, loadPastGroups]);
+
+  const visiblePastGroups = useMemo(() => {
+    let list = pastGroups.filter((g) => {
+      if (!selectedCourseId) return true;
+      if (!g.courseId && !g.courseTitle) return true;
+      return String(g.courseId) === String(selectedCourseId) ||
+             String(g.courseTitle) === String(selectedCourse?.course_label);
+    });
+
+    return [...list].sort((a, b) => {
+      const aTime = new Date(`${a.date || "1970-01-01"}T${a.time || "00:00"}`).getTime();
+      const bTime = new Date(`${b.date || "1970-01-01"}T${b.time || "00:00"}`).getTime();
+      const aVal = Number.isNaN(aTime) ? 0 : aTime;
+      const bVal = Number.isNaN(bTime) ? 0 : bTime;
+      // Newest first, always — the design gives this screen no sort control.
+      return bVal - aVal;
+    });
+  }, [pastGroups, selectedCourseId, selectedCourse]);
+
   const refreshOne = async (sessionId) => {
     try {
       const fresh = await groupSessionService.getDetail(sessionId);
@@ -1234,42 +1425,84 @@ useEffect(() => {
     loadGroups();
   };
 
-  const userInitial = getUserInitial(user);
-
   return (
-    <div className="sg__page sg__page--figma">
-
-      <div className="sg__figmaPanel">
-        <div className="sg__figmaPanelHeader">
-          <h2>Group Sessions</h2>
-          <div className="sg__figmaActions">
-            <button
-              type="button"
-              className="sg__figmaActionBtn"
-              onClick={() => { setJoinError(""); setShowJoinDialog(true); }}
-            >
-              Join Session
-            </button>
-            <button
-              type="button"
-              className="sg__figmaActionBtn"
-              onClick={() => { setHostError(""); setShowHostDialog(true); }}
-            >
-              Host Session
-            </button>
-          </div>
+    <div className="ac-screen">
+      {/* Head — the design pulls this tight against the tab bar (mb 4px). */}
+      <div className="ac-head ac-head--tight">
+        <div>
+          <h1 className="ac-head__title">Group Sessions</h1>
+          <p className="ac-head__sub">Study groups and doubt-clearing circles.</p>
         </div>
-
-        {loading ? (
-          <LoadingState plain label="Loading group sessions" />
-        ) : visibleGroups.length > 0 ? (
-          <div className="sg__figmaGrid">
-            {visibleGroups.map((g) => (
-              <GroupSessionCard key={g.id} group={g} onOpen={openCard} />
-            ))}
-          </div>
-        ) : null}
+        <div className="ac-head__actions">
+          <button
+            type="button"
+            className="ac-headBtn ac-headBtn--outline"
+            onClick={() => { setJoinError(""); setShowJoinDialog(true); }}
+          >
+            Join session
+          </button>
+          <button
+            type="button"
+            className="ac-headBtn ac-headBtn--success"
+            onClick={() => { setHostError(""); setShowHostDialog(true); }}
+          >
+            Host session
+          </button>
+        </div>
       </div>
+
+      {/* Underline tab bar — same control as Private Sessions (dc.html line
+          1330 shows a 2px-underline bar for this screen). */}
+      <div className="ac-tabs ac-tabs--tight" role="tablist" aria-label="Session view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={sessTab === "upcoming"}
+          className={`ac-tab${sessTab === "upcoming" ? " is-active" : ""}`}
+          onClick={() => setSessTab("upcoming")}
+        >
+          Upcoming
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={sessTab === "past"}
+          className={`ac-tab${sessTab === "past" ? " is-active" : ""}`}
+          onClick={() => setSessTab("past")}
+        >
+          Past
+        </button>
+      </div>
+
+      {sessTab === "upcoming" ? (
+        <section className="ac-listCard">
+          {loading ? (
+            <LoadingState plain label="Loading group sessions" />
+          ) : visibleGroups.length > 0 ? (
+            <div className="ac-list">
+              {visibleGroups.map((g) => (
+                <GroupSessionCard key={g.id} group={g} onOpen={openCard} />
+              ))}
+            </div>
+          ) : (
+            <div className="ac-emptyRow">Nothing here yet</div>
+          )}
+        </section>
+      ) : (
+        <section className="ac-listCard">
+          {pastLoading ? (
+            <LoadingState plain label="Loading past sessions" />
+          ) : visiblePastGroups.length > 0 ? (
+            <div className="ac-list">
+              {visiblePastGroups.map((g) => (
+                <PastSessionCard key={g.id} group={g} onNotes={setNotesSession} />
+              ))}
+            </div>
+          ) : (
+            <div className="ac-emptyRow">Nothing here yet</div>
+          )}
+        </section>
+      )}
 
       <JoinSessionDialog
         open={showJoinDialog}
@@ -1286,6 +1519,13 @@ useEffect(() => {
         onClose={() => { if (!hostBusy) { setShowHostDialog(false); setHostError(""); } }}
         onInstant={startInstantMeeting}
         onScheduled={openScheduledSession}
+      />
+
+      <NotesDialog
+        key={notesSession?.id}
+        session={notesSession}
+        open={Boolean(notesSession)}
+        onClose={() => setNotesSession(null)}
       />
 
       <ScheduleSessionModal
@@ -1705,6 +1945,22 @@ const styles = {
   declinedLabel: {
     background: "#fee2e2",
     color: "#b91c1c",
+    borderRadius: 4,
+    padding: "3px 8px",
+    fontSize: 10,
+    fontWeight: 800,
+  },
+  joinedLabel: {
+    background: "#d1fae5",
+    color: "#065f46",
+    borderRadius: 4,
+    padding: "3px 8px",
+    fontSize: 10,
+    fontWeight: 800,
+  },
+  reinvitedLabel: {
+    background: "#fef3c7",
+    color: "#92400e",
     borderRadius: 4,
     padding: "3px 8px",
     fontSize: 10,

@@ -88,7 +88,7 @@ export default function CounselorLayout() {
 
       <div className="teacher-main">
         <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
-        <main className="teacher-content teacher-content--expert">{content}</main>
+        <main className="teacher-content teacher-content--expert page-fade" key={pathname}>{content}</main>
       </div>
     </div>
   );

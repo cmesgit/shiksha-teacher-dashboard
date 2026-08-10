@@ -462,6 +462,11 @@
   letter-spacing: 1px;
 }
 
+.smv-file-size {
+  font-size: 11px;
+  color: #8a94a3;
+}
+
 /* Copy link button - Enhanced */
 .smv-copy-btn {
   background: transparent;

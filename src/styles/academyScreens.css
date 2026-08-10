@@ -1,0 +1,716 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   academyScreens.css — the shared vocabulary for every Academy list screen.
+
+   Transcribed from Academy Dashboard.dc.html. The design reuses one row and
+   one card shape across Live Sessions (1268–1315), Group Sessions (1319–1360),
+   all three Private Sessions tabs (1616–1727), Assignments (1731–1774) and
+   Study Materials (1155–1213) — the row markup there is byte-identical. This
+   file is that shape, declared once, so the screens can't drift apart.
+
+   Exact values, all verified against the source (the README prose disagrees on
+   several and is older — trust this file and the .dc.html):
+     · page head        flex/flex-end/space-between, gap 16, mb 16
+     · h1               Montserrat 800 22px, letter-spacing -.4px
+     · sub-line         12.5px #6b7c83, margin-top 3px
+     · list card        #fff / 1px #e5eaed / r12 / shadow card / padding 16
+     · list             flex column, gap 8
+     · row              1px #e5eaed / r10 / padding 11px 14px, gap 14
+     · row hover        border #cfdbe6, background #f8fafb
+     · when block       62px wide, centred; time Montserrat 800 13px
+     · divider          1px, align-self stretch, #e5eaed
+     · subject chip     9px 700 .4px uppercase, padding 3px 8px, r999
+     · tag chip         9.5px 700, padding 3px 8px, r999
+     · action button    11px 700, r9, padding 8px 15px
+     · underline tab    padding 10px 24px, 12px; active #1a2c33 + 2px #425f7f
+     · segmented pill   track #e4e9eb r9 p3; active fills --action, white, 700
+     · subject pill     r999, padding 6px 14px, 11px 600; INACTIVE #6b7c83
+     · sort select      1px #e5eaed r10, padding 7px 12px, 11.5px 600 #425f7f
+     · empty row        centred, 11.5px #9ca3af, padding 26px 0
+
+   `--action` is the per-role fill (student #425f7f, teacher #7a1c1c), which is
+   exactly how the design's pill()/chipStyle() helpers branch — so this file is
+   role-agnostic and both apps use it VERBATIM. It is a byte-for-byte copy of
+   the student app's copy; keep them identical (it is not in shared/sync.mjs,
+   so a change in one must be copied to the other).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Screen root ───────────────────────────────────────────────────────── */
+.ac-screen { animation: fadeUp .28s ease both; }
+
+/* ── Page head ─────────────────────────────────────────────────────────── */
+.ac-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ac-head__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-page-title);
+  letter-spacing: -.4px;
+  color: var(--ink);
+}
+.ac-head__sub {
+  margin: 3px 0 0;
+  font-size: var(--fs-body);
+  color: var(--ink-muted);
+}
+.ac-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+/* Group Sessions sits its tab bar right under the head (design line 1320). */
+.ac-head--tight { margin-bottom: 4px; }
+
+/* ── Filter bar: pills left, sort/status right ─────────────────────────── */
+.ac-filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ac-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.ac-pill {
+  border: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: var(--r-pill);
+  padding: 6px 14px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--ink-muted);
+  white-space: nowrap;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ac-pill:hover { border-color: var(--border-strong); }
+.ac-pill.is-active {
+  background: var(--action);
+  color: #fff;
+  border-color: var(--action);
+}
+.ac-pill:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Teacher status chips sit in the head at a smaller scale (design line 1738). */
+.ac-pill--sm { padding: 5px 12px; font-size: var(--fs-small); }
+
+/* ── Sort / status select ──────────────────────────────────────────────── */
+.ac-select {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 7px 12px;
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  color: var(--primary);
+  font-weight: 600;
+  background: var(--surface);
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+.ac-select:focus-visible { box-shadow: var(--focus-ring); }
+
+/* ── Underline tab bar (Private Sessions, Group Sessions) ──────────────── */
+.ac-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+}
+.ac-tabs--tight { margin-bottom: 16px; }
+
+.ac-tab {
+  border: none;
+  cursor: pointer;
+  padding: 10px 24px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--ink-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  letter-spacing: .2px;
+  transition: color .15s, border-color .15s;
+}
+.ac-tab:hover { color: var(--ink); }
+.ac-tab.is-active {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom-color: var(--primary);
+}
+.ac-tab:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Count badge on a tab (e.g. pending requests). */
+.ac-tab__count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+/* ── Segmented pill toggle (Live Sessions upcoming/past) ───────────────── */
+.ac-seg {
+  display: flex;
+  background: var(--toggle-track);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.ac-seg__btn {
+  border: none;
+  cursor: pointer;
+  border-radius: var(--r-xs);
+  padding: 6px 14px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.ac-seg__btn.is-active {
+  background: var(--action);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(26, 44, 51, .2);
+}
+.ac-seg__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Search row (past sessions) ────────────────────────────────────────── */
+.ac-searchRow {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ac-searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 9px 14px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  outline: none;
+}
+.ac-searchInput::placeholder { color: var(--ink-faint); }
+.ac-searchInput:focus-visible { box-shadow: var(--focus-ring); }
+.ac-searchRow .ac-select { padding: 9px 12px; }
+
+/* A sort control on its own, right-aligned (Private Sessions history). */
+.ac-sortRow { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+
+/* ── List card + rows ──────────────────────────────────────────────────── */
+.ac-listCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+  padding: 16px;
+}
+/* Study Materials' rows run edge to edge with their own dividers. */
+.ac-listCard--flush { padding: 0; overflow: hidden; }
+
+.ac-list { display: flex; flex-direction: column; gap: 8px; }
+
+.ac-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 11px 14px;
+  overflow: hidden;
+  transition: border-color .15s, background .15s;
+}
+.ac-row:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+/* Assignments rows are a touch taller (design line 1757). */
+.ac-row--tall { padding: 12px 14px; }
+
+/* Divider-separated rows inside a flush card (Study Materials, line 1175).
+   Longhands, not `border-bottom: 1px solid var(--divider)` — following
+   `border: none` in the same block, the shorthand's colour component did not
+   survive the cascade (it computed to currentColor, i.e. --ink, giving a near
+   black hairline instead of #f1f4f6). Setting the four sides explicitly is
+   unambiguous. */
+.ac-row--flush {
+  border-width: 0 0 1px;
+  border-style: solid;
+  border-color: var(--divider);
+  border-radius: 0;
+  padding: 13px 18px;
+  gap: 14px;
+}
+.ac-row--flush:last-child { border-bottom-width: 0; }
+
+/* Time / day block */
+.ac-row__when { width: 62px; flex-shrink: 0; text-align: center; }
+.ac-row__time {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ink);
+}
+.ac-row__day {
+  font-size: var(--fs-tag);
+  color: var(--ink-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-top: 1px;
+}
+
+.ac-row__divider { width: 1px; align-self: stretch; background: var(--border); }
+
+.ac-row__body { flex: 1; min-width: 0; }
+.ac-row__meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.ac-row__topic {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 4px;
+}
+.ac-row--tall .ac-row__topic { margin-top: 5px; }
+.ac-row__sub {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  margin-top: 1px;
+}
+.ac-row__actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+
+/* Right-aligned fixed columns (Study Materials size / date). */
+.ac-row__col {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+  width: 64px;
+  text-align: right;
+  flex-shrink: 0;
+}
+/* Right-aligned value+caption block (Students' "Enrolled" date) — the design's
+   own row-stat shape (dc.html lines 2060–2063: 76px, right-aligned, 12px/800
+   value over a 9px/.4px/600 uppercase caption), reused here for a real field
+   in place of the design's fabricated "Attendance"/"Avg score" stats (see
+   AllStudents.jsx header comment for why those aren't shown). */
+.ac-row__stat { width: 84px; text-align: right; flex-shrink: 0; }
+.ac-row__statValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.ac-row__statLabel {
+  font-size: var(--fs-chip);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* Round colour-initials avatar (Students, dc.html line 2055 — 34px circle,
+   11px/700 initials). Colour comes from subjectChipPalette() keyed on the
+   student's name, the same "same entity, same colour everywhere" rule the
+   subject chips already use, rather than the design's own list-index rotation
+   (AV[i % AV.length]) — index rotation would reshuffle a student's colour
+   every time the list is filtered/searched, which a stable per-person hash
+   avoids. */
+.ac-row__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+}
+.ac-row__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* "starts in 25m" */
+.ac-when {
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+
+/* ── Tag chip (status / relationship) ──────────────────────────────────── */
+.ac-tag {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: var(--fs-tag);
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+}
+/* Design's status-chip palette (README "Status chip palette"). */
+.ac-tag--success { background: var(--success-soft); color: var(--success); }
+.ac-tag--info    { background: var(--info-soft);    color: var(--info); }
+.ac-tag--warning { background: var(--warning-soft); color: var(--warning); }
+.ac-tag--danger  { background: var(--danger-soft);  color: var(--danger); }
+.ac-tag--neutral { background: var(--chip-neutral-soft); color: var(--chip-neutral); }
+/* Static (non-pulsing) teal badge — e.g. Classes' "{n} students" count, which
+   uses the same teal as --tag--live (dc.html's classes-card stLabel) but isn't
+   a live-session state, so it must not inherit the livePulse animation. */
+.ac-tag--teal    { background: var(--teal-soft);    color: var(--teal); }
+
+/* In-progress session. The design's static prototype has no equivalent — its
+   rows only ever show plain relative-time text — but a session here can really
+   be live, and both Live Sessions and Group Sessions need to say so. Uses the
+   design's live teal + its `livePulse` keyframes (from shared/tokens.css) so it
+   reads the same as the dashboard hero's LIVE NOW chip. */
+.ac-tag--live {
+  background: var(--teal-soft);
+  color: var(--teal);
+  animation: livePulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-tag--live { animation: none; }
+}
+
+/* ── File-type badge (Study Materials, line 1176) ──────────────────────── */
+.ac-fileBadge {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: var(--fs-tag);
+  font-weight: 800;
+  letter-spacing: .5px;
+  flex-shrink: 0;
+  /* PDF reads danger, everything else info (README "### 13"). */
+  background: var(--info-soft);
+  color: var(--info);
+}
+.ac-fileBadge--pdf { background: var(--danger-soft); color: var(--danger); }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+/* Row-scale action: 11px 700, r9, 8px 15px. */
+.ac-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  padding: 8px 15px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--primary);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.ac-btn:hover { background: var(--acc-soft); }
+.ac-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ac-btn:disabled { cursor: default; color: var(--ink-faint); border-color: var(--border); background: var(--surface); }
+
+.ac-btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.ac-btn--primary:hover { background: var(--action-hover); border-color: var(--action-hover); }
+
+.ac-btn--success {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.ac-btn--success:hover { background: #258a38; border-color: #258a38; }
+
+.ac-btn--danger {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--danger);
+}
+.ac-btn--danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+
+.ac-btn--warning {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--warning);
+}
+.ac-btn--warning:hover { background: var(--warning-soft); border-color: var(--warning); }
+
+/* Icon-only row action, for rows carrying more actions than the design's
+   single visible button. Same treatment as the Study Materials row's Manage
+   control, which is the design's own overflow pattern. */
+.ac-btn--icon {
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Head-scale action: 11.5px 700, r10, 9px 16–18px. */
+.ac-headBtn {
+  border: none;
+  cursor: pointer;
+  background: var(--action);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  border-radius: var(--r-md);
+  padding: 9px 18px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.ac-headBtn:hover { background: var(--action-hover); }
+.ac-headBtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.ac-headBtn--success { background: var(--success); }
+.ac-headBtn--success:hover { background: #258a38; }
+
+/* Slate variant for content-creation head buttons the design hardcodes to
+   #425f7f rather than the per-role --action (e.g. "+ New assignment", line
+   1740 — distinct from role-colored actions like "+ Schedule session"). */
+.ac-headBtn--primary { background: var(--primary); }
+.ac-headBtn--primary:hover { background: var(--primary-dark); }
+
+.ac-headBtn--outline {
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+.ac-headBtn--outline:hover { background: var(--acc-soft); }
+
+/* Small icon-only action (e.g. row-level download). */
+.ac-btn__icon { flex-shrink: 0; }
+.ac-btn--withIcon { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── Row-level dropdown menu (teacher "Manage ▾", line 1191) ───────────── */
+.ac-menuWrap { position: relative; flex-shrink: 0; }
+.ac-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-dropdown);
+  padding: 5px;
+  width: 158px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ac-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-radius: var(--r-xs);
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+.ac-menu__item:hover { background: var(--surface-alt); }
+.ac-menu__item--danger { color: var(--danger); }
+.ac-menu__item--danger:hover { background: var(--danger-soft); }
+
+/* ── Card grid ─────────────────────────────────────────────────────────── */
+/* The design's other list shape: a 3-up grid of cards (Quizzes dc.html 847,
+   Recordings 1096, Cards page 1964). Values are the design's own — note the
+   card title is 13px where a ROW title is 12.5px, and the card button is
+   7px 14px where a row button is 8px 15px. They are deliberately different
+   scales; don't collapse them. */
+.ac-cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.ac-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .15s;
+}
+.ac-card:hover { border-color: var(--border-strong); }
+
+.ac-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Square avatar/initials chip in a card's top-left (Classes' batch code,
+   dc.html "Cards page" c.avText/avBg/avColor — Subjects and Teachers use the
+   same slot with different content, e.g. teacher initials). */
+.ac-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 12px;
+  background: var(--acc-soft);
+  color: var(--primary);
+}
+
+.ac-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.ac-card__meta {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  margin-top: 3px;
+}
+
+/* In-card progress row (dc.html c.hasBar — Classes' syllabus-completion bar;
+   same track/fill/label treatment as BatchProgress's .bp-row-bar family,
+   declared here too since a card grid needs it, a row list doesn't). */
+.ac-card__bar { display: flex; align-items: center; gap: 8px; }
+.ac-card__barTrack {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--acc-soft);
+  overflow: hidden;
+}
+.ac-card__barFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--primary), var(--teal));
+  transition: width .3s ease;
+}
+.ac-card__pct {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 10.5px;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* Footer is pinned to the card's bottom so a grid row's cards align. */
+.ac-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--divider);
+  padding-top: 11px;
+  margin-top: auto;
+}
+.ac-card__footText { font-size: 11px; font-weight: 600; color: var(--ink-muted); }
+.ac-card__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Card-scale action — smaller than the row-scale .ac-btn. */
+.ac-cardBtn {
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  padding: 7px 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--primary);
+  transition: background .15s, border-color .15s;
+}
+.ac-cardBtn:hover:not(:disabled) { background: var(--acc-soft); }
+.ac-cardBtn:disabled { cursor: default; color: var(--ink-faint); border-color: var(--border); }
+.ac-cardBtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.ac-cardBtn--primary {
+  background: var(--action);
+  border-color: var(--action);
+  color: #fff;
+}
+.ac-cardBtn--primary:hover:not(:disabled) {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
+}
+.ac-cardBtn--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+.ac-cardBtn--danger:hover:not(:disabled) { background: var(--danger-soft); border-color: var(--danger); }
+
+/* Icon-only overflow trigger, for cards carrying more actions than the
+   design's single footer button. Same treatment as the Study Materials row's
+   Manage control, which is the design's own overflow pattern. */
+.ac-cardBtn--icon {
+  padding: 7px 9px;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 1100px) { .ac-cardGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px)  { .ac-cardGrid { grid-template-columns: 1fr; } }
+
+/* ── Empty state inside a list card ───────────────────────────────────── */
+.ac-emptyRow {
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: var(--fs-meta);
+  padding: 26px 0;
+}
+
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+/* The design is desktop-only; these keep the screens usable in the drawer
+   layout below 1240px without touching the desktop rendering. */
+@media (max-width: 768px) {
+  .ac-head { flex-direction: column; align-items: stretch; }
+  .ac-head__actions { flex-wrap: wrap; }
+  .ac-filterBar { flex-direction: column; align-items: stretch; }
+  .ac-filterBar .ac-select { width: 100%; }
+  .ac-pills { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .ac-tabs { overflow-x: auto; }
+  .ac-tab { padding: 10px 16px; }
+  .ac-row { flex-wrap: wrap; }
+  .ac-row__divider { display: none; }
+  .ac-row__actions { width: 100%; }
+  .ac-row__actions .ac-btn { flex: 1; }
+  .ac-row--flush { padding: 12px 14px; }
+}

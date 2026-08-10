@@ -180,6 +180,7 @@ export default function CounselorSession() {
                   </div>
                 )}
                 {intake.skills && <div className="co-answer"><b>Skills</b><p>{intake.skills}</p></div>}
+                {intake.favorite_subjects && <div className="co-answer"><b>Favourite subjects</b><p>{intake.favorite_subjects}</p></div>}
                 {intake.long_term_goals && <div className="co-answer"><b>Long-term goal</b><p>{intake.long_term_goals}</p></div>}
                 {intake.short_term_goals && <div className="co-answer"><b>Short-term goal</b><p>{intake.short_term_goals}</p></div>}
                 {intake.preferred_industry && <div className="co-answer"><b>Preferred industry</b><p>{intake.preferred_industry}</p></div>}

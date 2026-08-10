@@ -114,6 +114,11 @@ export default function CounselorSchedule() {
                     "{a.student_note}"
                   </div>
                 )}
+                {a.status === "cancelled" && a.cancel_reason && (
+                  <div className="co-meta" style={{ marginTop: 9, color: "#b91c1c" }}>
+                    Cancelled: {a.cancel_reason}
+                  </div>
+                )}
               </div>
             );
           })}

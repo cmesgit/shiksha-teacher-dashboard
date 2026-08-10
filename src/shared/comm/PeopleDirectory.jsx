@@ -18,7 +18,7 @@ const FILTERS = [
   { key: "guest", label: "Guest Experts" },
 ];
 
-export default function PeopleDirectory({ mode = "picker", onClose, onStart }) {
+export default function PeopleDirectory({ mode = "picker", onClose, onStart, contactsNote }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [items, setItems] = useState(null);
@@ -70,8 +70,8 @@ export default function PeopleDirectory({ mode = "picker", onClose, onStart }) {
           ))
         )}
       </div>
-      {mode === "picker" && (
-        <div className="cc-modal-foot">To reach a student, reply to their message or message them from a course room.</div>
+      {mode === "picker" && contactsNote && (
+        <div className="cc-modal-foot">{contactsNote}</div>
       )}
     </>
   );

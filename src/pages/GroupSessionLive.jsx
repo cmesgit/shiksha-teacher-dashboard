@@ -6,6 +6,7 @@ import ReconnectingBanner from "../components/live/ReconnectingBanner";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
 import GroupSessionClassroomUI from "../components/live/GroupSessionClassroomUI";
 import { useAuth } from "../contexts/AuthContext";
+import { ACADEMY_BROWSE_URL } from "../config/urls";
 
 const fullscreenWrap = {
   width: "100vw",
@@ -51,6 +52,9 @@ export default function GroupSessionLive() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [remainingMs, setRemainingMs] = useState(null);
+  // "idle" (not gated) | "pending" (knocking) | "denied" | "paywall"
+  const [gateStatus, setGateStatus] = useState("idle");
+  const [denyMessage, setDenyMessage] = useState("");
 
   const { user } = useAuth();
 
@@ -117,6 +121,13 @@ export default function GroupSessionLive() {
 
         const joinData = await groupSessionService.joinRoom(resolvedId);
         if (cancelled) return;
+
+        // 202 { status: "pending" } — the host has admit_mode="lobby" and
+        // hasn't let us in yet. Start knocking instead of rendering the room.
+        if (joinData?.status === "pending") {
+          setGateStatus("pending");
+          return;
+        }
         setLivekitData(joinData);
         setRemainingMs(joinData.remaining_ms ?? null);
       } catch (err) {
@@ -130,6 +141,70 @@ export default function GroupSessionLive() {
     load();
     return () => { cancelled = true; };
   }, [resolvedId]);
+
+  // While knocking: poll every 2s for the host's decision. Admit/deny is a
+  // one-time, low-frequency event, so a short poll is simpler and lower-risk
+  // than a dedicated realtime channel here (the guest has no LiveKit room
+  // yet to receive a data-channel message on).
+  //
+  // This effect ONLY updates gateStatus — it deliberately does NOT also fetch
+  // the real LiveKit credentials inline. Doing both in one async closure is
+  // unsafe: setGateStatus("admitted") is a dependency of this very effect, so
+  // it tears the effect down (running the cleanup that flips this closure's
+  // own `cancelled` to true) before the *same* tick's later `await
+  // joinRoom()` resolves — which then bails out via `if (cancelled) return`
+  // and never calls setLoading(false), leaving the screen stuck forever.
+  // The actual join happens in a separate effect below, keyed off gateStatus.
+  useEffect(() => {
+    if (gateStatus !== "pending" || !resolvedId) return undefined;
+    let cancelled = false;
+    let resolved = false;
+
+    const tick = async () => {
+      if (resolved) return;
+      try {
+        const res = await groupSessionService.getJoinStatus(resolvedId);
+        if (cancelled || resolved) return;
+        if (res.status === "admitted") {
+          resolved = true;
+          setGateStatus("admitted");
+        } else if (res.status === "denied") {
+          resolved = true;
+          setGateStatus("denied");
+          setDenyMessage(res.deny_message || "");
+        }
+      } catch {
+        /* transient poll failure — try again next tick */
+      }
+    };
+
+    const interval = setInterval(tick, 2000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [gateStatus, resolvedId]);
+
+  // Just been admitted — fetch the real LiveKit credentials. Separate from
+  // the polling effect above (see the comment there for why).
+  useEffect(() => {
+    if (gateStatus !== "admitted" || !resolvedId) return undefined;
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      try {
+        const joinData = await groupSessionService.joinRoom(resolvedId);
+        if (cancelled) return;
+        setLivekitData(joinData);
+        setRemainingMs(joinData.remaining_ms ?? null);
+      } catch (err) {
+        if (cancelled) return;
+        setError(extractApiError(err, "Unable to join group session."));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [gateStatus, resolvedId]);
 
   useEffect(() => {
     if (remainingMs == null || remainingMs <= 0) return;
@@ -147,10 +222,9 @@ export default function GroupSessionLive() {
 
   useEffect(() => {
     if (remainingMs != null && remainingMs <= 0 && livekitData) {
-      const timer = setTimeout(() => navigate("/group-sessions"), 600);
-      return () => clearTimeout(timer);
+      setGateStatus("paywall");
     }
-  }, [remainingMs, livekitData, navigate]);
+  }, [remainingMs, livekitData]);
 
   if (loading) {
     return (
@@ -183,6 +257,43 @@ export default function GroupSessionLive() {
     );
   }
 
+  if (gateStatus === "pending") {
+    return (
+      <div style={centerMsg}>
+        <div style={{
+          width: 64, height: 64, borderRadius: "50%", background: "#415B7E",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", fontWeight: 700, fontSize: 22,
+        }}>
+          {(sessionDetail?.hostName || "?").charAt(0).toUpperCase()}
+        </div>
+        <h2 style={{ margin: 0, color: "#0f172a" }}>Asking to join…</h2>
+        <p style={{ color: "#475569", margin: 0 }}>The host will let you in shortly</p>
+        <button
+          onClick={() => navigate("/group-sessions")}
+          style={{ padding: "10px 24px", borderRadius: 8, border: "2px solid #94a3b8", background: "transparent", color: "#475569", fontWeight: 600, cursor: "pointer" }}
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  if (gateStatus === "denied") {
+    return (
+      <div style={centerMsg}>
+        <h2 style={{ margin: 0, color: "#0f172a" }}>The host didn't let you in</h2>
+        {denyMessage && <p style={{ color: "#475569", margin: 0 }}>{denyMessage}</p>}
+        <button
+          onClick={() => navigate("/group-sessions")}
+          style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#015865", color: "#fff", fontWeight: 600, cursor: "pointer" }}
+        >
+          Back to Group Sessions
+        </button>
+      </div>
+    );
+  }
+
   if (!livekitData) {
     return (
       <div style={centerMsg}>
@@ -195,6 +306,37 @@ export default function GroupSessionLive() {
           style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#015865", color: "#fff", fontWeight: 600, cursor: "pointer" }}
         >
           Back to Group Sessions
+        </button>
+      </div>
+    );
+  }
+
+  if (gateStatus === "paywall") {
+    return (
+      <div style={centerMsg}>
+        <h2 style={{ margin: 0, color: "#0f172a" }}>Your free 15 minutes are up</h2>
+        <p style={{ color: "#475569", margin: 0, maxWidth: 360, textAlign: "center" }}>
+          Enroll in a course or subscribe to keep watching live sessions.
+        </p>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            onClick={() => { window.location.href = ACADEMY_BROWSE_URL; }}
+            style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#006d78", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+          >
+            See courses
+          </button>
+          <button
+            onClick={() => navigate("/subscribe")}
+            style={{ padding: "10px 24px", borderRadius: 8, border: "2px solid #415B7E", background: "transparent", color: "#415B7E", fontWeight: 700, cursor: "pointer" }}
+          >
+            Subscribe
+          </button>
+        </div>
+        <button
+          onClick={() => navigate("/group-sessions")}
+          style={{ background: "none", border: "none", color: "#64748b", textDecoration: "underline", cursor: "pointer", fontSize: 13 }}
+        >
+          Leave
         </button>
       </div>
     );

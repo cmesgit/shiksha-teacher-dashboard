@@ -1,0 +1,88 @@
+/* src/styles/expertStudents.css — design_handoff_skilldev Expert "3. Students" */
+
+.es-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--skill-ink); margin-bottom: 2px; }
+
+.es-targetRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 6px 10px;
+  margin: 12px 0 18px;
+}
+.es-targetLabel { font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.es-stepBtn {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.es-stepBtn:disabled { opacity: .4; cursor: not-allowed; }
+.es-targetValue { font-size: 13px; font-weight: 700; color: var(--ink); min-width: 74px; text-align: center; }
+
+.es-statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.es-statTile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.es-statValue { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--ink); }
+.es-statLabel { font-size: 11px; color: var(--ink-muted); margin-top: 3px; }
+
+.es-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.es-filterPill {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.es-filterPill.is-active { background: var(--skill); border-color: var(--skill); color: #fff; }
+
+.es-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.es-cardTop { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.es-avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--skill); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 17px; flex-shrink: 0; }
+.es-name { font-size: 14px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.es-statusChip { font-size: 9.5px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; padding: 2px 8px; border-radius: var(--r-pill); background: var(--skill-soft); color: var(--skill-ink); }
+.es-statusChip.is-mastered { background: var(--success-soft); color: var(--success); }
+.es-track { font-size: 11.5px; color: var(--ink-muted); margin-top: 2px; }
+
+.es-nextSession { text-align: right; flex-shrink: 0; }
+.es-nextLabel { font-size: 10px; color: var(--ink-faint); }
+.es-nextValue { font-size: 12.5px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+.es-nextEmpty { font-size: 12px; color: var(--sk-meta-faint); font-style: italic; margin-top: 2px; }
+
+.es-progressLine { font-size: 11.5px; font-weight: 700; color: var(--ink-muted); margin-top: 6px; }
+.es-note { font-size: 12px; color: var(--ink-2); background: var(--surface-muted); border-radius: 8px; padding: 8px 10px; margin-top: 10px; line-height: 1.5; }
+
+.es-cardActions { display: flex; gap: 8px; margin-top: 12px; }
+.es-btn {
+  border: none;
+  border-radius: var(--r-md);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.es-btn--primary { background: var(--skill); color: #fff; }
+.es-btn--primary:hover { background: var(--skill-hover); }
+.es-btn--outline { background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); }

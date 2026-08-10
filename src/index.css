@@ -31,8 +31,45 @@ button:focus,
   outline: none;
 }
 
+/* Form controls don't inherit the body font by default — the design puts
+   Poppins on every button/input, so opt them in explicitly. */
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+
+html,
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100%;
+}
+
+body {
+  background: var(--page-bg);
+  font-family: var(--font-body);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Scrollbars, per the design's global block */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }

@@ -1,184 +1,124 @@
-.qsv-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: 100%;
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   quiz-submission-view.css — what the Quiz Results screen needs BEYOND the
+   shared vocabulary in academyScreens.css (.ac-listCard/.ac-list/.ac-row/
+   .ac-tag/.ac-btn already cover the card, rows, status chip and action
+   button). Transcribed from Academy Dashboard.dc.html's Quiz Results screen
+   (data-screen-label="Quiz Results", lines 947-989) — the stat tiles, the
+   status legend, the row avatar and the fixed-width score column are all
+   specific to this screen and aren't reused anywhere else yet.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .qsv-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #425f7f;
-  color: #fff;
   border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
-  font-size: 13px;
-  font-weight: 500;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  width: fit-content;
+  padding: 0;
+  margin-bottom: 16px;
+}
+.qsv-back-btn:hover { color: var(--ink); }
+
+.qsv-head { margin-bottom: 20px; }
+.qsv-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-page-title);
+  letter-spacing: -.4px;
+  color: var(--ink);
+}
+.qsv-sub {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--ink-faint);
+}
+
+/* ── Stat tiles ── */
+.qsv-statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  max-width: var(--builder-max);
+  margin-bottom: 18px;
+}
+.qsv-statTile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+  padding: 14px 16px;
+}
+.qsv-statValue {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-stat);
+  color: var(--ink);
+}
+.qsv-statLabel {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  margin-top: 3px;
+}
+
+/* ── Status legend ── */
+.qsv-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.qsv-legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* ── Status dot (legend + row) ── */
+.qsv-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
+.qsv-dot--submitted { background: var(--success); }
+.qsv-dot--pending { background: var(--dot-idle); }
 
-.qsv-back-btn:hover {
-  background: #354d67;
-}
+/* ── Row content ── */
+.qsv-row { max-width: var(--builder-max); }
 
-.qsv-content-card {
-  background: #fff;
-  border: 1px solid #e5eaed;
-  border-radius: 12px;
-  padding: 28px 32px 40px;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.qsv-title-row {
+.qsv-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 0 16px;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.qsv-title {
-  font-size: 20px;
+.qsv-score {
+  width: 64px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 12px;
   font-weight: 700;
-  color: #1f2d3d;
-  margin: 0;
+  color: var(--ink);
 }
 
-.qsv-count {
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.qsv-count-green {
-  color: #38b89a;
-}
-
-.qsv-count-red {
-  color: #e74c3c;
-}
-
-.qsv-tabs-search-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.qsv-tabs {
-  display: flex;
-  background: #e8e8e8;
-  border-radius: 24px;
-  overflow: hidden;
-}
-
-.qsv-tab {
-  padding: 8px 28px;
-  border: none;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  color: #555;
-  border-radius: 24px;
-}
-
-.qsv-tab-active-pending {
-  background: #38b89a;
-  color: #fff;
-}
-
-.qsv-tab-active-submitted {
-  background: #2d3748;
-  color: #fff;
-}
-
-.qsv-search {
-  position: relative;
-}
-
-.qsv-search input {
-  padding: 6px 32px 6px 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 13px;
-  outline: none;
-  width: 160px;
-  background: #fff;
-}
-
-.qsv-search input:focus {
-  border-color: #425f7f;
-}
-
-.qsv-search-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 14px;
-}
-
-.qsv-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.qsv-table thead tr {
-  border-bottom: 2px solid #e0e0e0;
-}
-
-.qsv-table th {
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1f2d3d;
-}
-
-.qsv-table td {
-  padding: 14px 16px;
-  font-size: 14px;
-  color: #1f2d3d;
-}
-
-.qsv-table tbody tr {
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.qsv-table tbody tr:hover {
-  background: #eef7f8;
-}
-
-.qsv-status-submitted {
-  color: #38b89a;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.qsv-status-pending {
-  color: #e74c3c;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.qsv-review-btn {
-  background: #425f7f;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.qsv-review-btn:hover {
-  background: #354d67;
+/* Keeps a not-submitted row's columns aligned with rows that do have a
+   "View attempts" button. */
+.qsv-actionSpacer {
+  width: 108px;
+  flex-shrink: 0;
 }

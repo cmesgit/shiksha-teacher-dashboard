@@ -6,6 +6,7 @@ export function extractError(err) {
   if (d.detail) return d.detail;
   // First field error.
   for (const k of Object.keys(d)) {
+    if (k === "code") continue; // machine token, never user-facing
     const v = d[k];
     if (Array.isArray(v) && v.length) return v[0];
     if (typeof v === "string") return v;

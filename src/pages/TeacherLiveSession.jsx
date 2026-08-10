@@ -4,6 +4,7 @@ import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import api from "../api/apiClient";
 import ClassroomUI from "../components/live/ClassroomUI";
 import ReconnectingBanner from "../components/live/ReconnectingBanner";
+import ReviewModal from "../components/live/ReviewModal";
 
 const cacheKey = (id) => `livekit_session_${id}`;
 
@@ -22,16 +23,17 @@ function readCache(id) {
   }
 }
 
-/* ── Fullscreen wrapper styles (kills scroll) ── */
+/* ── Fullscreen wrapper styles (kills scroll). Full-viewport dark overlay
+   per the design handoff's video-conference spec (section 10) — no padding,
+   edge-to-edge. ── */
 const fullscreenWrap = {
   width: "100vw",
   height: "100vh",
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  background: "#c9dde1",
+  background: "#0f1117",
   boxSizing: "border-box",
-  padding: "14px",
 };
 
 const liveKitWrap = {
@@ -50,7 +52,7 @@ const centerMsg = {
   justifyContent: "center",
   flexDirection: "column",
   gap: 16,
-  background: "#c9dde1",
+  background: "#0f1117",
 };
 
 export default function TeacherLiveSession() {
@@ -59,6 +61,7 @@ export default function TeacherLiveSession() {
   const [sessionData, setSessionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showReview, setShowReview] = useState(false);
   const joiningRef = useRef(false);
 
   useEffect(() => {
@@ -97,10 +100,15 @@ export default function TeacherLiveSession() {
     navigate(-1);
   };
 
+  // Show the review prompt first — it calls handleLeave itself once
+  // submitted or skipped (spec section 10: live/private sessions show a
+  // review modal on leave, group sessions never do).
+  const handleControlBarLeave = () => setShowReview(true);
+
   if (loading) {
     return (
       <div style={centerMsg}>
-        <p style={{ fontSize: 16, color: "#102a2a", margin: 0 }}>
+        <p style={{ fontSize: 16, color: "#e5eaed", margin: 0 }}>
           Connecting...
         </p>
       </div>
@@ -110,7 +118,7 @@ export default function TeacherLiveSession() {
   if (error || !sessionData?.token) {
     return (
       <div style={centerMsg}>
-        <p style={{ fontSize: 16, color: "#102a2a", margin: 0 }}>
+        <p style={{ fontSize: 16, color: "#e5eaed", margin: 0 }}>
           {error || "Session unavailable"}
         </p>
         <button
@@ -123,7 +131,7 @@ export default function TeacherLiveSession() {
             padding: "10px 24px",
             borderRadius: 999,
             border: "none",
-            background: "#005f6f",
+            background: "#425f7f",
             color: "#fff",
             cursor: "pointer",
             fontSize: 14,
@@ -150,10 +158,11 @@ export default function TeacherLiveSession() {
         <ClassroomUI
           role={sessionData.role}
           sessionId={id}
-          onLeave={handleLeave}
+          onLeave={handleControlBarLeave}
         />
         <RoomAudioRenderer />
       </LiveKitRoom>
+      {showReview && <ReviewModal sessionId={id} onDone={handleLeave} />}
     </div>
   );
 }

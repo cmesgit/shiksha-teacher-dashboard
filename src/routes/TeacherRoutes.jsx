@@ -9,7 +9,7 @@
  *   This makes it accessible at /teacher/expert/inbox — the path that
  *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
  */
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -25,7 +25,8 @@ import CreateAssignment from "../pages/CreateAssignment";
 import AssignmentView from "../pages/AssignmentView";
 import SubmissionView from "../pages/SubmissionView";
 import Quizzes from "../pages/Quizzes";
-import CreateQuiz from "../pages/CreateQuiz";
+import QuizBuilder from "../pages/QuizBuilder";
+import QuizAnalytics from "../pages/QuizAnalytics";
 import QuizBank from "../pages/QuizBank";
 import QuizView from "../pages/QuizView";
 import QuizDraftPreview from "../pages/QuizDraftPreview";
@@ -39,7 +40,6 @@ import UploadRecording from "../pages/UploadRecording";
 import RecordingPlayer from "../pages/RecordingPlayer";
 import LiveSessions from "../pages/LiveSessions";
 import LiveSessionDetail from "../pages/LiveSessionDetail";
-import TeacherCreateLiveSession from "../pages/TeacherCreateLiveSession";
 import FacultyProfile from "../pages/FacultyProfile";
 import StudentsList from "../pages/StudentsList";
 import StudentDetail from "../pages/StudentDetail";
@@ -57,18 +57,17 @@ import GroupSessions from "../pages/GroupSessions";
 import GroupSessionLive from "../pages/GroupSessionLive";
 import BatchProgress from "../pages/BatchProgress";
 import BatchProgressDetail from "../pages/BatchProgressDetail";
-import AssignmentsLanding from "../pages/AssignmentsLanding";
-import StudyMaterialsLanding from "../pages/StudyMaterialsLanding";
-import RecordingsLanding from "../pages/RecordingsLanding";
 
 // Skill Dev (Expert) pages
 import ExpertDashboard from "../pages/skill/ExpertDashboard";
-import ExpertCourse from "../pages/skill/ExpertCourse";      // "My Course" — 1-on-1 profile + availability
+import ExpertSkills from "../pages/skill/ExpertSkills";       // "My skills" — one row per SkillListing
+import SkillListingForm from "../pages/skill/SkillListingForm"; // add / edit one skill
 import ExpertBookings from "../pages/skill/ExpertBookings";
+import ExpertStudents from "../pages/skill/ExpertStudents";
 import ExpertAvailability from "../pages/skill/ExpertAvailability";
 // Earnings removed — guest experts settle payment directly with learners.
-import ExpertPromote from "../pages/skill/ExpertPromote";       // subscription (reached from dashboard)
-import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // profile + location + UPI ("Edit Course")
+import ExpertPromote from "../pages/skill/ExpertPromote";       // subscription
+import ExpertProfileEdit from "../pages/skill/ExpertProfileEdit"; // profile + location + UPI
 import SkillInbox from "../pages/SkillInbox";
 import SkillSessionLive from "../pages/skill/SkillSessionLive"; // skill LiveKit room
 
@@ -87,6 +86,20 @@ import { LOGIN_URL } from "../config/urls";
 function RedirectToMainLogin() {
   useEffect(() => { window.location.href = LOGIN_URL; }, []);
   return null;
+}
+
+// A single quiz's own child screens (view/draft/submissions/student-attempts/
+// review) used to be reachable ONLY via classes/:subjectId/quizzes/:quizId/...
+// — a relic of the pre-flattening nav, kept only because none of those
+// screens actually need subjectId for anything (their own API calls are
+// keyed on quizId/studentId/attemptId alone; subjectId was only ever there to
+// satisfy the URL shape). They now live under the same /teacher/quizzes root
+// as the list. The old paths still resolve — via a plain redirect — so any
+// existing bookmark or notification link built on the old shape keeps working.
+function LegacyQuizRedirect({ to }) {
+  const params = useParams();
+  const path = to.replace(/:(\w+)/g, (_, key) => params[key]);
+  return <Navigate to={path} replace />;
 }
 
 function DashboardEntry() {
@@ -116,12 +129,15 @@ export default function TeacherRoutes() {
         element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
       >
         <Route index element={<ExpertDashboard />} />
-        <Route path="course" element={<ExpertCourse />} />       {/* My Course — 1-on-1 profile + availability */}
         <Route path="bookings" element={<ExpertBookings />} />
-        {/* availability kept as a deep link; it now lives inside "My Course" */}
+        <Route path="students" element={<ExpertStudents />} />
         <Route path="availability" element={<ExpertAvailability />} />
+        <Route path="skills" element={<ExpertSkills />} />
+        {/* "new" must precede ":listingId" or it would be read as an id. */}
+        <Route path="skills/new" element={<SkillListingForm />} />
+        <Route path="skills/:id" element={<SkillListingForm />} />
+        <Route path="profile" element={<ExpertProfileEdit />} />
         <Route path="promote" element={<ExpertPromote />} />
-        <Route path="profile" element={<ExpertProfileEdit />} /> {/* opened via "Edit Course" */}
         <Route path="inbox" element={<SkillInbox />} />
       </Route>
 
@@ -159,21 +175,42 @@ export default function TeacherRoutes() {
         <Route path="classes/:subjectId/assignments/:assignmentId" element={<AssignmentView />} />
         <Route path="classes/:subjectId/assignments/:assignmentId/submissions" element={<SubmissionView />} />
 
-        {/* CONTENT top-level landings (class pickers) — close the loose
-            ends where the sidebar promotes per-class screens to nav items. */}
-        <Route path="assignments" element={<AssignmentsLanding />} />
-        <Route path="study-materials" element={<StudyMaterialsLanding />} />
-        <Route path="recordings" element={<RecordingsLanding />} />
+        {/* CONTENT nav items are flat, subject-filtered lists (design screens
+            11/12/13) — the class-picker step is gone. The classes/:subjectId
+            variants above and below still resolve so existing deep links work;
+            they render the same screen with that subject's pill preselected. */}
+        <Route path="assignments" element={<Assignments />} />
+        <Route path="study-materials" element={<StudyMaterials />} />
+        <Route path="recordings" element={<SessionRecordings />} />
+        <Route path="quizzes" element={<Quizzes />} />
 
-        {/* Quizzes */}
+        {/* Quizzes. NOTE: quiz-bank is the QUESTION BANK, a different screen —
+            the sidebar's "Quizzes" item used to point here, which is why the
+            real quiz list was only reachable via Classes. It now points at
+            /teacher/quizzes; the bank stays routable. */}
         <Route path="quiz-bank" element={<QuizBank />} />
         <Route path="classes/:subjectId/quizzes" element={<Quizzes />} />
-        <Route path="classes/:subjectId/quizzes/create" element={<CreateQuiz />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/draft" element={<QuizDraftPreview />} />
-        <Route path="classes/:subjectId/quizzes/:quizId" element={<QuizView />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/submissions" element={<QuizSubmissionView />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/student/:studentId" element={<QuizStudentAttemptsView />} />
-        <Route path="classes/:subjectId/quizzes/:quizId/review/:attemptId" element={<QuizReviewView />} />
+
+        {/* A quiz's own child screens — flat, matching the list's root. Create
+            stays subject-scoped (a new quiz needs a subject up front, same as
+            Create Assignment); the rest need only quizId/studentId/attemptId. */}
+        <Route path="quizzes/create/:subjectId" element={<QuizBuilder />} />
+        <Route path="quizzes/:quizId/edit" element={<QuizBuilder />} />
+        <Route path="quizzes/:quizId/draft" element={<QuizDraftPreview />} />
+        <Route path="quizzes/:quizId" element={<QuizView />} />
+        <Route path="quizzes/:quizId/submissions" element={<QuizSubmissionView />} />
+        <Route path="quizzes/:quizId/analytics" element={<QuizAnalytics />} />
+        <Route path="quizzes/:quizId/student/:studentId" element={<QuizStudentAttemptsView />} />
+        <Route path="quizzes/:quizId/review/:attemptId" element={<QuizReviewView />} />
+
+        {/* Old nested paths — kept as redirects so an existing bookmark or
+            notification link built before this flattening still resolves. */}
+        <Route path="classes/:subjectId/quizzes/create" element={<LegacyQuizRedirect to="/teacher/quizzes/create/:subjectId" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/draft" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/draft" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/submissions" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/submissions" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/student/:studentId" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/student/:studentId" />} />
+        <Route path="classes/:subjectId/quizzes/:quizId/review/:attemptId" element={<LegacyQuizRedirect to="/teacher/quizzes/:quizId/review/:attemptId" />} />
 
         {/* Study Materials */}
         <Route path="classes/:subjectId/study-materials" element={<StudyMaterials />} />
@@ -192,7 +229,6 @@ export default function TeacherRoutes() {
         {/* Live Sessions */}
         <Route path="live-sessions" element={<LiveSessions />} />
         <Route path="classes/:subjectId/live-sessions" element={<LiveSessions />} />
-        <Route path="classes/:subjectId/live-sessions/create" element={<TeacherCreateLiveSession />} />
         <Route path="live-sessions/:id/detail" element={<LiveSessionDetail />} />
         <Route path="classes/:subjectId/live-sessions/:id/detail" element={<LiveSessionDetail />} />
 

@@ -1,127 +1,104 @@
 /**
- * PLACEMENT: src/pages/skill/ExpertBookings.jsx
- * ACTION:    Replace the entire file.
+ * src/pages/skill/ExpertBookings.jsx — rebuilt to design_handoff_skilldev's
+ * Expert "2. Bookings" (verified against the live standalone prototype):
+ * Requests/Upcoming/Past tabs, a 24h-SLA amber notice + per-request expiry
+ * chip (danger tint at ≤6h), Accept/Decline/Propose new time, and a
+ * Report-no-show + per-student note flow on Past.
  *
- * Change from original:
- *   Both Message buttons previously navigated to "/teacher/skill-inbox" —
- *   a route that was never registered, causing a silent 404.
- *
- *   Fixed: both now call openChat(sess) which navigates to "/teacher/chat"
- *   with state { learnerId: s.learner.id }. Chat.jsx at that path already
- *   reads state.learnerId and calls ChatAPI.startDirect("LEARNER", id),
- *   opening the WS DM immediately.
- *
- *   s.learner.id = LearnerProfile UUID (from _session_card() in livekit_views.py)
- *   which is exactly what StartDirectView KIND_LEARNER expects.
+ * GET  /skill/teacher/sessions/                          → this expert's sessions
+ * POST /skill/teacher/sessions/<id>/confirm/ | /decline/
+ * POST /skill/teacher/sessions/<id>/reschedule/           → propose new time
+ * POST /skill/teacher/sessions/<id>/report-no-show/
+ * PUT  /skill/teacher/sessions/<id>/note/
  */
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
+import SkillModal from "../../components/SkillModal";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import { useSkillToast } from "../../components/useSkillToast";
 import "../../styles/skillDev.css";
+import "../../styles/expertBookings.css";
 import { LoadingState } from "../../components/StateViews";
+import { DAYS, SLOTS, label as slotLabel } from "../../api/availabilityStore";
 
-/* ── helpers ── */
 function fmtWhen(iso) {
   if (!iso) return "TBC";
   try {
     const d = new Date(iso);
     return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })
-      + " · "
-      + d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+      + " · " + d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
   } catch { return iso; }
 }
 
-function isLive(s) {
-  if (!s.scheduled_for) return false;
-  const now   = Date.now();
-  const start = new Date(s.scheduled_for).getTime();
-  const end   = start + (s.duration_mins || 60) * 60 * 1000;
-  return now >= start - 5 * 60 * 1000 && now <= end;
+function hoursLeft(createdAt) {
+  if (!createdAt) return null;
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+  return Math.max(0, Math.ceil(24 - elapsedMs / 3600000));
 }
 
-function groupByDay(sessions) {
-  const today    = new Date();
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-  const fmt = (d) => d.toDateString();
-  const map = {};
-  sessions.forEach(s => {
-    if (!s.scheduled_for) { (map["Unscheduled"] = map["Unscheduled"] || []).push(s); return; }
-    const d   = new Date(s.scheduled_for);
-    const key = fmt(d) === fmt(today)    ? `Today · ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
-              : fmt(d) === fmt(tomorrow) ? `Tomorrow · ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
-              : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
-    (map[key] = map[key] || []).push(s);
-  });
-  return Object.entries(map).map(([day, items]) => ({ day, items }));
-}
-
-/* ── Main component ── */
 export default function ExpertBookings() {
   const navigate = useNavigate();
-  const [sessions,   setSessions]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [acting,     setActing]     = useState({});
+  const showToast = useSkillToast();
+  const [tab, setTab] = useState("requests");
+  const [sessions, setSessions] = useState([]);
+  const [avail, setAvail] = useState({ open: [], booked: [] });
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState({});
+  const [proposeFor, setProposeFor] = useState(null);
+  const [noShowFor, setNoShowFor] = useState(null);
+  const [noteFor, setNoteFor] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get("/skill/teacher/sessions/")
-      .then((sRes) => setSessions(sRes.data || []))
+    Promise.all([
+      api.get("/skill/teacher/sessions/"),
+      api.get("/skill/teacher/availability/"),
+    ])
+      .then(([sRes, aRes]) => {
+        setSessions(sRes.data || []);
+        setAvail({ open: aRes.data.open || [], booked: aRes.data.booked || [] });
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const pending   = sessions.filter(s => s.status === "requested");
-  const scheduled = sessions.filter(s => s.status === "confirmed");
-  const grouped   = groupByDay(scheduled);
+  const requests = sessions.filter((s) => s.status === "requested");
+  const upcoming = sessions.filter((s) => s.status === "confirmed" || s.status === "needs_reconfirmation");
+  const past = sessions.filter((s) => s.status === "completed");
 
-  const confirm = async (sess) => {
-    setActing(a => ({ ...a, [sess.id]: "confirming" }));
-    try {
-      await api.post(`/skill/teacher/sessions/${sess.id}/confirm/`);
-      setSessions(ss => ss.map(s => s.id === sess.id ? { ...s, status: "confirmed" } : s));
-    } catch { /* leave the request as-is on failure */ } finally {
-      setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
-    }
+  const openChat = (sess) => navigate("/teacher/expert/inbox", {
+    state: { learnerId: sess.learner?.id, learnerName: sess.learner?.name },
+  });
+
+  const act = async (id, key, fn) => {
+    setActing((a) => ({ ...a, [id]: key }));
+    try { await fn(); } finally { setActing((a) => { const n = { ...a }; delete n[id]; return n; }); }
   };
 
-  const decline = async (sess) => {
-    setActing(a => ({ ...a, [sess.id]: "declining" }));
-    try {
-      await api.post(`/skill/teacher/sessions/${sess.id}/decline/`);
-      setSessions(ss => ss.filter(s => s.id !== sess.id));
-    } catch { /* leave the request as-is on failure */ } finally {
-      setActing(a => { const n = { ...a }; delete n[sess.id]; return n; });
-    }
-  };
+  const accept = (s) => act(s.id, "accepting", async () => {
+    await api.post(`/skill/teacher/sessions/${s.id}/confirm/`);
+    setSessions((ss) => ss.map((x) => (x.id === s.id ? { ...x, status: "confirmed" } : x)));
+    showToast("Session confirmed.");
+  });
 
-  const startClass = (sess) => {
-    // Enter the skill LiveKit room. The room page (SkillSessionLive) performs
-    // POST /skill/sessions/<id>/join/ and mounts LiveKit. Previously this
-    // joined here, logged the token to the console, then navigated to the
-    // Academy /teacher/private-sessions list — so the room was never entered.
-    navigate(`/teacher/skill-session/live/${sess.id}`);
-  };
+  const decline = (s) => act(s.id, "declining", async () => {
+    await api.post(`/skill/teacher/sessions/${s.id}/decline/`);
+    setSessions((ss) => ss.filter((x) => x.id !== s.id));
+    showToast("Request declined.");
+  });
 
-  const complete = async (sess) => {
-    try {
-      await api.post(`/skill/teacher/sessions/${sess.id}/complete/`);
-      setSessions(ss => ss.map(s => s.id === sess.id ? { ...s, status: "completed" } : s));
-    } catch { /* keep the session as-is on failure */ }
-  };
+  const startClass = (s) => navigate(`/teacher/skill-session/live/${s.id}`);
 
-  // Navigate to /teacher/expert/inbox with this learner pre-selected.
-  // SkillInbox reads state.learnerId and opens that DM directly via ChatPanel.
-  // s.learner.id = LearnerProfile UUID — what StartDirectView KIND_LEARNER expects.
-  const openChat = (sess) => {
-    navigate("/teacher/expert/inbox", {
-      state: {
-        learnerId: sess.learner?.id,
-        learnerName: sess.learner?.name,
-      },
-    });
+  const reportNoShow = async () => {
+    if (!noShowFor) return;
+    await api.post(`/skill/teacher/sessions/${noShowFor.id}/report-no-show/`);
+    setSessions((ss) => ss.map((x) => (x.id === noShowFor.id ? { ...x, no_show: true } : x)));
+    showToast("No-show reported. Session forfeited, you're paid in full.");
+    setNoShowFor(null);
   };
 
   return (
@@ -129,121 +106,213 @@ export default function ExpertBookings() {
       <div className="sk-head">
         <div>
           <div className="sk-head__title">Bookings</div>
-          <div className="sk-head__sub">1-on-1 live tutoring — requests and your schedule</div>
         </div>
       </div>
 
-      {/* Pending requests */}
-      <div className="rd-card teacher">
-        <h4 style={{ margin: "0 0 4px" }}>
-          Pending requests{pending.length ? ` (${pending.length})` : ""}
-        </h4>
-        <p style={{ fontSize: 11.5, color: "#6b7c83", margin: "0 0 10px" }}>
-          Accepting a request confirms the slot for the learner.
-        </p>
-        {loading ? (
-          <LoadingState plain label="Loading requests" />
-        ) : pending.length === 0 ? (
-          <div className="sk-empty">No pending requests right now.</div>
-        ) : pending.map((s) => {
-          const act  = acting[s.id];
-          const name = s.learner?.name || "Student";
-          return (
-            <div key={s.id} className="rd-book">
-              <div style={{ width: 46, height: 46, borderRadius: 11, background: "linear-gradient(135deg,#13899b,#0a808a)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
-                {name[0]}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a2c33" }}>{name}</div>
-                <div style={{ fontSize: 12, color: "#6b7c83" }}>{s.note || "Session request"}</div>
-                <div style={{ fontSize: 11.5, color: "#0a808a", fontWeight: 700, marginTop: 3 }}>
-                  {fmtWhen(s.scheduled_for)} · {s.duration_mins || 60} min
+      <div className="eb-seg">
+        <button className={`eb-seg__btn ${tab === "requests" ? "is-active" : ""}`} onClick={() => setTab("requests")}>
+          Requests{requests.length > 0 && <span className="eb-seg__count">{requests.length}</span>}
+        </button>
+        <button className={`eb-seg__btn ${tab === "upcoming" ? "is-active" : ""}`} onClick={() => setTab("upcoming")}>Upcoming</button>
+        <button className={`eb-seg__btn ${tab === "past" ? "is-active" : ""}`} onClick={() => setTab("past")}>Past</button>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Loading" />
+      ) : tab === "requests" ? (
+        <>
+          {requests.length > 0 && (
+            <div className="eb-notice">
+              Requests auto-decline after 24 hours and the student is refunded — responding quickly protects your ranking.
+            </div>
+          )}
+          {requests.length === 0 ? (
+            <div className="sk-empty">No pending requests right now.</div>
+          ) : requests.map((s) => {
+            const left = hoursLeft(s.created_at);
+            const name = s.learner?.name || "Student";
+            const busy = acting[s.id];
+            return (
+              <div key={s.id} className="eb-row">
+                <div className="eb-avatar">{name[0]}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="eb-topic">{s.note || "Session request"}</div>
+                  <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)}</div>
+                </div>
+                <span className="eb-tag eb-tag--pending">Pending</span>
+                {left != null && (
+                  <span className={`eb-expiry ${left <= 6 ? "is-danger" : ""}`}>{left}h left to respond</span>
+                )}
+                <div className="eb-actions">
+                  <button className="eb-btn eb-btn--outline" disabled={!!busy} onClick={() => decline(s)}>Decline</button>
+                  <button className="eb-btn eb-btn--primary" disabled={!!busy} onClick={() => accept(s)}>Accept</button>
+                  <button className="eb-btn eb-btn--outline" disabled={!!busy} onClick={() => setProposeFor(s)}>Propose new time</button>
+                  <button className="eb-iconBtn" title="Message" disabled={!s.learner?.id} onClick={() => openChat(s)}><Icon.msg size={14} /></button>
+                  <button className="eb-link" onClick={() => setNoteFor(s)}>{s.teacher_note ? "● Notes" : "+ Note"}</button>
                 </div>
               </div>
-              {/* FIXED: was navigate("/teacher/skill-inbox") — unregistered route */}
-              <button
-                className="rd-book__icon-btn"
-                title="Message"
-                onClick={() => openChat(s)}
-                disabled={!s.learner?.id}
-              >
-                <Icon.msg size={15} />
-              </button>
-              <button className="rd-book__ghost" onClick={() => decline(s)} disabled={!!act}>
-                {act === "declining" ? "…" : "Decline"}
-              </button>
-              <button className="rd-book__accept" onClick={() => confirm(s)} disabled={!!act}>
-                {act === "confirming" ? "…" : <><Icon.check size={13} /> Accept</>}
-              </button>
+            );
+          })}
+        </>
+      ) : tab === "upcoming" ? (
+        upcoming.length === 0 ? (
+          <div className="sk-empty">No upcoming sessions.</div>
+        ) : upcoming.map((s) => {
+          const name = s.learner?.name || "Student";
+          const awaiting = s.status === "needs_reconfirmation";
+          return (
+            <div key={s.id} className="eb-row">
+              <div className="eb-avatar">{name[0]}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="eb-topic">{s.note || "1-on-1 session"}</div>
+                <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)}</div>
+                {awaiting && <div className="eb-awaitingNote">Awaiting student confirmation</div>}
+              </div>
+              {!awaiting && <span className="eb-tag eb-tag--confirmed">Confirmed</span>}
+              <div className="eb-actions">
+                {!awaiting && <button className="eb-btn eb-btn--primary" onClick={() => startClass(s)}><Icon.vid size={13} /> Start session</button>}
+                {!awaiting && <button className="eb-btn eb-btn--outline" onClick={() => setProposeFor(s)}>Reschedule</button>}
+                <button className="eb-iconBtn" title="Message" disabled={!s.learner?.id} onClick={() => openChat(s)}><Icon.msg size={14} /></button>
+                <button className="eb-link" onClick={() => setNoteFor(s)}>{s.teacher_note ? "● Notes" : "+ Note"}</button>
+              </div>
             </div>
           );
-        })}
-      </div>
+        })
+      ) : (
+        past.length === 0 ? (
+          <div className="sk-empty">No completed sessions yet.</div>
+        ) : past.map((s) => {
+          const name = s.learner?.name || "Student";
+          return (
+            <div key={s.id} className="eb-row">
+              <div className="eb-avatar">{name[0]}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="eb-topic">{s.note || "1-on-1 session"}</div>
+                <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)}</div>
+                {s.no_show && <div className="eb-noShowTag">No-show reported</div>}
+              </div>
+              <span className="eb-tag eb-tag--completed">Completed</span>
+              <div className="eb-actions">
+                {!s.no_show && <button className="eb-btn eb-btn--outline" onClick={() => setNoShowFor(s)}>Report no-show</button>}
+                <button className="eb-link" onClick={() => setNoteFor(s)}>{s.teacher_note ? "● Notes" : "+ Note"}</button>
+              </div>
+            </div>
+          );
+        })
+      )}
 
-      {/* Scheduled sessions */}
-      <div className="rd-card teacher">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h4 style={{ margin: 0 }}>Scheduled sessions</h4>
-          <span style={{ fontSize: 11.5, color: "#6b7c83" }}>{scheduled.length} upcoming</span>
-        </div>
-        {loading ? (
-          <LoadingState plain label="Loading sessions" />
-        ) : scheduled.length === 0 ? (
-          <div className="sk-empty" style={{ marginTop: 14 }}>No scheduled sessions yet.</div>
-        ) : grouped.map((g) => (
-          <div key={g.day}>
-            <div className="rd-daygroup">{g.day}</div>
-            {g.items.map((s) => {
-              const live = isLive(s);
-              const act  = acting[s.id];
-              const name = s.learner?.name || "Student";
-              const time = s.scheduled_for
-                ? new Date(s.scheduled_for).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
-                : "TBC";
-              return (
-                <div key={s.id} className="rd-book">
-                  <span className="bt" style={{ background: "#13899b" }}>
-                    {time.split(":")[0]}
-                    <span style={{ fontSize: 9, opacity: .8 }}>{time.includes("PM") ? "PM" : "AM"}</span>
-                  </span>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a2c33" }}>{name}</div>
-                    <div style={{ fontSize: 12, color: "#6b7c83" }}>{s.note || "1-on-1 session"}</div>
-                    <div style={{ fontSize: 11.5, color: "#0a808a", fontWeight: 700, marginTop: 3 }}>
-                      {time} · {s.duration_mins || 60} min
-                    </div>
-                  </div>
-                  {/* A confirmed session can be started by the expert at ANY
-                      time — they're not locked to a 5-min window. `live` only
-                      drives a "Live now" hint + styling. */}
-                  <button
-                    className="start"
-                    onClick={() => startClass(s)}
-                    disabled={!!act}
-                    style={live ? undefined : { background: "#13899b" }}
-                  >
-                    {act === "starting"
-                      ? "…"
-                      : <><Icon.vid size={14} /> {live ? "Start class · Live" : "Start class"}</>}
-                  </button>
-                  {/* FIXED: was navigate("/teacher/skill-inbox") — unregistered route */}
-                  <button
-                    className="rd-book__icon-btn"
-                    title="Message"
-                    onClick={() => openChat(s)}
-                    disabled={!s.learner?.id}
-                  >
-                    <Icon.msg size={15} />
-                  </button>
-                  <button className="rd-book__ghost" style={{ fontSize: 11 }} onClick={() => complete(s)}>
-                    Mark done
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+      <ProposeModal
+        key={proposeFor?.id}
+        session={proposeFor}
+        avail={avail}
+        onClose={() => setProposeFor(null)}
+        onProposed={() => { setProposeFor(null); load(); showToast("New time proposed to the student."); }}
+      />
+
+      <NoteModal key={noteFor?.id} session={noteFor} onClose={() => setNoteFor(null)} onSaved={(note) => {
+        setSessions((ss) => ss.map((x) => (x.id === noteFor.id ? { ...x, teacher_note: note } : x)));
+        setNoteFor(null);
+      }} />
+
+      <ConfirmDialog
+        dialog={noShowFor ? {
+          title: "Report no-show?",
+          message: `This forfeits the session — you're paid in full and the slot is released. This can't be undone.`,
+          confirmLabel: "Report no-show",
+          danger: true,
+          tone: "skill",
+          onConfirm: reportNoShow,
+        } : null}
+        onClose={() => setNoShowFor(null)}
+      />
+    </div>
+  );
+}
+
+function ProposeModal({ session, avail, onClose, onProposed }) {
+  // Keyed on session.id so switching to a different session's modal starts
+  // fresh, without a setState-in-effect reset (React resets local state for
+  // a changed key automatically — see the <ProposeModal key=...> below).
+  const [slot, setSlot] = useState(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (!session) return null;
+  const openSlots = avail.open.filter((k) => !avail.booked.includes(k));
+
+  const submit = async () => {
+    if (!slot || busy) return;
+    setBusy(true);
+    try {
+      await api.post(`/skill/teacher/sessions/${session.id}/reschedule/`, { slot_key: slot, reason });
+      onProposed();
+    } catch { setBusy(false); }
+  };
+
+  return (
+    <SkillModal open onClose={onClose} title="Propose a new time">
+      <p className="eb-modalSub">
+        &ldquo;{session.note || "This session"}&rdquo; with {session.learner?.name} — the class is only officially
+        booked once the student accepts your new time.
+      </p>
+      <div className="eb-modalLabel">Current</div>
+      <div className="eb-modalCurrent">{fmtWhen(session.scheduled_for)}</div>
+      <div className="eb-modalLabel">Pick from your open slots</div>
+      <div className="eb-slotGrid">
+        {openSlots.length === 0 ? (
+          <div className="eb-modalSub">No open slots available.</div>
+        ) : openSlots.map((k) => (
+          <span key={k} className={`eb-slotPill ${slot === k ? "is-selected" : ""}`} onClick={() => setSlot(k)}>
+            {slotLabel(k)}
+          </span>
         ))}
       </div>
-    </div>
+      <textarea
+        className="eb-textarea"
+        placeholder="Message to the student (optional)"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={3}
+      />
+      <div className="eb-modalActions">
+        <button className="eb-btn eb-btn--outline" onClick={onClose} disabled={busy}>Cancel</button>
+        <button className="eb-btn eb-btn--primary" onClick={submit} disabled={!slot || busy}>
+          {busy ? "Sending…" : !slot ? "Pick a slot first" : "Propose new time"}
+        </button>
+      </div>
+    </SkillModal>
+  );
+}
+
+function NoteModal({ session, onClose, onSaved }) {
+  // Keyed on session.id at the call site — see ProposeModal's comment.
+  const [note, setNote] = useState(session?.teacher_note || "");
+  const [saving, setSaving] = useState(false);
+
+  if (!session) return null;
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/skill/teacher/sessions/${session.id}/note/`, { note });
+      onSaved(note);
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <SkillModal open onClose={onClose} title={`Note about ${session.learner?.name || "this student"}`}>
+      <textarea
+        className="eb-textarea"
+        placeholder="Private note — never shown to the student…"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={5}
+        autoFocus
+      />
+      <div className="eb-modalActions">
+        <button className="eb-btn eb-btn--outline" onClick={onClose} disabled={saving}>Cancel</button>
+        <button className="eb-btn eb-btn--primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save note"}</button>
+      </div>
+    </SkillModal>
   );
 }

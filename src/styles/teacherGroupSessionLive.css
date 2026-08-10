@@ -7,6 +7,7 @@
   --tgs-host: #415B7E;
   --tgs-panel: #eef7fb;
   --tgs-danger: #ef4444;
+  --tgs-warning: #f59e0b;
   --tgs-text: #0f172a;
   --tgs-muted: #64748b;
 }
@@ -110,13 +111,13 @@
   flex: 0 0 56px;
   min-height: 56px;
   display: grid;
-  grid-template-columns: 92px 1fr 190px;
+  grid-template-columns: 92px 1fr 240px;
   align-items: center;
   gap: 12px;
   padding: 8px 18px;
   border-radius: 0 0 12px 12px;
   border-top: 2px solid var(--tgs-primary);
-  background: #8b8b8b;
+  background: #ffffff;
   box-sizing: border-box;
 }
 
@@ -160,8 +161,8 @@
 }
 
 .tgs-cb-icon {
-  width: 29px;
-  height: 29px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #2d3340;
   color: #ffffff;
@@ -205,7 +206,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
+  min-width: 44px;
+  min-height: 44px;
   border: none;
   background: transparent;
   color: #0f172a;
@@ -246,7 +250,7 @@
   transform: translateX(-50%);
   width: 205px;
   background: #1f232b;
-  border: 2px solid #874dff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
   color: #e5e7eb;
   z-index: 120;

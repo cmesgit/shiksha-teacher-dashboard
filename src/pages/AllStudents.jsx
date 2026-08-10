@@ -8,150 +8,243 @@
  *
  * 2. We store the response in `data` state
  *
- * 3. The `search` state filters students by name/email/ID as user types
- *    → filter() runs on every render, comparing against the search query
+ * 3. The `search` state filters students by name/email/ID/course as user types,
+ *    and `batchFilter` filters by batch — this is the design's Students screen
+ *    (Academy Dashboard.dc.html lines 2039–2074): flat row list, avatar +
+ *    name + "Class {batch}" subline, batch-filter chip row above the list
+ *    (dc.html's stuChips, hardcoded ["All","10-A","10-B","9-A"] there — derived
+ *    here from whatever batch_code values actually appear so the filter stays
+ *    truthful for any real roster).
  *
- * 4. Each row is clickable — navigates to student detail page
- *    → We pass student data via router state (no extra API call needed)
+ * 4. Each row is clickable — navigates to student detail page. The design's
+ *    own row has no click-through (its row only wires a "Message" button that
+ *    just jumps to the Messages tab, not a real per-student feature) — but this
+ *    app already has a real student-detail page, so the click-through is kept
+ *    verbatim rather than dropped to match the prototype.
+ *
+ * Divergence from the design's row — deliberate, not an oversight: the mockup
+ * shows a per-student "Attendance %". That one still doesn't exist anywhere
+ * real: LiveSessionAttendance is keyed by account, not learner_profile, so on
+ * a multi-profile account it can't be attributed to one sibling over another,
+ * and LiveSession.batch is nullable (course-wide sessions), so "sessions in
+ * their batch" isn't a clean denominator either — a computed number here
+ * would look real but wouldn't be. Avg quiz score, by contrast, IS real and
+ * now wired up (TeacherAllStudentsView aggregates it in one grouped query,
+ * same Avg(score/quiz.total_marks*100) definition `build_progress_stats`
+ * already uses for a single learner) — shown alongside `enrolled_at`.
+ *
+ * ONE ROW = ONE STUDENT, NOT ONE ACCOUNT. This app is multi-profile: a parent
+ * with three enrolled children is one login and three students, so several
+ * rows can share the same `email`/`account_id`/`username`. `student.id` is the
+ * learner-profile id (the student), which is why it — and never the email — is
+ * the row key. Use displayNameOf() rather than `username` for the same reason.
  */
 
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiSearch } from "react-icons/fi";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { FiMessageCircle } from "react-icons/fi";
 import api from "../api/apiClient";
-import "../styles/students.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState } from "../components/StateViews";
+import { subjectChipPalette } from "../utils/subjectChips";
+import "../styles/academyScreens.css";
+
+// full_name is optional on a learner profile; display_name is what the profile
+// picker shows and is the only field that distinguishes siblings on one
+// account, so it comes before the account-level `username` fallback.
+const displayNameOf = (s) =>
+  s.full_name || s.display_name || s.username || "Unnamed student";
+
+const initialsOf = (name) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "S";
+
+const ALL_BATCHES = "All";
+
+const fmtEnrolled = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    : "—";
 
 export default function AllStudents() {
   const navigate = useNavigate();
 
   // State: stores the API response { total_students, students[] }
   const [data, setData] = useState(null);
-  // State: the search input value
-  const [search, setSearch] = useState("");
-  // State: loading flag to show spinner/message while fetching
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [batchFilter, setBatchFilter] = useState(ALL_BATCHES);
 
   // useEffect runs ONCE on mount (empty dependency array [])
-  // It fetches all students from the backend
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchStudents() {
+      setLoading(true);
+      setError(null);
       try {
         const res = await api.get("/courses/teacher/all-students/");
+        if (cancelled) return;
         setData(res.data);
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to load students", err);
+        setError("Failed to load students.");
       } finally {
-        setLoading(false); // Always stop loading, even on error
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchStudents();
+    return () => { cancelled = true; };
   }, []);
 
-  // Early returns for loading/error states
-  if (loading) return <LoadingState label="Loading students" />;
-  if (!data) return <div className="students-loading">Failed to load students.</div>;
+  const students = useMemo(() => data?.students || [], [data]);
 
-  // Filter students based on search input
-  // .filter() creates a NEW array with only matching items
-  // .toLowerCase() makes the search case-insensitive
-  const filtered = data.students.filter((s) => {
-    const q = search.toLowerCase();
-    return (
-      (s.full_name || "").toLowerCase().includes(q) ||
-      (s.email || "").toLowerCase().includes(q) ||
-      (s.student_id || "").toLowerCase().includes(q) ||
-      (s.course_title || "").toLowerCase().includes(q)
-    );
-  });
+  // Batch chips, from the batches that actually appear in the roster. The
+  // design hardcodes ["All","10-A","10-B","9-A"]; deriving them keeps the
+  // control truthful for any real timetable.
+  const batchChips = useMemo(() => {
+    const codes = [...new Set(students.map((s) => s.batch_code).filter(Boolean))].sort();
+    return [ALL_BATCHES, ...codes];
+  }, [students]);
+
+  // Filter by batch, then by the free-text search (name/email/ID/course). The
+  // design's Students screen has no search box in its static prototype, but
+  // this is real working functionality with no design equivalent replacing
+  // it — filter chips filter by batch, not by text — so it's kept per this
+  // project's standing rule: don't delete real functionality just because the
+  // mockup doesn't show it.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return students
+      .filter((s) => batchFilter === ALL_BATCHES || (s.batch_code || "") === batchFilter)
+      .filter((s) => {
+        if (!q) return true;
+        return (
+          displayNameOf(s).toLowerCase().includes(q) ||
+          (s.email || "").toLowerCase().includes(q) ||
+          (s.student_id || "").toLowerCase().includes(q) ||
+          // course_titles lists every course this student shares with the
+          // teacher; course_title is only the first of them.
+          (s.course_titles || [s.course_title]).join(" ").toLowerCase().includes(q)
+        );
+      });
+  }, [students, search, batchFilter]);
+
+  if (loading) return <div className="ac-screen"><LoadingState label="Loading students" /></div>;
+  if (error) return <div className="ac-screen"><ErrorState message={error} /></div>;
 
   return (
-    <div className="students-page">
-      {/* Header with title and search */}
-      <div className="students-header">
+    <div className="ac-screen">
+      <div className="ac-head">
         <div>
-          <h2 className="students-title">All Students</h2>
-          <p className="students-subtitle">
-            {data.total_students} student{data.total_students !== 1 ? "s" : ""} across all your classes
-          </p>
-        </div>
-
-        <div className="students-search">
-          <input
-            type="text"
-            placeholder="Search by name, email, ID or course..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <FiSearch className="students-search-icon" />
+          <h1 className="ac-head__title">Students</h1>
+          <p className="ac-head__sub">All students across your batches.</p>
         </div>
       </div>
 
-      {/* Table or empty message */}
-      {filtered.length === 0 ? (
-        <p className="students-empty">
-          {search ? "No students match your search." : "No students enrolled."}
-        </p>
-      ) : (
-        <div className="students-table-wrap">
-          <table className="students-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Student ID</th>
-                <th>Course</th>
-                <th>Enrolled</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* .map() loops through each student and renders a <tr> */}
-              {filtered.map((student, idx) => (
-                <tr
-                  key={student.id}
-                  className="students-row"
+      <div className="ac-filterBar">
+        <div className="ac-pills">
+          {batchChips.map((b) => (
+            <button
+              key={b}
+              type="button"
+              className={`ac-pill${batchFilter === b ? " is-active" : ""}`}
+              onClick={() => setBatchFilter(b)}
+            >
+              {b === ALL_BATCHES ? "All" : b}
+            </button>
+          ))}
+        </div>
+
+        <input
+          type="text"
+          className="ac-searchInput"
+          placeholder="Search by name, email, ID or course…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search students"
+        />
+      </div>
+
+      <section className="ac-listCard">
+        <div className="ac-list">
+          {filtered.length === 0 ? (
+            <div className="ac-emptyRow">
+              {search || batchFilter !== ALL_BATCHES
+                ? "No students match your filters."
+                : "No students enrolled."}
+            </div>
+          ) : (
+            filtered.map((student) => {
+              const name = displayNameOf(student);
+              const chip = subjectChipPalette(name);
+              return (
+                <div
+                  key={student.id || `account:${student.account_id}`}
+                  className="ac-row"
                   onClick={() =>
                     navigate(`/teacher/students/${student.id}`, {
                       state: { student },
                     })
                   }
                 >
-                  <td>{idx + 1}</td>
-                  <td>
-                    <div className="students-name-cell">
-                      {/* Avatar: show image, emoji, or first letter fallback */}
-                      <div className="students-avatar">
-                        {student.avatar_type === "image" && student.avatar ? (
-                          <img src={student.avatar} alt="" />
-                        ) : student.avatar_type === "emoji" && student.avatar ? (
-                          <span>{student.avatar}</span>
-                        ) : (
-                          <span>
-                            {(student.full_name || "?")[0].toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <span>{student.full_name || student.username}</span>
+                  <div className="ac-row__avatar" style={{ background: chip.bg, color: chip.ink }}>
+                    {student.avatar_type === "image" && student.avatar ? (
+                      <img src={student.avatar} alt="" />
+                    ) : student.avatar_type === "emoji" && student.avatar ? (
+                      <span>{student.avatar}</span>
+                    ) : (
+                      <span>{initialsOf(name)}</span>
+                    )}
+                  </div>
+
+                  <div className="ac-row__body">
+                    <div className="ac-row__topic">{name}</div>
+                    <div className="ac-row__sub">
+                      {student.batch_code ? `Class ${student.batch_code}` : "No batch assigned"}
                     </div>
-                  </td>
-                  <td>{student.email}</td>
-                  <td>{student.student_id || "—"}</td>
-                  <td>{student.course_title}</td>
-                  <td>
-                    {new Date(student.enrolled_at).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+
+                  {student.avg_quiz_score != null && (
+                    <div className="ac-row__stat">
+                      <div className="ac-row__statValue">{student.avg_quiz_score}%</div>
+                      <div className="ac-row__statLabel">Avg score</div>
+                    </div>
+                  )}
+
+                  <div className="ac-row__stat">
+                    <div className="ac-row__statValue">{fmtEnrolled(student.enrolled_at)}</div>
+                    <div className="ac-row__statLabel">Enrolled</div>
+                  </div>
+
+                  <div className="ac-row__actions">
+                    <button
+                      type="button"
+                      className="ac-btn ac-btn--icon"
+                      aria-label={`Message ${name}`}
+                      title="Message"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate("/teacher/chat", { state: { learnerId: student.id } });
+                      }}
+                    >
+                      <FiMessageCircle size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
-      )}
+      </section>
     </div>
   );
 }

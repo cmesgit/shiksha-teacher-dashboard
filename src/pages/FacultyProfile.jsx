@@ -369,6 +369,35 @@ export default function FacultyProfile() {
             )}
           </Section>
 
+          {/* ── Your name ── */}
+          <Section
+            title="Your name"
+            hint="Shown on your public teacher card and across this dashboard."
+            editing={editing === "name"}
+            onEdit={() => beginEdit("name", {
+              first_name: raw.first_name || "",
+              last_name: raw.last_name || "",
+            })}
+            onCancel={cancelEdit} onSave={saveSection}
+            saving={saving} error={editing === "name" ? saveError : ""}
+          >
+            {editing === "name" ? (
+              <div className="fp-formgrid">
+                <Field name="First name">
+                  <input className="fp-input" value={form.first_name}
+                    onChange={(e) => set("first_name", e.target.value)} />
+                </Field>
+                <Field name="Last name">
+                  <input className="fp-input" value={form.last_name}
+                    onChange={(e) => set("last_name", e.target.value)} />
+                </Field>
+              </div>
+            ) : (
+              <ValueRow name="Name"
+                value={[raw.first_name, raw.last_name].filter(Boolean).join(" ")} />
+            )}
+          </Section>
+
           {/* ── Qualifications ── */}
           <Section
             title="Qualifications"
@@ -531,8 +560,6 @@ export default function FacultyProfile() {
             hint="Private — visible to admins only, never on your public card."
             editing={editing === "personal"}
             onEdit={() => beginEdit("personal", {
-              first_name: raw.first_name || "",
-              last_name: raw.last_name || "",
               phone: raw.phone || "",
               gender: raw.gender || "",
               date_of_birth: raw.date_of_birth || "",
@@ -546,14 +573,6 @@ export default function FacultyProfile() {
           >
             {editing === "personal" ? (
               <div className="fp-formgrid">
-                <Field name="First name">
-                  <input className="fp-input" value={form.first_name}
-                    onChange={(e) => set("first_name", e.target.value)} />
-                </Field>
-                <Field name="Last name">
-                  <input className="fp-input" value={form.last_name}
-                    onChange={(e) => set("last_name", e.target.value)} />
-                </Field>
                 <Field name="Phone">
                   <input className="fp-input" value={form.phone}
                     onChange={(e) => set("phone", e.target.value)} />
@@ -587,8 +606,6 @@ export default function FacultyProfile() {
               </div>
             ) : (
               <>
-                <ValueRow name="Name"
-                  value={[raw.first_name, raw.last_name].filter(Boolean).join(" ")} />
                 <ValueRow name="Phone" value={raw.phone} />
                 <ValueRow name="Date of birth" value={raw.date_of_birth} />
                 <ValueRow name="Gender" value={label(GENDERS, raw.gender)} />

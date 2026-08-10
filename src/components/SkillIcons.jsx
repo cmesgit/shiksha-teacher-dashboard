@@ -37,27 +37,8 @@ export const Icon = {
   clipboard: ({ size = 16 }) => s(size, <><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></>),
 };
 
-/* Small star-row + rating helpers reused on several pages */
-export function StarRow({ n, size = 11 }) {
-  return (
-    <span style={{ display: "inline-flex", gap: 1 }}>
-      {[1, 2, 3, 4, 5].map((x) => (
-        <span key={x} style={{ color: x <= n ? "#f5a623" : "#dcd3c4", display: "flex" }}>
-          <Icon.star size={size} />
-        </span>
-      ))}
-    </span>
-  );
-}
-
-export function Rating({ v, reviews }) {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-      <span style={{ color: "#f5a623", display: "flex" }}><Icon.star size={12} /></span>
-      <span style={{ fontSize: 12, fontWeight: 800, color: "#1a2c33" }}>{v}</span>
-      {reviews != null && <span style={{ fontSize: 11, color: "#999" }}>({reviews})</span>}
-    </span>
-  );
-}
+// StarRow/Rating used to be duplicated here — unused (no <StarRow>/<Rating>
+// call sites in this app) and now live once, canonically, in
+// ../skill/SkillUI.jsx (synced from shared/src/skill/SkillUI.jsx).
 
 export default Icon;

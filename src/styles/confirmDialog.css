@@ -87,22 +87,37 @@
   color: #0f172a;
 }
 
+/* Parameterized so a caller can retheme via a wrapper class (e.g. Skill Dev's
+   orange) without forking this file — defaults preserve every existing
+   caller's look exactly. */
+.tcd__overlay {
+  --tcd-primary: #3b5c7c;
+  --tcd-primary-hover: #2b4560;
+  --tcd-danger: #dc2626;
+  --tcd-danger-hover: #b91c1c;
+}
+/* Skill Dev retint — dialog="{...dialog, tone:'skill'}" */
+.tcd__overlay--skill {
+  --tcd-primary: var(--skill);
+  --tcd-primary-hover: var(--skill-hover);
+}
+
 .tcd__btn--primary {
-  background: #3b5c7c;
-  border-color: #3b5c7c;
+  background: var(--tcd-primary);
+  border-color: var(--tcd-primary);
   color: #ffffff;
 }
 .tcd__btn--primary:hover:not(:disabled) {
-  background: #2b4560;
-  border-color: #2b4560;
+  background: var(--tcd-primary-hover);
+  border-color: var(--tcd-primary-hover);
 }
 
 .tcd__btn--danger {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: var(--tcd-danger);
+  border-color: var(--tcd-danger);
   color: #ffffff;
 }
 .tcd__btn--danger:hover:not(:disabled) {
-  background: #b91c1c;
-  border-color: #b91c1c;
+  background: var(--tcd-danger-hover);
+  border-color: var(--tcd-danger-hover);
 }

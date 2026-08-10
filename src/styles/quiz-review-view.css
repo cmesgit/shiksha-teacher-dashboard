@@ -1,332 +1,105 @@
-.qrv-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: 100%;
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   quiz-review-view.css — Quiz Review, restyled to match the design
+   handoff's quizResShowDetail MODAL (Academy Dashboard.dc.html lines
+   318-346 / screenshots/teacher-10-quiz-answer-detail.png): a name+score
+   head, then one card per question with a WRONG/CORRECT pill and
+   "Answered:"/"Correct:" text lines — no score-circle, no per-option radio
+   rows (the design has neither). This screen stays a routed page rather
+   than a true inline modal (see the header comment in QuizReviewView.jsx),
+   so the panel below is the modal's shape lifted into normal page flow
+   instead of a fixed-position overlay.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 .qrv-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #425f7f;
-  color: #fff;
   border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
-  font-size: 13px;
-  font-weight: 500;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  width: fit-content;
-  flex-shrink: 0;
+  padding: 0;
+  margin-bottom: 16px;
 }
+.qrv-back-btn:hover { color: var(--ink); }
 
-.qrv-back-btn:hover {
-  background: #354d67;
-}
-
-.qrv-card {
-  background: #fff;
-  border-radius: 16px;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.qrv-header {
-  padding: 20px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e0e0e0;
-  flex-shrink: 0;
-}
-
-.qrv-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2d3d;
-  margin: 0;
-}
-
-.qrv-search {
-  position: relative;
-}
-
-.qrv-search input {
-  padding: 6px 32px 6px 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 13px;
-  outline: none;
-  width: 160px;
-  background: #fff;
-}
-
-.qrv-search input:focus {
-  border-color: #425f7f;
-}
-
-.qrv-search-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 14px;
-}
-
-.qrv-content {
-  padding: 28px 48px 40px;
-  flex: 1;
-}
-
-/* ── Meta row (name + date side by side) ── */
-.qrv-meta-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.qrv-student-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2d3d;
-  margin: 0;
-}
-
-.qrv-date-text {
-  font-size: 13px;
-  font-weight: 700;
-  color: #1f2d3d;
-  text-decoration: underline;
-}
-
-/* ── Score banner ── */
-.qrv-score-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: #f0faf8;
-  border: 1px solid #c6ede5;
-  border-radius: 12px;
-  padding: 14px 20px;
-  margin-bottom: 24px;
-}
-
-.qrv-score-circle {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: #38b89a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.qrv-score-pct {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.qrv-score-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.qrv-score-label {
-  font-size: 11px;
-  color: #38b89a;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.qrv-score-fraction {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f2d3d;
-}
-
-.qrv-score-bar-wrap {
-  width: 130px;
-  height: 6px;
-  background: #d0ede8;
-  border-radius: 999px;
+/* ── Panel (the design's 560px modal, lifted into page flow) ── */
+.qrv-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--sh-card);
+  max-width: 560px;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
-.qrv-score-bar-fill {
-  height: 100%;
-  background: #38b89a;
-  border-radius: 999px;
-  transition: width 0.8s ease;
+.qrv-panelHead {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--divider);
+}
+.qrv-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-header);
+  color: var(--ink);
+}
+.qrv-scoreLine {
+  font-size: var(--fs-meta);
+  color: var(--ink-muted);
+  margin-top: 2px;
 }
 
-/* ── Question list ── */
-.qrv-questions-list {
+/* ── Answer list ── */
+.qrv-answers {
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
-.qrv-question-block {
-  background: #f0f0f0;
-  border-radius: 10px;
-  padding: 14px 24px;
-  border: 1.5px solid transparent;
-  transition: box-shadow 0.2s;
+.qrv-answerCard {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
 }
 
-.qrv-question-block:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-}
-
-.qrv-question-block.qrv-correct {
-  border-color: #b2e5d8;
-  background: #f4fdf9;
-}
-
-.qrv-question-block.qrv-wrong {
-  border-color: #f5c6c6;
-  background: #fff8f8;
-}
-
-/* ── Question header (text + badge) ── */
-.qrv-question-header {
+.qrv-answerTop {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 9px;
 }
 
-.qrv-question-text {
-  font-size: 14px;
+.qrv-qText {
+  font-size: var(--fs-body);
   font-weight: 600;
-  color: #1f2d3d;
-  line-height: 1.5;
+  color: var(--ink);
+  line-height: 1.4;
 }
 
-.qrv-q-num {
-  color: #38b89a;
-  margin-right: 5px;
-}
-
-.qrv-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 999px;
-  padding: 3px 10px;
-  white-space: nowrap;
+.qrv-markPill {
   flex-shrink: 0;
+  font-size: var(--fs-tag);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
 }
+.qrv-markPill.is-correct { background: var(--success-soft); color: var(--success); }
+.qrv-markPill.is-wrong   { background: var(--danger-soft);  color: var(--danger); }
 
-.badge-correct {
-  background: #d4f5ec;
-  color: #1a7a61;
+.qrv-answerLine {
+  font-size: var(--fs-meta);
+  color: var(--primary);
+  margin-top: 2px;
 }
-
-.badge-wrong {
-  background: #fde8e8;
-  color: #b03030;
+.qrv-answerLine--correct {
+  color: var(--success);
+  margin-top: 3px;
 }
-
-/* ── Options ── */
-.qrv-options-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.qrv-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #444;
-  background: #ebebeb;
-  border: 1.5px solid transparent;
-  border-radius: 8px;
-  padding: 6px 14px;
-  cursor: default;
-}
-
-.qrv-option input[type="radio"] {
-  accent-color: #38b89a;
-  margin: 0;
-  width: 15px;
-  height: 15px;
-}
-
-.opt-selected-correct {
-  background: #d4f5ec;
-  border-color: #38b89a;
-  color: #1a7a61;
-  font-weight: 600;
-}
-
-.opt-selected-wrong {
-  background: #fde8e8;
-  border-color: #e05555;
-  color: #b03030;
-  font-weight: 600;
-}
-
-.opt-correct-hint {
-  background: #d4f5ec;
-  border-color: #38b89a;
-  color: #1a7a61;
-}
-
-/* ── Answer row (below options) ── */
-.qrv-answer-row {
-  display: flex;
-  align-items: center;
-}
-
-.qrv-answer-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  border-radius: 8px;
-  padding: 5px 12px;
-}
-
-.pill-correct {
-  background: #d4f5ec;
-  color: #1a7a61;
-}
-
-.pill-wrong {
-  background: #fde8e8;
-  color: #b03030;
-}
-
-/* ── No results ── */
-.qrv-no-results {
-  text-align: center;
-  color: #aaa;
-  font-size: 14px;
-  padding: 32px 0;
-}
-
-/* ── Loading ── */
-.qrv-loading {
-  padding: 40px;
-  color: #666;
-}
+.qrv-answerLabel { color: var(--ink-faint); }
