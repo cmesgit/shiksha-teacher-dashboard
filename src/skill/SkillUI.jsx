@@ -175,7 +175,7 @@ export function MasteryBlock({ completed, target, teacherFirstName, skill, onCon
 }
 
 /** 16/9 intro-video placeholder. Swap the gradient for a real player/poster later. */
-export function IntroVideoThumb({ accentColor = "var(--acc)", duration, onPlay, size = 46 }) {
+export function IntroVideoThumb({ accentColor = "#ff8f01", duration, onPlay, size = 46 }) {
   return (
     <div onClick={onPlay} style={{
       position: "relative", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden",

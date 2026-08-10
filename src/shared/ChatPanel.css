@@ -483,9 +483,13 @@
 .cc-theme-skill .cc-sidebar { background: #425f7f; border-right: 1px solid rgba(0,0,0,.12); }
 .cc-theme-skill .cc-sidebar-item-active { background: rgba(255,255,255,.18); }
 .cc-theme-skill .cc-card-active { background: #fff8f0; }
-.cc-theme-skill .cc-bubble { background: #fff; border: 1px solid var(--cc-border); color: var(--cc-ink); }
-.cc-theme-skill .cc-msg-mine .cc-bubble { background: var(--cc-grad); border-color: var(--cc-grad); color: #fff; }
+/* Skill Dev Student.dc.html dc:1322-1323: incoming #f2f5f7 (no border),
+   mine #ff8f01/#fff; both 13px/1.45, radius 15 with a 5px tail corner. */
+.cc-theme-skill .cc-bubble { background: #f2f5f7; border: none; color: var(--cc-ink); font-size: 13px; line-height: 1.45; padding: 11px 15px; border-radius: 15px 15px 15px 5px; }
+.cc-theme-skill .cc-msg-mine .cc-bubble { background: var(--cc-grad); border-color: var(--cc-grad); color: #fff; border-radius: 15px 15px 5px 15px; }
 .cc-theme-skill .cc-search-bar { background: var(--cc-bg-soft); }
+.cc-theme-skill .cc-composer-input { background: var(--cc-bg-soft); border-color: var(--cc-border); }
+.cc-theme-skill .cc-composer-input:focus { border-color: var(--cc-grad); }
 .cc-theme-skill .cc-card-unread-badge,
 .cc-theme-skill .cc-count-pill { background: var(--cc-accent); }
 .cc-theme-skill .cc-muted-icon,

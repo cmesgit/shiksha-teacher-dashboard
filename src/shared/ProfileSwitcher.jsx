@@ -303,7 +303,22 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
     try {
       const result = await enterTeacherMode(password, pendingTrack || undefined);
       if (result.ok) { closeAll(); window.location.href = destUrl(pendingDest); return; }
-      if (result.needsSignup) { closeAll(); if (teacherSignupUrl) window.location.href = teacherSignupUrl; return; }
+      if (result.needsSignup) {
+        closeAll();
+        // App.jsx only lets an already-authenticated visitor onto /signup when
+        // ?add_track= is present (it's the "add a teaching track" bypass of the
+        // normal logged-out-only signup guard) — without it this silently
+        // bounces back to "/" with no explanation. teacherSignupUrl is a bare
+        // "/signup?role=teacher" from the caller, so append the specific track
+        // the user just tried to enter (known here as `pendingTrack`).
+        if (teacherSignupUrl) {
+          const sep = teacherSignupUrl.includes("?") ? "&" : "?";
+          window.location.href = pendingTrack
+            ? `${teacherSignupUrl}${sep}add_track=${pendingTrack}`
+            : teacherSignupUrl;
+        }
+        return;
+      }
       if (result.notApproved)  { setModalError("Your teacher account is awaiting admin approval."); return; }
       if (result.trackPending) { setModalError("This track is awaiting approval — you'll get access once it's reviewed."); return; }
       if (result.trackLocked)  { setModalError("This track isn't enabled on your account yet. Apply from Settings → Teacher identity."); return; }
