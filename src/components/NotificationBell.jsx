@@ -13,6 +13,7 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoNotificationsOutline, IoNotificationsSharp } from "react-icons/io5";
 import useNotificationSocket from "../hooks/useNotificationSocket";
+import { useAuth } from "../contexts/AuthContext";
 
 const TYPE_ICONS = {
   ASSIGNMENT:      "📝",
@@ -43,6 +44,8 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
+  const { teacherInfo } = useAuth();
+  const isSkillActive = teacherInfo?.active_track === "skill";
 
   const {
     notifications,
@@ -221,7 +224,10 @@ export default function NotificationBell() {
 
           <button
             className="notif-bell-seeall"
-            onClick={() => { setOpen(false); navigate("/teacher/chat?view=notifications"); }}
+            onClick={() => {
+              setOpen(false);
+              navigate(isSkillActive ? "/teacher/expert/inbox?view=notifications" : "/teacher/chat?view=notifications");
+            }}
           >
             See all in Communication Center
           </button>
