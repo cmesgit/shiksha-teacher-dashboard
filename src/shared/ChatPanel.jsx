@@ -72,7 +72,7 @@ function useCompact() {
 // TEACHER-side callers (Chat.jsx, SkillInbox.jsx) pass this — the copy
 // ("To reach a student...") only makes sense from a teacher's perspective;
 // a student would never expect to find a student in a staff directory.
-export default function ChatPanel({ directTo, courseRoom, initialDraft = "", theme, directoryContactsNote }) {
+export default function ChatPanel({ directTo, courseRoom, conversationId, initialDraft = "", theme, directoryContactsNote }) {
   const [searchParams] = useSearchParams();
   const initialView = (() => {
     const v = searchParams.get("view");
@@ -112,6 +112,25 @@ export default function ChatPanel({ directTo, courseRoom, initialDraft = "", the
       initialTab: conv.kind === "BROADCAST" ? "announcements" : "discussion",
     });
   }, []);
+
+  // Open a specific conversation by id (e.g. a notification deep link).
+  // Unlike directTo/courseRoom (which create-or-fetch a conversation up
+  // front), this just waits for the already-in-flight conversations list
+  // and selects the matching row once it lands.
+  const openedConversationId = useRef(null);
+  useEffect(() => {
+    if (!conversationId || openedConversationId.current === conversationId) return;
+    const conv = conversations.find((c) => c.id === conversationId);
+    if (!conv) return;
+    openedConversationId.current = conversationId;
+    if ((conv.kind === "ROOM" || conv.kind === "BROADCAST") && conv.course_id) {
+      openRoomLike(conv);
+    } else {
+      setActiveId(conv.id);
+      setView("inbox");
+      setShowThreadOnMobile(true);
+    }
+  }, [conversationId, conversations, openRoomLike]);
 
   // Resolve directTo / courseRoom exactly once, on first mount — same
   // contract the previous ChatPanel honored.

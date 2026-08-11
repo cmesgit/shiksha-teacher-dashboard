@@ -70,12 +70,25 @@ export default function NotificationBell() {
   };
 
   const handleNotifClick = (notif) => {
-    const { type, subject_id, id, is_private_session, is_group_session, is_skill_session, link_url } = notif;
+    const { type, subject_id, id, object_id, is_private_session, is_group_session, is_skill_session, link_url } = notif;
     if (id) markOneRead(id);
 
     // Teacher app is mounted under /teacher — every navigate() must include
     // that prefix or it falls through to the root RedirectToMainLogin and
     // the user lands on a blank page.
+
+    // Chat links are a bare conversation path (/chat/<id>) that doesn't
+    // match any route in this app, and don't start with /teacher, so they
+    // used to fall into the counsellor-schedule catch-all below. ChatPanel
+    // opens a conversation via router state, not a URL param.
+    if (link_url) {
+      const chatMatch = link_url.match(/^\/chat\/([^/?]+)/);
+      if (chatMatch) {
+        navigate("/teacher/chat", { state: { conversationId: chatMatch[1] } });
+        setOpen(false);
+        return;
+      }
+    }
 
     // notifications-app events (counseling.*, forum.*, ...) carry a
     // link_url. The backend's counsellor-facing paths are /counselor/...
@@ -91,6 +104,19 @@ export default function NotificationBell() {
         .replace(/^\/counselor\/apply/, "/teacher/counsellor")
         .replace(/^\/counselor$/, "/teacher/counsellor");
       navigate(mapped.startsWith("/teacher") ? mapped : "/teacher/counsellor");
+      setOpen(false);
+      return;
+    }
+
+    // Live session (scheduled or "now LIVE") notifications carry the real
+    // LiveSession id as object_id — route into the detail page (scoped to
+    // the subject when known) instead of the bare list.
+    if (type === "SESSION" && !is_group_session && !is_private_session && !is_skill_session && object_id) {
+      navigate(
+        subject_id
+          ? `/teacher/classes/${subject_id}/live-sessions/${object_id}/detail`
+          : `/teacher/live-sessions/${object_id}/detail`
+      );
       setOpen(false);
       return;
     }

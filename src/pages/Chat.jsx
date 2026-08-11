@@ -26,7 +26,7 @@ export default function Chat() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-      <ChatPanel directTo={directTo} courseRoom={courseRoom} theme="academy" directoryContactsNote={DIRECTORY_NOTE} />
+      <ChatPanel directTo={directTo} courseRoom={courseRoom} conversationId={state?.conversationId} theme="academy" directoryContactsNote={DIRECTORY_NOTE} />
     </div>
   );
 }
