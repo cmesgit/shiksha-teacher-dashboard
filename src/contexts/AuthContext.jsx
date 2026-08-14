@@ -26,7 +26,7 @@
  *          /me/ 401 with a manual refresh + retry.
  *   FIX 2: only redirect to LOGIN_URL when NOT already on an auth page.
  */
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { API_URL, LOGIN_URL } from "../config/urls";
 
@@ -141,7 +141,15 @@ export function AuthProvider({ children }) {
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
   // The interceptor skips /me/ calls, so bootstrap handles refresh manually.
+  // A network-level failure (no response reached the server — offline, a
+  // timeout, the browser aborting an in-flight fetch on a backgrounded tab)
+  // is not proof the session is invalid, so it never clears `user` — only a
+  // real 401 response (from /me/ AND the refresh retry) does. Without this
+  // distinction, a transient blip on the focus-triggered recheck below would
+  // force a fully-authenticated user into a logged-out redirect.
+  const bootstrapInFlight = useRef(null);
   const bootstrap = useCallback(async () => {
+    if (bootstrapInFlight.current) return bootstrapInFlight.current;
     const apply = (data) => {
       setUser(data);
       setContext(data.context || "account");
@@ -149,32 +157,63 @@ export function AuthProvider({ children }) {
       setTeacherInfo(data.teacher || null);
       return data;
     };
-    try {
-      const res = await api.get("/accounts/me/");
-      return apply(res.data);
-    } catch {
-      // /me/ failed — try refreshing the token once
+    const run = async () => {
       try {
-        await api.post("/accounts/refresh/");
-      } catch {
-        // Refresh also failed — user is not logged in
-        setUser(null);
+        const res = await api.get("/accounts/me/");
+        return apply(res.data);
+      } catch (err) {
+        if (!err?.response) return null;
+        // /me/ failed — try refreshing the token once
+        try {
+          await api.post("/accounts/refresh/");
+        } catch (refreshErr) {
+          if (!refreshErr?.response) return null;
+          // Refresh also failed — user is not logged in
+          setUser(null);
+          return null;
+        }
+        // Refresh succeeded — retry /me/
+        try {
+          return apply((await api.get("/accounts/me/")).data);
+        } catch (retryErr) {
+          if (!retryErr?.response) return null;
+          setUser(null);
+          return null;
+        }
+      } finally {
         setLoading(false);
-        return null;
       }
-      // Refresh succeeded — retry /me/
-      try {
-        return apply((await api.get("/accounts/me/")).data);
-      } catch {
-        setUser(null);
-        return null;
-      }
-    } finally {
-      setLoading(false);
-    }
+    };
+    bootstrapInFlight.current = run().finally(() => {
+      bootstrapInFlight.current = null;
+    });
+    return bootstrapInFlight.current;
   }, []);
 
   useEffect(() => { bootstrap(); }, [bootstrap]);
+
+  // Auth context lives in a cookie shared across every app on this domain
+  // (teacher-dashboard, admin-dashboard, another tab of this same app).
+  // Entering teacher mode in one of those elsewhere rewrites that cookie
+  // to context=teacher — this tab's React state has no way to know, so it
+  // keeps rendering the student UI while every subsequent API call now
+  // authenticates as a teacher, surfacing as scattered, hard-to-diagnose
+  // 403s ("Not authorized for this quiz.", "Not assigned to this subject.")
+  // instead of one clear "you're in a different context now" signal.
+  // Re-bootstrapping when the tab regains focus/visibility catches that
+  // drift immediately — RequireProfile's isLearnerContext check then
+  // redirects to /pick-profile instead of leaving the stale UI up. `focus`
+  // and `visibilitychange` both fire on a single tab-switch; bootstrap()'s
+  // in-flight guard above collapses that into one request.
+  useEffect(() => {
+    const recheck = () => { if (!document.hidden) bootstrap(); };
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", recheck);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      document.removeEventListener("visibilitychange", recheck);
+    };
+  }, [bootstrap]);
 
   // ── Step 1 — account login ─────────────────────────────────────────────────
   const login = async (email, password) => {

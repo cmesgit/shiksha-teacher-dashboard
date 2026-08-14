@@ -200,6 +200,10 @@ export default function Quizzes() {
         ...prev.filter((q) => String(q.subjectId) !== String(quiz.subjectId)),
         ...fresh,
       ]);
+      // Publishing here only submits for admin review — it doesn't go live
+      // on its own, so the toast says so rather than implying it's now
+      // visible to students.
+      toast.success("Submitted for review — an admin will verify it before it goes live.");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to publish quiz.");
     } finally {
