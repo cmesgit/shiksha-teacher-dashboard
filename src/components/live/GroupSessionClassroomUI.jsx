@@ -154,7 +154,6 @@ export default function GroupSessionClassroomUI({
   session,
   chatConfig,
   onLeave,
-  groupSession = false,
   groupSessionRemainingMs = null,
   isHost = false,
   onEndSession = null,

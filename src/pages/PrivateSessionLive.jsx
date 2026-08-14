@@ -42,7 +42,7 @@ export default function PrivateSessionLive() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [sessionData, setSessionData] = useState(null);
+  const [, setSessionData] = useState(null);
   const [livekitData, setLivekitData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
