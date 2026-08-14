@@ -85,12 +85,6 @@ const privateSessionService = {
     return res.data || [];
   },
 
-  // Legacy: validate a student by their student ID string
-  async validateStudentId(studentId) {
-    const res = await api.get(`/accounts/validate-student/?student_id=${studentId}`);
-    return res.data; // { valid, name, user_id, student_id }
-  },
-
   // ─────────────────────────────────────────────
   // SHARED — LiveKit
   // ─────────────────────────────────────────────
@@ -263,7 +257,6 @@ export const {
   getSubjectsByCourse,
   getTeachers,
   getCourseStudents,       // ← new
-  validateStudentId,
   joinSession,
   getLiveKitToken,
   getTeacherSessions,

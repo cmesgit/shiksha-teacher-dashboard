@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { IoChevronBack } from "react-icons/io5";
 import api from "../api/apiClient";
+import { useToast } from "../contexts/ToastContext";
 import "../styles/quiz-analytics.css";
 
 // New teacher-facing analytics screen — item analysis, score distribution,
@@ -15,6 +16,7 @@ import "../styles/quiz-analytics.css";
 export default function QuizAnalytics() {
   const navigate = useNavigate();
   const { quizId } = useParams();
+  const { showToast } = useToast();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export default function QuizAnalytics() {
         setData((prev) => (prev ? { ...prev, _reminderDetail: res.data.detail } : prev));
       }
     } catch (err) {
-      alert(err.response?.data?.detail || "Failed to send reminder.");
+      showToast({ type: "error", message: err.response?.data?.detail || "Failed to send reminder." });
     } finally {
       setReminding(false);
     }

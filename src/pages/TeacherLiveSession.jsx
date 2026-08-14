@@ -153,6 +153,7 @@ export default function TeacherLiveSession() {
         video
         audio
         style={liveKitWrap}
+        onError={(err) => setError(err?.message || "Lost connection to the session.")}
       >
         <ReconnectingBanner />
         <ClassroomUI

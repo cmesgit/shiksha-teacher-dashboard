@@ -31,11 +31,11 @@
 .notif-bell-icon { font-size:18px; flex-shrink:0; margin-top:2px; }
 .notif-bell-title { font-size:13px; color:#111827; margin:0 0 4px; line-height:1.4; }
 .notif-bell-time { font-size:11px; color:#9ca3af; margin:0; }
-@media (max-width:768px){
+@media (max-width:1239px){
   .header{padding:0 16px;gap:12px}
   .hamburgerBtn{display:flex;align-items:center;justify-content:center;flex-shrink:0}
   /* The date sub-line is the first thing to go when space is tight. */
   .header__subtitle{display:none}
   .header__right{gap:10px}
 }
-@media (min-width:769px){ .hamburgerBtn{display:none} }
+@media (min-width:1240px){ .hamburgerBtn{display:none} }

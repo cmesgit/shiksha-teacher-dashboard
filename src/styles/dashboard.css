@@ -99,6 +99,7 @@
 .dash-card-body::-webkit-scrollbar { width: 4px; }
 .dash-card-body::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, .12); border-radius: 10px; }
 .dash-card-body > p { font-size: 12px; color: #999; text-align: center; padding: 16px 0; margin: 0; }
+.dash-allCaughtUp { display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 /* The design's two-up subgrid cards (work list / Recent Activity) are a
    fixed 360px — everything else on this page is content-height. */

@@ -25,10 +25,22 @@ summary {
   user-select: none;
 }
 
-button:focus,
-[role="button"]:focus,
-[role="tab"]:focus {
+/* Suppress the focus ring for mouse/touch activation, but keep it for
+   keyboard navigation (:focus-visible) — this used to strip it
+   unconditionally, leaving no visible focus indicator anywhere except the
+   handful of components (.tk-btn/.tk-chip, academySidebar.css) that
+   happened to restore their own. */
+button:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
+[role="tab"]:focus:not(:focus-visible) {
   outline: none;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 /* Form controls don't inherit the body font by default — the design puts

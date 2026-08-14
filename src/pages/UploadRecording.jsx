@@ -23,6 +23,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import { FiUploadCloud, FiCheckCircle, FiPlay, FiUsers, FiClock, FiCheckSquare } from "react-icons/fi";
 import api from "../api/apiClient";
+import { uploadToBunny } from "../shared/bunnyUpload";
 import "../styles/upload-recording.css";
 
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -52,7 +53,7 @@ export default function UploadRecording() {
   const [error, setError] = useState("");
 
   const fileInputRef = useRef(null);
-  const xhrRef = useRef(null);
+  const uploadRef = useRef(null);
 
   useEffect(() => {
     if (!subjectId) return;
@@ -62,7 +63,7 @@ export default function UploadRecording() {
   }, [subjectId]);
 
   const handleBack = () => {
-    if (xhrRef.current) xhrRef.current.abort();
+    if (uploadRef.current) uploadRef.current.abort();
     navigate(`/teacher/classes/${subjectId}/session-recordings`);
   };
 
@@ -96,24 +97,10 @@ export default function UploadRecording() {
       const videoId = res.data.video_id;
 
       const signedRes = await api.post("/courses/recordings/signed-upload-url/", { video_id: videoId });
-      const { upload_url, access_key } = signedRes.data;
 
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhrRef.current = xhr;
-        xhr.open("PUT", upload_url, true);
-        xhr.setRequestHeader("AccessKey", access_key);
-        xhr.setRequestHeader("Content-Type", videoFile.type);
-
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () => {
-          if (xhr.status === 200 || xhr.status === 201) resolve();
-          else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
-        };
-        xhr.onerror = () => reject(new Error("Network error during upload."));
-        xhr.send(videoFile);
+      await uploadToBunny(videoFile, signedRes.data, {
+        onProgress: setUploadProgress,
+        onUploadStart: (u) => { uploadRef.current = u; },
       });
 
       await api.post(`/courses/subjects/${subjectId}/recordings/save/`, {

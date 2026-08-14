@@ -188,7 +188,10 @@
   margin: 0 0 20px;
 }
 
-/* Table */
+/* Table — wrapped so it scrolls at tablet/mobile widths instead of clipping */
+.sv-table-scroll {
+  overflow-x: auto;
+}
 .sv-table {
   width: 100%;
   border-collapse: collapse;

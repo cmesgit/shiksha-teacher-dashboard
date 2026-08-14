@@ -87,7 +87,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  box-shadow: 2px 2px 2px 0 rgba(0, 0, 0, 0.25);
+  box-shadow: var(--sh-card);
   cursor: pointer;
   min-width: 0;
   overflow: hidden;

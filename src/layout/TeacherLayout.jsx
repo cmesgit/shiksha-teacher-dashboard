@@ -17,13 +17,13 @@ import "./layout.css";
 export default function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [active, setActive] = useState("sessions");
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1239);
 
   const location = useLocation();
   const swipeHandlers = useSwipeBack();
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    const onResize = () => setIsMobile(window.innerWidth <= 1239);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);

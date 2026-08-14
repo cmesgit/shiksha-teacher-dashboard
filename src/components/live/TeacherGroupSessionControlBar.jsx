@@ -4,6 +4,7 @@ import {
 } from "@livekit/components-react";
 import { useEffect, useRef, useState } from "react";
 import groupSessionService from "../../api/groupSessionService";
+import { useToast } from "../../contexts/ToastContext";
 
 
 export default function TeacherGroupSessionControlBar({
@@ -17,6 +18,7 @@ export default function TeacherGroupSessionControlBar({
 }) {
   const isPresenter = role === "PRESENTER" || role === "teacher";
   const isStudent = !isPresenter;
+  const { showToast } = useToast();
 
   const room = useRoomContext();
   const {
@@ -161,7 +163,7 @@ export default function TeacherGroupSessionControlBar({
         }
 
         if (msg.type === "kick") {
-          alert("You have been removed from the session by the host.");
+          showToast({ type: "error", message: "You have been removed from the session by the host.", duration: 6000 });
           room.disconnect();
           if (onLeave) onLeave();
         }
@@ -174,7 +176,7 @@ export default function TeacherGroupSessionControlBar({
 
     room.on("dataReceived", handleData);
     return () => room.off("dataReceived", handleData);
-  }, [room, localParticipant, onLeave]);
+  }, [room, localParticipant, onLeave, showToast]);
 
   const toggleMic = async () => {
     if (!localParticipant) return;

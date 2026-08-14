@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import api from "../api/apiClient";
 import NotesViewModal from "../components/live/NotesViewModal";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState } from "../components/StateViews";
+import { BUNNY_LIBRARY_ID } from "../config/urls";
 import "../styles/recording-player.css";
 
 export default function RecordingPlayer() {
@@ -21,16 +22,17 @@ export default function RecordingPlayer() {
   }, [recordingId]);
 
   useEffect(() => {
+    if (!BUNNY_LIBRARY_ID || !iframeRef.current) return;
     api
       .get(`/courses/recordings/${recordingId}/progress/`)
       .then((res) => {
         const startTime = res.data.last_position || 0;
         iframeRef.current.src =
-          `https://iframe.mediadelivery.net/embed/${import.meta.env.VITE_BUNNY_LIBRARY_ID || "615730"}/${videoId}?start=${Math.floor(startTime)}`;
+          `https://iframe.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}?start=${Math.floor(startTime)}`;
       })
       .catch(() => {
         iframeRef.current.src =
-          `https://iframe.mediadelivery.net/embed/${import.meta.env.VITE_BUNNY_LIBRARY_ID || "615730"}/${videoId}`;
+          `https://iframe.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}`;
       });
   }, [recordingId, videoId]);
 
@@ -59,17 +61,24 @@ export default function RecordingPlayer() {
 
       {!recording && <LoadingState label="Loading recording" />}
 
-      <div className="rp-player">
-        <iframe
-          ref={iframeRef}
-          width="100%"
-          height="600"
-          allow="autoplay; fullscreen"
-          allowFullScreen
-          style={{ border: "none", display: "block" }}
-          title={recording?.title || "Recording"}
+      {recording && !BUNNY_LIBRARY_ID ? (
+        <ErrorState
+          title="Playback isn't configured"
+          message="This recording can't be played right now — the video library isn't set up. Contact support."
         />
-      </div>
+      ) : (
+        <div className="rp-player">
+          <iframe
+            ref={iframeRef}
+            width="100%"
+            height="600"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            style={{ border: "none", display: "block" }}
+            title={recording?.title || "Recording"}
+          />
+        </div>
+      )}
 
       {showNotes && (
         <NotesViewModal sessionId={recordingId} sessionType="recording" onClose={() => setShowNotes(false)} />

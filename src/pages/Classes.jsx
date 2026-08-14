@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import SubjectCard from "../components/SubjectCard";
 import api from "../api/apiClient";
 import "../styles/classes.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 
 export default function Classes() {
   const { subjectId } = useParams(); // ✅ correct param name
@@ -13,34 +13,34 @@ export default function Classes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchDashboard = async () => {
     if (!subjectId) return;
+    try {
+      setLoading(true);
+      setError(null);
 
-    async function fetchDashboard() {
-      try {
-        setLoading(true);
-        setError(null);
+      const res = await api.get(
+        `/courses/subjects/${subjectId}/dashboard/`
+      );
 
-        const res = await api.get(
-          `/courses/subjects/${subjectId}/dashboard/`
-        );
-
-        setDashboard(res.data);
-      } catch (err) {
-        console.error("Failed to load dashboard", err);
-        setError("Failed to load class data.");
-        setDashboard(null);
-      } finally {
-        setLoading(false);
-      }
+      setDashboard(res.data);
+    } catch (err) {
+      console.error("Failed to load dashboard", err);
+      setError("Failed to load class data.");
+      setDashboard(null);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     fetchDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectId]);
 
   if (loading) return <LoadingState label="Loading class" />;
-  if (error) return <div>{error}</div>;
-  if (!dashboard) return <div>No data found.</div>;
+  if (error) return <ErrorState message={error} onRetry={fetchDashboard} />;
+  if (!dashboard) return <EmptyState icon="book" title="No data found" message="This class doesn't have any data to show yet." />;
 
   const base = `/teacher/classes/${subjectId}`;
 

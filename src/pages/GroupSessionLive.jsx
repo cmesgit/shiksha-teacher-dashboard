@@ -352,6 +352,7 @@ export default function GroupSessionLive() {
         audio={true}
         style={liveKitWrap}
         onDisconnected={() => navigate("/group-sessions")}
+        onError={(err) => setError(err?.message || "Lost connection to the group session.")}
       >
         <ReconnectingBanner />
         <GroupSessionClassroomUI

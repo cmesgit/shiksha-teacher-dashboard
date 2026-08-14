@@ -4,7 +4,7 @@ import api from "../api/apiClient";
 import { IoChevronBack } from "react-icons/io5";
 import { IoCheckmarkCircle } from "react-icons/io5";
 import "../styles/quiz-view.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState } from "../components/StateViews";
 
 const optionLabels = ["a", "b", "c", "d"];
 
@@ -14,18 +14,23 @@ export default function QuizView() {
 
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [error, setError] = useState(false);
+
+  const fetchQuiz = async () => {
+    setError(false);
+    try {
+      const res = await api.get(`/quizzes/${quizId}/`);
+      setQuiz(res.data);
+      setQuestions(res.data.questions || []);
+    } catch (err) {
+      console.error("Failed to load quiz", err);
+      setError(true);
+    }
+  };
 
   useEffect(() => {
-    async function fetchQuiz() {
-      try {
-        const res = await api.get(`/quizzes/${quizId}/`);
-        setQuiz(res.data);
-        setQuestions(res.data.questions || []);
-      } catch (err) {
-        console.error("Failed to load quiz", err);
-      }
-    }
     fetchQuiz();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizId]);
 
   const getAnswerText = (q) => {
@@ -47,6 +52,10 @@ export default function QuizView() {
 
     return q.answer?.trim() || "";
   };
+
+  if (error) {
+    return <ErrorState message="Couldn't load this quiz." onRetry={fetchQuiz} />;
+  }
 
   if (!quiz) {
     return <LoadingState label="Loading quiz" />;

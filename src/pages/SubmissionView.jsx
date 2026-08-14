@@ -3,7 +3,7 @@ import { IoChevronBack } from "react-icons/io5";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/submission-view.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState } from "../components/StateViews";
 
 export default function SubmissionView() {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export default function SubmissionView() {
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState("all"); // all | submitted | pending
 
   const formatDate = (dateStr) => {
@@ -23,31 +24,36 @@ export default function SubmissionView() {
     });
   };
 
-  useEffect(() => {
-    async function fetchSubmissions() {
-      try {
-        const res = await api.get(
-          `/assignments/teacher/${assignmentId}/submissions/`
-        );
-        const formatted = res.data.map((s) => ({
-          id: s.id,
-          name: s.student_name,
-          submittedOn: s.submitted_at,
-          status: s.submitted_file ? "Submitted" : "Pending",
-          file: s.submitted_file,
+  const fetchSubmissions = async () => {
+    if (!assignmentId) return;
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await api.get(
+        `/assignments/teacher/${assignmentId}/submissions/`
+      );
+      const formatted = res.data.map((s) => ({
+        id: s.id,
+        name: s.student_name,
+        submittedOn: s.submitted_at,
+        status: s.submitted_file ? "Submitted" : "Pending",
+        file: s.submitted_file,
 
-          // ✅ already correct
-          submissionStatus: s.submission_status || "",
-        }));
-        setStudents(formatted);
-      } catch (err) {
-        console.error("Failed to load submissions", err);
-      } finally {
-        setLoading(false);
-      }
+        // ✅ already correct
+        submissionStatus: s.submission_status || "",
+      }));
+      setStudents(formatted);
+    } catch (err) {
+      console.error("Failed to load submissions", err);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (assignmentId) fetchSubmissions();
+  useEffect(() => {
+    fetchSubmissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId]);
 
   const total = students.length;
@@ -65,6 +71,7 @@ export default function SubmissionView() {
     );
 
   if (loading) return <LoadingState label="Loading submissions" />;
+  if (error) return <ErrorState message="Couldn't load submissions." onRetry={fetchSubmissions} />;
 
   return (
     <div className="sv-page">
@@ -120,6 +127,7 @@ export default function SubmissionView() {
         </p>
 
         {/* Table */}
+        <div className="sv-table-scroll">
         <table className="sv-table">
           <thead>
             <tr>
@@ -186,6 +194,7 @@ export default function SubmissionView() {
             )}
           </tbody>
         </table>
+        </div>
 
       </div>
     </div>
