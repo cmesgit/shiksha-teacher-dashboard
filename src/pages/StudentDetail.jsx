@@ -11,7 +11,7 @@ const displayNameOf = (s) =>
 
 export default function StudentDetail() {
   const navigate = useNavigate();
-  const { subjectId, studentId } = useParams();
+  const { subjectId } = useParams();
   const location = useLocation();
 
   const student = location.state?.student;
