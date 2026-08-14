@@ -4,7 +4,7 @@ import { FaRegFolder } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/assignment-view.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, EmptyState, ErrorState } from "../components/StateViews";
 
 export default function AssignmentView() {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function AssignmentView() {
 
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -22,23 +23,28 @@ export default function AssignmentView() {
     });
   };
 
-  useEffect(() => {
-    async function fetchAssignment() {
-      try {
-        const res = await api.get(`/assignments/${assignmentId}/`);
-        setAssignment(res.data);
-      } catch (err) {
-        console.error("Failed to load assignment", err);
-      } finally {
-        setLoading(false);
-      }
+  const fetchAssignment = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await api.get(`/assignments/${assignmentId}/`);
+      setAssignment(res.data);
+    } catch (err) {
+      console.error("Failed to load assignment", err);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     fetchAssignment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId]);
 
   if (loading) return <LoadingState label="Loading assignment" />;
-  if (!assignment) return <div>Assignment not found</div>;
+  if (error) return <ErrorState message="Couldn't load this assignment." onRetry={fetchAssignment} />;
+  if (!assignment) return <EmptyState icon="file" title="Assignment not found" message="It may have been removed or the link is out of date." />;
 
   return (
     <div className="assignment-view-page">

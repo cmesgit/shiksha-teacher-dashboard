@@ -4,7 +4,7 @@ import { FaRegFolder } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import api from "../api/apiClient";
 import "../styles/study-material-view.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, EmptyState } from "../components/StateViews";
 
 const getFileExt = (name = "") => {
   const ext = name.split(".").pop().toUpperCase();
@@ -44,7 +44,7 @@ export default function StudyMaterialView() {
   };
 
   if (loading) return <LoadingState label="Loading material" />;
-  if (!material) return <div>Material not found</div>;
+  if (!material) return <EmptyState icon="file" title="Material not found" message="It may have been removed or the link is out of date." />;
 
   const files = material.files || [];
 

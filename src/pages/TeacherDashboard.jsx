@@ -598,7 +598,11 @@ export default function TeacherDashboard() {
           <span className="dash-pendingPill">{gradingCount} pending</span>
         </div>
         <div className="dash-card-body">
-          {gradingQueue.length === 0 && <p>All caught up 🎉</p>}
+          {gradingQueue.length === 0 && (
+            <p className="dash-allCaughtUp">
+              <NavIcon name="check" size={15} color="var(--success)" /> All caught up
+            </p>
+          )}
           {gradingQueue.map((g) => (
             <div key={g.id} className="grade-item" style={{ marginBottom: 8 }}>
               <div className="grade-item__avatar">{initialsOf(g.student)}</div>

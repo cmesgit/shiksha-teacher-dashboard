@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import * as privateSession from "../api/privateSessionService";
 import "../styles/privateSessions.css";
 import { LoadingState } from "../components/StateViews";
+import NavIcon from "../components/NavIcon";
 
 export default function PrivateSessionAvailability() {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ export default function PrivateSessionAvailability() {
       <div className="tps__bodyBox">
         {/* Info banner */}
         <div className="tps__availBanner">
-          <div className="tps__availBannerIcon">📅</div>
+          <div className="tps__availBannerIcon"><NavIcon name="cal" size={24} color="var(--primary)" /></div>
           <div className="tps__availBannerText">
             <strong>Set your weekly availability</strong>
             <p>Students will only be able to request sessions during the time slots you select below. You can change this anytime.</p>
@@ -68,7 +69,7 @@ export default function PrivateSessionAvailability() {
             <div className="tps__availTimeCol">
               <div className="tps__availColHeader" />
               {privateSession.TIME_SLOTS.map((slot) => (
-                <div key={slot} className="tps__availTimeLabel">{slot}</div>
+                <div key={slot.value} className="tps__availTimeLabel">{slot.label}</div>
               ))}
             </div>
 
@@ -81,12 +82,12 @@ export default function PrivateSessionAvailability() {
                 </div>
                 {privateSession.TIME_SLOTS.map((slot) => (
                   <div
-                    key={slot}
-                    className={`tps__availSlot ${isSelected(day, slot) ? "tps__availSlot--selected" : ""}`}
-                    onClick={() => toggle(day, slot)}
-                    title={`${privateSession.DAYS[di]} ${slot}`}
+                    key={slot.value}
+                    className={`tps__availSlot ${isSelected(day, slot.value) ? "tps__availSlot--selected" : ""}`}
+                    onClick={() => toggle(day, slot.value)}
+                    title={`${privateSession.DAYS[di]} ${slot.label}`}
                   >
-                    {isSelected(day, slot) ? "✓" : ""}
+                    {isSelected(day, slot.value) ? "✓" : ""}
                   </div>
                 ))}
               </div>
@@ -106,7 +107,11 @@ export default function PrivateSessionAvailability() {
 
         {/* Save */}
         <div className="tps__availActions">
-          {saved && <span className="tps__availSavedMsg">✅ Availability saved successfully!</span>}
+          {saved && (
+            <span className="tps__availSavedMsg">
+              <NavIcon name="check" size={14} color="var(--success)" /> Availability saved successfully!
+            </span>
+          )}
           <button className="tps__availSaveBtn" onClick={handleSave}>Save Availability</button>
         </div>
       </div>

@@ -7,11 +7,10 @@
    everything that used to live here is gone. What's left is genuinely
    private-sessions-specific:
 
-     · .tps__page / .tps__title — NOT used by this screen any more. Kept
-       alive only because PrivateSessionAvailability.jsx (a separate,
-       out-of-scope settings page — see its own header comment) still
-       imports this file for exactly these two classes. Do not remove
-       without also fixing that page.
+     · .tps__page / .tps__title / .tps__avail* — PrivateSessionAvailability.jsx's
+       own weekly day×time grid (its own screen, not the .ac-* list/detail
+       flow above). Uses the same tokens.css scale as everything else so it
+       doesn't read as a leftover from a different app.
      · .psm__*  — the Reschedule / Decline-or-cancel-reason modal shell
        shared by src/components/PrivateSessionModals.jsx. 420px, icon tile +
        title + body copy + fields + footer — the same shape as
@@ -27,20 +26,134 @@
        shared .ac-tag for the status chip and .ac-btn for actions.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* ── Legacy: PrivateSessionAvailability.jsx only (out of scope) ─────────── */
+/* ── PrivateSessionAvailability.jsx ──────────────────────────────────────── */
 .tps__page {
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-card);
   padding: 28px 32px 36px;
   margin: 20px;
   min-height: calc(100vh - 120px);
 }
+.tps__headerBox { display: flex; align-items: center; margin-bottom: 4px; }
+.tps__backBtn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.tps__backBtn:hover { background: var(--surface-alt); }
 .tps__title {
   font-size: 22px;
   font-weight: 700;
-  color: #1a2a3a;
+  color: var(--ink);
   margin: 0 0 18px;
+}
+.tps__bodyBox { display: flex; flex-direction: column; gap: var(--gap-lg); }
+
+.tps__availBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
+}
+.tps__availBannerIcon { font-size: 26px; flex-shrink: 0; }
+.tps__availBannerText { flex: 1; min-width: 0; }
+.tps__availBannerText strong { display: block; font-size: 14px; color: var(--ink); margin-bottom: 3px; }
+.tps__availBannerText p { font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; margin: 0; }
+.tps__availBannerCount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 6px 16px;
+  border-left: 1px solid var(--border-strong);
+}
+.tps__availCountNum { font-size: 22px; font-weight: 800; color: var(--primary); line-height: 1; }
+.tps__availCountLabel { font-size: 10.5px; color: var(--ink-muted); margin-top: 3px; white-space: nowrap; }
+
+.tps__availCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  overflow-x: auto;
+}
+.tps__availGrid { display: flex; gap: 6px; min-width: 640px; }
+.tps__availTimeCol { flex-shrink: 0; width: 72px; }
+.tps__availDayCol { flex: 1; min-width: 64px; }
+.tps__availColHeader {
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.tps__availDayFull { display: none; }
+.tps__availTimeLabel {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.tps__availSlot {
+  height: 38px;
+  margin-bottom: 2px;
+  border-radius: var(--r-sm);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.tps__availSlot:hover { background: var(--surface-alt); border-color: var(--border-strong); }
+.tps__availSlot--selected {
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.tps__availLegend { display: flex; gap: 18px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--divider); }
+.tps__availLegendItem { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
+.tps__availDot { width: 12px; height: 12px; border-radius: 3px; }
+.tps__availDot--selected { background: var(--success-soft); border: 1px solid var(--success); }
+.tps__availDot--empty { background: var(--surface-muted); border: 1px solid var(--border); }
+
+.tps__availActions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+.tps__availSavedMsg { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--success); }
+.tps__availSaveBtn {
+  border: none;
+  background: var(--action, var(--primary));
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 10px 22px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.tps__availSaveBtn:hover { background: var(--action-hover, var(--primary-dark)); }
+
+@media (max-width: 600px) {
+  .tps__availDayShort { display: none; }
+  .tps__availDayFull { display: inline; font-size: 10.5px; font-weight: 600; }
+  .tps__availBannerText p { display: none; }
 }
 
 /* ══ Reschedule / Reason modal shell (psm__) ══════════════════════════════ */

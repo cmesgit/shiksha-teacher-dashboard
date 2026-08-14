@@ -11,16 +11,19 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/apiClient";
 import NavIcon from "../components/NavIcon";
 import "../styles/batch-progress.css";
-import { LoadingState } from "../components/StateViews";
+import { LoadingState, ErrorState } from "../components/StateViews";
 
 export default function BatchProgress() {
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const loadBatches = () => {
     let cancel = false;
+    setLoading(true);
+    setError(false);
     (async () => {
       try {
         const res = await api.get("/courses/teacher/my-batches/");
@@ -34,13 +37,16 @@ export default function BatchProgress() {
         if (!cancel) {
           setGroups([]);
           setStats(null);
+          setError(true);
         }
       } finally {
         if (!cancel) setLoading(false);
       }
     })();
     return () => { cancel = true; };
-  }, []);
+  };
+
+  useEffect(loadBatches, []);
 
   const flatBatches = groups.flatMap((g) =>
     (g.batches || []).map((b) => ({ ...b, courseTitle: g.course_title }))
@@ -95,6 +101,8 @@ export default function BatchProgress() {
 
         {loading ? (
           <LoadingState plain label="Loading your batches" />
+        ) : error ? (
+          <ErrorState plain message="Couldn't load your batches." onRetry={loadBatches} />
         ) : flatBatches.length === 0 ? (
           <div className="bp-empty">
             <p className="bp-empty-title">No batches to track yet.</p>
