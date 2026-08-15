@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   FiPlus, FiSearch, FiMoreHorizontal, FiBookmark, FiVolumeX, FiArchive, FiFlag,
-  FiChevronDown, FiChevronRight,
+  FiChevronDown, FiChevronRight, FiPaperclip,
 } from "react-icons/fi";
 import { ChatAPI } from "../chatClient";
 import { Avatar, timeAgo, rolesLabel, categoryLabel, EmptyState, SkeletonRows } from "./common";
@@ -33,7 +33,7 @@ function CardMenu({ conv, onChanged, onClose }) {
 function ConversationCard({ conv, active, onSelect, onChanged }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const preview = conv.last_message
-    ? (conv.last_message.deleted ? "Message deleted" : conv.last_message.attachment ? `📎 ${conv.last_message.attachment.name}` : conv.last_message.body || "…")
+    ? (conv.last_message.deleted ? "Message deleted" : conv.last_message.attachment ? <><FiPaperclip size={11} /> {conv.last_message.attachment.name}</> : conv.last_message.body || "…")
     : "No messages yet";
   const badge = conv.course?.title || (conv.kind === "DIRECT" ? rolesLabel(conv.counterpart?.roles) : conv.kind === "BROADCAST" ? "Announcements" : conv.kind === "SUPPORT" ? "Support" : "");
 

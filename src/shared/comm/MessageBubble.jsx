@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   FiCornerUpLeft, FiCopy, FiTrash2, FiFlag, FiMoreHorizontal, FiDownload,
-  FiFileText, FiCheck, FiClock, FiAlertTriangle,
+  FiFileText, FiCheck, FiClock, FiAlertTriangle, FiSmile,
 } from "react-icons/fi";
 import { Avatar, formatClock } from "./common";
 
@@ -172,7 +172,7 @@ export default function MessageBubble({
 
         {!failed && (
           <div className="cc-bubble-actions">
-            <button className="cc-bubble-action-btn" title="React" onClick={() => setPickerOpen((v) => !v)}>🙂</button>
+            <button className="cc-bubble-action-btn" title="React" onClick={() => setPickerOpen((v) => !v)}><FiSmile size={14} /></button>
             <button className="cc-bubble-action-btn" title="Reply" onClick={() => onReply?.(msg)}><FiCornerUpLeft size={14} /></button>
             <button className="cc-bubble-action-btn" title="More" onClick={() => setMenuOpen((v) => !v)}><FiMoreHorizontal size={14} /></button>
           </div>

@@ -1,0 +1,353 @@
+/* ═══════════════════════════════════════════════════════════
+   GroupSessions.jsx modal dialogs (Join/Host/Schedule/Notes) —
+   moved out of an inline `const styles = {...}` JS object (was
+   ~420 lines) into real CSS classes, matching the rest of the
+   app's modal shells (e.g. components/live/ScheduleSessionModal.css).
+═══════════════════════════════════════════════════════════ */
+
+.gs-figma-dialog,
+.gs-details-dialog {
+  width: min(92vw, 430px);
+  background: #eef7fb;
+  border-radius: 10px;
+  padding: 24px 28px 20px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
+  box-sizing: border-box;
+}
+
+.gs-join-dialog {
+  width: min(92vw, 250px);
+  background: #eef7fb;
+  border-radius: 10px;
+  padding: 24px 22px 18px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.gs-dialog-title {
+  margin: 0 0 18px;
+  text-align: center;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.gs-step-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 20px;
+}
+
+.gs-step-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gs-step-circle,
+.gs-step-circle-active {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+.gs-step-circle { border: 1px solid #a8b8c0; color: #94a3b8; background: #fff; }
+.gs-step-circle-active { border: 1px solid #007181; color: #fff; background: #007181; }
+
+.gs-step-text { font-size: 11px; font-weight: 600; color: #94a3b8; }
+.gs-step-text-active { font-size: 11px; font-weight: 700; color: #007181; }
+
+.gs-step-line {
+  width: 38px;
+  height: 1px;
+  background: #99aab3;
+  display: inline-block;
+  margin: 0 7px;
+}
+
+.gs-form-area { padding: 0 4px; }
+
+.gs-inline-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.gs-compact-label {
+  font-size: 12px;
+  color: #0f172a;
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.gs-date-input, .gs-time-input {
+  width: 160px;
+  height: 28px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+.gs-time-input { width: 100px; }
+
+.gs-end-time-hint { font-size: 11px; color: #64748b; font-weight: 700; }
+
+.gs-duration-row {
+  display: flex;
+  gap: 18px;
+  margin: 8px 0 14px;
+  flex-wrap: wrap;
+}
+
+.gs-duration-btn,
+.gs-duration-btn-active {
+  border: none;
+  color: #fff;
+  border-radius: 5px;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.gs-duration-btn { background: #2d83a0; }
+.gs-duration-btn-active { background: #007181; box-shadow: 0 0 0 2px rgba(0, 113, 129, 0.22); }
+
+.gs-topic-input { height: 30px; font-size: 12px; }
+
+.gs-dialog-foot,
+.gs-dialog-foot-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+.gs-dialog-foot { justify-content: space-between; }
+.gs-dialog-foot-center { justify-content: center; }
+
+.gs-teal-btn,
+.gs-teal-btn-muted,
+.gs-teal-ghost-btn {
+  border: none;
+  color: #fff;
+  border-radius: 5px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.gs-teal-btn, .gs-teal-ghost-btn { background: #008a99; }
+.gs-teal-btn-muted { background: #94a3b8; cursor: not-allowed; opacity: 0.75; }
+
+.gs-cancel-text-btn {
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #dc2626;
+  border-radius: 5px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.gs-teacher-search-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gs-participant-list-box {
+  max-height: 165px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-top: 10px;
+}
+
+.gs-participant-edit-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 26px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+
+.gs-participant-index { color: #0f172a; font-weight: 700; font-size: 12px; }
+
+.gs-participant-name-box {
+  background: #fff;
+  border: 1px solid #9fb5bd;
+  border-radius: 4px;
+  padding: 5px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gs-remove-btn {
+  border: none;
+  background: #2d83a0;
+  color: #fff;
+  border-radius: 4px;
+  height: 24px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.gs-participant-count {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 10px;
+}
+
+.gs-no-participants {
+  text-align: center;
+  color: #64748b;
+  font-size: 12px;
+  padding: 18px 0;
+}
+
+.gs-search-drop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #dbe7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.gs-search-row {
+  width: 100%;
+  border: none;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.gs-search-row-muted {
+  padding: 10px 12px;
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: left;
+}
+
+.gs-search-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #008a99;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gs-search-name {
+  display: block;
+  font-size: 12px;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-search-sub {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-search-add { color: #008a99; font-weight: 800; font-size: 11px; }
+
+.gs-summary-box { margin-top: 10px; padding: 10px 4px; }
+
+.gs-summary-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 12px;
+  margin-bottom: 9px;
+  color: #0f172a;
+}
+
+.gs-details-grid { padding: 4px 0 6px; }
+
+.gs-details-participants-box {
+  max-height: 165px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin: 8px 0 12px;
+}
+
+.gs-details-participant-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #0f172a;
+  padding: 4px 0;
+}
+
+.gs-host-label, .gs-declined-label, .gs-joined-label, .gs-reinvited-label {
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.gs-host-label { background: #2d83a0; color: #fff; }
+.gs-declined-label { background: #fee2e2; color: #b91c1c; }
+.gs-joined-label { background: #d1fae5; color: #065f46; }
+.gs-reinvited-label { background: #fef3c7; color: #92400e; }
+
+.gs-details-topic {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #0f172a;
+  margin-top: 8px;
+}
+
+.gs-join-input {
+  width: 100px;
+  height: 28px;
+  padding: 3px 8px;
+  font-size: 12px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+.gs-join-error {
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-top: 12px;
+  text-align: center;
+}

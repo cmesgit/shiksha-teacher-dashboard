@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   FiChevronLeft, FiSearch, FiUsers, FiMoreVertical, FiPaperclip, FiSend,
-  FiX, FiBookOpen, FiVolumeX, FiFlag, FiFolder, FiDownload, FiFileText,
+  FiX, FiBookOpen, FiVolumeX, FiFlag, FiFolder, FiDownload, FiFileText, FiSmile,
 } from "react-icons/fi";
 import { ChatAPI, openChatSocket } from "../chatClient";
 import MessageBubble from "./MessageBubble";
@@ -497,7 +497,7 @@ export default function ConversationThread({
               <FiPaperclip size={17} />
             </button>
             <div className="cc-emoji-anchor">
-              <button className="cc-icon-btn" title="Emoji" onClick={() => setEmojiOpen((v) => !v)}>🙂</button>
+              <button className="cc-icon-btn" title="Emoji" onClick={() => setEmojiOpen((v) => !v)}><FiSmile size={17} /></button>
               {emojiOpen && (
                 <div className="cc-emoji-picker cc-emoji-picker-up">
                   {QUICK_EMOJI.map((e) => (

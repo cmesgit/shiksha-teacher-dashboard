@@ -38,6 +38,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { IoCloseOutline } from "react-icons/io5";
 import api from "../api/apiClient";
 import groupSessionService, { extractApiError } from "../api/groupSessionService";
 import { LoadingState } from "../components/StateViews";
@@ -45,6 +46,7 @@ import { subjectChipSlot } from "../utils/subjectChips";
 import { fmtClockTime, dayLabel, startsInText } from "../utils/sessionTime";
 import "../styles/academyScreens.css";
 import "../styles/teacherGroupSessions.css";
+import "../styles/groupSessionModals.css";
 
 /* ═══════════════════════════════════════════════════════════
    HELPERS
@@ -395,10 +397,10 @@ function ParticipantSearch({ subjectId, selected, onAdd, disabled, currentUserId
       />
 
       {open && !disabled && subjectId && (
-        <div style={styles.searchDrop}>
-          {loading && <div style={styles.searchRowMuted}>Searching…</div>}
+        <div className="gs-search-drop">
+          {loading && <div className="gs-search-row-muted">Searching…</div>}
           {!loading && results.length === 0 && (
-            <div style={styles.searchRowMuted}>
+            <div className="gs-search-row-muted">
               {query ? "No teacher found for this subject" : "Start typing to search same-subject teachers"}
             </div>
           )}
@@ -408,15 +410,15 @@ function ParticipantSearch({ subjectId, selected, onAdd, disabled, currentUserId
               <button
                 key={tid}
                 type="button"
-                style={styles.searchRow}
+                className="gs-search-row"
                 onMouseDown={(e) => { e.preventDefault(); choose(t); }}
               >
-                <span style={styles.searchAvatar}>{(t.name || t.full_name || "?").charAt(0).toUpperCase()}</span>
+                <span className="gs-search-avatar">{(t.name || t.full_name || "?").charAt(0).toUpperCase()}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={styles.searchName}>{t.name || t.full_name || "Teacher"}</strong>
-                  <small style={styles.searchSub}>{t.phone || t.teacher_id || t.employee_id || shortId(tid)}</small>
+                  <strong className="gs-search-name">{t.name || t.full_name || "Teacher"}</strong>
+                  <small className="gs-search-sub">{t.phone || t.teacher_id || t.employee_id || shortId(tid)}</small>
                 </span>
-                <span style={styles.searchAdd}>Add</span>
+                <span className="gs-search-add">Add</span>
               </button>
             );
           })}
@@ -452,7 +454,7 @@ function ParticipantsStep({ subjectId, participants, setParticipants, disabled, 
   return (
     <div>
       <label className="sg__label">Enter Teacher:</label>
-      <div style={styles.teacherSearchLine}>
+      <div className="gs-teacher-search-line">
         <ParticipantSearch
           subjectId={subjectId}
           selected={participants}
@@ -462,20 +464,20 @@ function ParticipantsStep({ subjectId, participants, setParticipants, disabled, 
         />
       </div>
 
-      <div style={styles.participantListBox}>
+      <div className="gs-participant-list-box">
         {participants.length === 0 ? (
-          <div style={styles.noParticipants}>No teachers added yet.</div>
+          <div className="gs-no-participants">No teachers added yet.</div>
         ) : (
           participants.map((p, index) => (
-            <div key={p.user_id || p.userId || index} style={styles.participantEditRow}>
-              <span style={styles.participantIndex}>{index + 1}.</span>
-              <span style={styles.participantNameBox}>
+            <div key={p.user_id || p.userId || index} className="gs-participant-edit-row">
+              <span className="gs-participant-index">{index + 1}.</span>
+              <span className="gs-participant-name-box">
                 {p.name || "Teacher"}
                 {(p.teacher_id || p.teacherId) ? ` (${p.teacher_id || p.teacherId})` : ""}
               </span>
               <button
                 type="button"
-                style={styles.removeBtn}
+                className="gs-remove-btn"
                 onClick={() => removeParticipant(p.user_id || p.userId)}
               >
                 x
@@ -485,7 +487,7 @@ function ParticipantsStep({ subjectId, participants, setParticipants, disabled, 
         )}
       </div>
 
-      <div style={styles.participantCount}>Participants: {participants.length}/{MAX_PARTICIPANTS}</div>
+      <div className="gs-participant-count">Participants: {participants.length}/{MAX_PARTICIPANTS}</div>
       {participants.length >= MAX_PARTICIPANTS && (
         <p className="sg__hint" style={{ textAlign: "center", marginTop: 6 }}>
           Maximum {MAX_PARTICIPANTS} participants allowed.
@@ -617,20 +619,20 @@ function ScheduleSessionModal({
 
   return (
     <div className="sg__modalOverlay" onClick={() => !saving && onClose()}>
-      <div style={styles.figmaDialog} onClick={(e) => e.stopPropagation()}>
-        <h3 style={styles.dialogTitle}>{title}</h3>
+      <div className="gs-figma-dialog" onClick={(e) => e.stopPropagation()}>
+        <h3 className="gs-dialog-title">{title}</h3>
 
         <StepHeader step={step} />
         {error && <div className="sg__errorBox">{error}</div>}
 
         {step === 1 && (
-          <div style={styles.formArea}>
-            <div style={styles.inlineField}>
-              <label style={styles.compactLabel}>Select Date:</label>
+          <div className="gs-form-area">
+            <div className="gs-inline-field">
+              <label className="gs-compact-label">Select Date:</label>
               <input
                 type="date"
                 className="sg__input"
-                style={styles.dateInput}
+                className="gs-date-input"
                 value={date}
                 min={getLocalDateValue()}
                 onChange={(e) => {
@@ -643,12 +645,12 @@ function ScheduleSessionModal({
               />
             </div>
 
-            <div style={styles.inlineField}>
-              <label style={styles.compactLabel}>Start Time:</label>
+            <div className="gs-inline-field">
+              <label className="gs-compact-label">Start Time:</label>
               <input
                 type="time"
                 className="sg__input"
-                style={styles.timeInput}
+                className="gs-time-input"
                 value={time}
                 min={date === getLocalDateValue() ? minTimeToday : undefined}
                 onChange={(e) => {
@@ -657,7 +659,7 @@ function ScheduleSessionModal({
                 }}
               />
               {time && duration ? (
-                <span style={styles.endTimeHint}>End: {formatTime(endTime)}</span>
+                <span className="gs-end-time-hint">End: {formatTime(endTime)}</span>
               ) : null}
             </div>
             {schedulePast && (
@@ -666,13 +668,13 @@ function ScheduleSessionModal({
               </p>
             )}
 
-            <label style={styles.compactLabel}>Select Duration:</label>
-            <div style={styles.durationRow}>
+            <label className="gs-compact-label">Select Duration:</label>
+            <div className="gs-duration-row">
               {DURATIONS.map((d) => (
                 <button
                   key={d.value}
                   type="button"
-                  style={duration === d.value ? styles.durationBtnActive : styles.durationBtn}
+                  className={duration === d.value ? "gs-duration-btn-active" : "gs-duration-btn"}
                   onClick={() => setDuration(d.value)}
                 >
                   {d.label}
@@ -680,10 +682,10 @@ function ScheduleSessionModal({
               ))}
             </div>
 
-            <label style={styles.compactLabel}>Topic (optional):</label>
+            <label className="gs-compact-label">Topic (optional):</label>
             <input
               className="sg__input"
-              style={styles.topicInput}
+              className="gs-topic-input"
               value={topic}
               maxLength={255}
               placeholder='Discussion on "What comes first ?"'
@@ -693,7 +695,7 @@ function ScheduleSessionModal({
         )}
 
         {step === 2 && (
-          <div style={styles.formArea}>
+          <div className="gs-form-area">
             <ParticipantsStep
               subjectId={selectedSubjectId || initialSession?.subjectId}
               participants={participants}
@@ -713,13 +715,13 @@ function ScheduleSessionModal({
           />
         )}
 
-        <div style={styles.dialogFoot}>
+        <div className="gs-dialog-foot">
           {step === 1 ? (
-            <button type="button" style={styles.tealGhostBtn} disabled={saving} onClick={onClose}>
+            <button type="button" className="gs-teal-ghost-btn" disabled={saving} onClick={onClose}>
               Cancel
             </button>
           ) : (
-            <button type="button" style={styles.tealGhostBtn} disabled={saving} onClick={() => setStep(step - 1)}>
+            <button type="button" className="gs-teal-ghost-btn" disabled={saving} onClick={() => setStep(step - 1)}>
               Back
             </button>
           )}
@@ -727,14 +729,14 @@ function ScheduleSessionModal({
           {step < 3 ? (
             <button
               type="button"
-              style={styles.tealBtn}
+              className="gs-teal-btn"
               disabled={saving || (step === 1 && !canStep1) || (step === 2 && !canStep2)}
               onClick={() => setStep(step + 1)}
             >
               Continue
             </button>
           ) : (
-            <button type="button" style={styles.tealBtn} disabled={saving} onClick={submit}>
+            <button type="button" className="gs-teal-btn" disabled={saving} onClick={submit}>
               {saving ? "Saving…" : isEdit ? "Save Changes" : "Confirm"}
             </button>
           )}
@@ -747,15 +749,15 @@ function ScheduleSessionModal({
 function StepHeader({ step }) {
   const items = ["Details", "Participants", "Summary"];
   return (
-    <div style={styles.stepWrap}>
+    <div className="gs-step-wrap">
       {items.map((name, index) => {
         const n = index + 1;
         const active = step >= n;
         return (
-          <div key={name} style={styles.stepItem}>
-            <span style={active ? styles.stepCircleActive : styles.stepCircle}>{n}</span>
-            <span style={active ? styles.stepTextActive : styles.stepText}>{name}</span>
-            {index < items.length - 1 && <span style={styles.stepLine} />}
+          <div key={name} className="gs-step-item">
+            <span className={active ? "gs-step-circle-active" : "gs-step-circle"}>{n}</span>
+            <span className={active ? "gs-step-text-active" : "gs-step-text"}>{name}</span>
+            {index < items.length - 1 && <span className="gs-step-line" />}
           </div>
         );
       })}
@@ -765,7 +767,7 @@ function StepHeader({ step }) {
 
 function SummaryStep({ date, time, duration, topic, participants }) {
   return (
-    <div style={styles.summaryBox}>
+    <div className="gs-summary-box">
       <SummaryRow label="Date:" value={formatDateLong(date)} />
       <SummaryRow label="Timing:" value={formatTiming(time, duration)} />
       <SummaryRow label="Duration:" value={`${duration} minutes`} />
@@ -777,7 +779,7 @@ function SummaryStep({ date, time, duration, topic, participants }) {
 
 function SummaryRow({ label, value }) {
   return (
-    <div style={styles.summaryRow}>
+    <div className="gs-summary-row">
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
@@ -869,30 +871,30 @@ function SessionDetailsDialog({
 
   return (
     <div className="sg__modalOverlay" onClick={() => !busy && onClose()}>
-      <div style={styles.detailsDialog} onClick={(e) => e.stopPropagation()}>
-        <h3 style={styles.dialogTitle}>Session Details</h3>
+      <div className="gs-details-dialog" onClick={(e) => e.stopPropagation()}>
+        <h3 className="gs-dialog-title">Session Details</h3>
         {error && <div className="sg__errorBox">{error}</div>}
 
-        <div style={styles.detailsGrid}>
+        <div className="gs-details-grid">
           <SummaryRow label="Date:" value={formatDateLong(session.date)} />
           <SummaryRow label="Timing:" value={formatTiming(session.time, session.durationMinutes)} />
           <SummaryRow label="Duration:" value={`${session.durationMinutes || "—"} minutes`} />
           <SummaryRow label="Participants:" value={`${participants.length} people`} />
         </div>
 
-        <div style={styles.detailsParticipantsBox}>
+        <div className="gs-details-participants-box">
           {participants.map((p, index) => (
-            <div key={p.id || index} style={styles.detailsParticipantRow}>
-              <span style={styles.participantIndex}>{index + 1}.</span>
+            <div key={p.id || index} className="gs-details-participant-row">
+              <span className="gs-participant-index">{index + 1}.</span>
               <span style={{ flex: 1 }}>
                 {p.name || "Participant"}
                 {p.teacherId ? ` (${shortId(p.teacherId)})` : ""}
               </span>
-              {p.isHost && <span style={styles.hostLabel}>HOST</span>}
-              {!p.isHost && p.status === "declined" && <span style={styles.declinedLabel}>DECLINED</span>}
-              {!p.isHost && p.status === "accepted" && p.joinedAt && <span style={styles.joinedLabel}>JOINED</span>}
+              {p.isHost && <span className="gs-host-label">HOST</span>}
+              {!p.isHost && p.status === "declined" && <span className="gs-declined-label">DECLINED</span>}
+              {!p.isHost && p.status === "accepted" && p.joinedAt && <span className="gs-joined-label">JOINED</span>}
               {!p.isHost && p.declineCount > 0 && (
-                <span style={styles.reinvitedLabel} title="Number of times this invite was declined and resent">
+                <span className="gs-reinvited-label" title="Number of times this invite was declined and resent">
                   RE-INVITED ×{p.declineCount}
                 </span>
               )}
@@ -900,19 +902,19 @@ function SessionDetailsDialog({
           ))}
         </div>
 
-        <div style={styles.detailsTopic}>
+        <div className="gs-details-topic">
           <strong>Topic:</strong>
           <span>{session.topic || "—"}</span>
         </div>
 
-        <div style={styles.dialogFoot}>
-          <button type="button" style={styles.tealGhostBtn} disabled={busy} onClick={onClose}>
+        <div className="gs-dialog-foot">
+          <button type="button" className="gs-teal-ghost-btn" disabled={busy} onClick={onClose}>
             Back
           </button>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
             {isHost && isScheduled && (
-              <button type="button" style={styles.cancelTextBtn} disabled={busy} onClick={cancelSession}>
+              <button type="button" className="gs-cancel-text-btn" disabled={busy} onClick={cancelSession}>
                 Cancel Session
               </button>
             )}
@@ -920,7 +922,7 @@ function SessionDetailsDialog({
             {isHost && isScheduled && (
               <button
                 type="button"
-                style={editUsed ? styles.tealBtnMuted : styles.tealBtn}
+                className={editUsed ? "gs-teal-btn-muted" : "gs-teal-btn"}
                 disabled={busy || editUsed}
                 title={editUsed ? "Can be edited only once" : "Edit session details"}
                 onClick={onEdit}
@@ -930,13 +932,13 @@ function SessionDetailsDialog({
             )}
 
             {isHost && isScheduled && (
-              <button type="button" style={styles.tealBtn} disabled={busy} onClick={startSession}>
+              <button type="button" className="gs-teal-btn" disabled={busy} onClick={startSession}>
                 Start Session
               </button>
             )}
 
             {!isHost && isScheduled && (
-              <button type="button" style={styles.cancelTextBtn} disabled={busy} onClick={decline}>
+              <button type="button" className="gs-cancel-text-btn" disabled={busy} onClick={decline}>
                 Decline
               </button>
             )}
@@ -997,7 +999,7 @@ function NotesDialog({ session, open, onClose }) {
     <div className="sg__modalOverlay" onClick={onClose}>
       <div className="sg__smallModal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="sg__modalClose" onClick={onClose} aria-label="Close">
-          ✕
+          <IoCloseOutline />
         </button>
 
         <h3 className="sg__modalTitle">Session Notes</h3>
@@ -1049,13 +1051,13 @@ function JoinSessionDialog({ open, busy, error, onClose, onEnter }) {
 
   return (
     <div className="sg__modalOverlay" onClick={() => !busy && onClose()}>
-      <div style={styles.joinDialog} onClick={(e) => e.stopPropagation()}>
-        <h3 style={styles.dialogTitle}>Join Session</h3>
+      <div className="gs-join-dialog" onClick={(e) => e.stopPropagation()}>
+        <h3 className="gs-dialog-title">Join Session</h3>
 
-        <label style={{ ...styles.compactLabel, textAlign: "center" }}>Enter Session ID:</label>
+        <label className="gs-compact-label" style={{ textAlign: "center" }}>Enter Session ID:</label>
         <input
           className="sg__input"
-          style={styles.joinInput}
+          className="gs-join-input"
           value={code}
           autoFocus
           placeholder="SHR7J2"
@@ -1065,15 +1067,15 @@ function JoinSessionDialog({ open, busy, error, onClose, onEnter }) {
           }}
         />
 
-        {error && <div style={styles.joinError}>Error:<br />{error}</div>}
+        {error && <div className="gs-join-error">Error:<br />{error}</div>}
 
-        <div style={styles.dialogFootCenter}>
-          <button type="button" style={styles.tealGhostBtn} disabled={busy} onClick={onClose}>
+        <div className="gs-dialog-foot-center">
+          <button type="button" className="gs-teal-ghost-btn" disabled={busy} onClick={onClose}>
             Cancel
           </button>
           <button
             type="button"
-            style={styles.tealBtn}
+            className="gs-teal-btn"
             disabled={busy || !code.trim()}
             onClick={() => onEnter(code.trim())}
           >
@@ -1098,7 +1100,7 @@ function HostSessionDialog({ open, busy, error, onClose, onInstant, onScheduled 
           onClick={() => !busy && onClose()}
           aria-label="Close"
         >
-          ✕
+          <IoCloseOutline />
         </button>
 
         <h3 className="sg__modalTitle">Host Session</h3>
@@ -1572,422 +1574,3 @@ export default function GroupSessions() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   INLINE STYLES FOR FIGMA DIALOGS
-   These avoid requiring another CSS paste for the modal layout.
-═══════════════════════════════════════════════════════════ */
-const styles = {
-  figmaDialog: {
-    width: "min(92vw, 430px)",
-    background: "#eef7fb",
-    borderRadius: 10,
-    padding: "24px 28px 20px",
-    boxShadow: "0 20px 60px rgba(15,23,42,0.28)",
-    boxSizing: "border-box",
-  },
-  detailsDialog: {
-    width: "min(92vw, 430px)",
-    background: "#eef7fb",
-    borderRadius: 10,
-    padding: "24px 28px 20px",
-    boxShadow: "0 20px 60px rgba(15,23,42,0.28)",
-    boxSizing: "border-box",
-  },
-  joinDialog: {
-    width: "min(92vw, 250px)",
-    background: "#eef7fb",
-    borderRadius: 10,
-    padding: "24px 22px 18px",
-    boxShadow: "0 20px 60px rgba(15,23,42,0.28)",
-    boxSizing: "border-box",
-    textAlign: "center",
-  },
-  dialogTitle: {
-    margin: "0 0 18px",
-    textAlign: "center",
-    color: "#0f172a",
-    fontSize: 16,
-    fontWeight: 800,
-  },
-  stepWrap: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 0,
-    marginBottom: 20,
-  },
-  stepItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-  },
-  stepCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: "50%",
-    border: "1px solid #a8b8c0",
-    color: "#94a3b8",
-    background: "#fff",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 10,
-    fontWeight: 800,
-  },
-  stepCircleActive: {
-    width: 18,
-    height: 18,
-    borderRadius: "50%",
-    border: "1px solid #007181",
-    color: "#fff",
-    background: "#007181",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 10,
-    fontWeight: 800,
-  },
-  stepText: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#94a3b8",
-  },
-  stepTextActive: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#007181",
-  },
-  stepLine: {
-    width: 38,
-    height: 1,
-    background: "#99aab3",
-    display: "inline-block",
-    margin: "0 7px",
-  },
-  formArea: {
-    padding: "0 4px",
-  },
-  inlineField: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-    flexWrap: "wrap",
-  },
-  compactLabel: {
-    fontSize: 12,
-    color: "#0f172a",
-    fontWeight: 700,
-    marginBottom: 6,
-    display: "block",
-  },
-  dateInput: {
-    width: 160,
-    height: 28,
-    padding: "3px 8px",
-    fontSize: 12,
-  },
-  timeInput: {
-    width: 100,
-    height: 28,
-    padding: "3px 8px",
-    fontSize: 12,
-  },
-  endTimeHint: {
-    fontSize: 11,
-    color: "#64748b",
-    fontWeight: 700,
-  },
-  durationRow: {
-    display: "flex",
-    gap: 18,
-    margin: "8px 0 14px",
-    flexWrap: "wrap",
-  },
-  durationBtn: {
-    border: "none",
-    background: "#2d83a0",
-    color: "#fff",
-    borderRadius: 5,
-    padding: "7px 14px",
-    fontSize: 11,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  durationBtnActive: {
-    border: "none",
-    background: "#007181",
-    color: "#fff",
-    borderRadius: 5,
-    padding: "7px 14px",
-    fontSize: 11,
-    fontWeight: 800,
-    cursor: "pointer",
-    boxShadow: "0 0 0 2px rgba(0,113,129,0.22)",
-  },
-  topicInput: {
-    height: 30,
-    fontSize: 12,
-  },
-  dialogFoot: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 18,
-  },
-  dialogFootCenter: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 18,
-  },
-  tealBtn: {
-    border: "none",
-    background: "#008a99",
-    color: "#fff",
-    borderRadius: 5,
-    padding: "8px 16px",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  tealBtnMuted: {
-    border: "none",
-    background: "#94a3b8",
-    color: "#fff",
-    borderRadius: 5,
-    padding: "8px 16px",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "not-allowed",
-    opacity: 0.75,
-  },
-  tealGhostBtn: {
-    border: "none",
-    background: "#008a99",
-    color: "#fff",
-    borderRadius: 5,
-    padding: "8px 16px",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  cancelTextBtn: {
-    border: "1px solid #fecaca",
-    background: "#fff",
-    color: "#dc2626",
-    borderRadius: 5,
-    padding: "7px 12px",
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  teacherSearchLine: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  participantListBox: {
-    maxHeight: 165,
-    overflowY: "auto",
-    paddingRight: 6,
-    marginTop: 10,
-  },
-  participantEditRow: {
-    display: "grid",
-    gridTemplateColumns: "24px 1fr 26px",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 7,
-    fontSize: 12,
-  },
-  participantIndex: {
-    color: "#0f172a",
-    fontWeight: 700,
-    fontSize: 12,
-  },
-  participantNameBox: {
-    background: "#fff",
-    border: "1px solid #9fb5bd",
-    borderRadius: 4,
-    padding: "5px 8px",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  },
-  removeBtn: {
-    border: "none",
-    background: "#2d83a0",
-    color: "#fff",
-    borderRadius: 4,
-    height: 24,
-    fontSize: 12,
-    fontWeight: 800,
-    cursor: "pointer",
-  },
-  participantCount: {
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: 700,
-    color: "#0f172a",
-    marginTop: 10,
-  },
-  noParticipants: {
-    textAlign: "center",
-    color: "#64748b",
-    fontSize: 12,
-    padding: "18px 0",
-  },
-  searchDrop: {
-    position: "absolute",
-    top: "calc(100% + 4px)",
-    left: 0,
-    right: 0,
-    background: "#fff",
-    border: "1px solid #dbe7eb",
-    borderRadius: 8,
-    boxShadow: "0 10px 24px rgba(15,23,42,0.16)",
-    zIndex: 20,
-    maxHeight: 220,
-    overflowY: "auto",
-  },
-  searchRow: {
-    width: "100%",
-    border: "none",
-    background: "#fff",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "8px 10px",
-    cursor: "pointer",
-    textAlign: "left",
-  },
-  searchRowMuted: {
-    padding: "10px 12px",
-    color: "#94a3b8",
-    fontSize: 12,
-    textAlign: "left",
-  },
-  searchAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: "50%",
-    background: "#008a99",
-    color: "#fff",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 12,
-    fontWeight: 800,
-  },
-  searchName: {
-    display: "block",
-    fontSize: 12,
-    color: "#0f172a",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  searchSub: {
-    display: "block",
-    color: "#64748b",
-    fontSize: 10,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-  searchAdd: {
-    color: "#008a99",
-    fontWeight: 800,
-    fontSize: 11,
-  },
-  summaryBox: {
-    marginTop: 10,
-    padding: "10px 4px",
-  },
-  summaryRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 18,
-    fontSize: 12,
-    marginBottom: 9,
-    color: "#0f172a",
-  },
-  detailsGrid: {
-    padding: "4px 0 6px",
-  },
-  detailsParticipantsBox: {
-    maxHeight: 165,
-    overflowY: "auto",
-    paddingRight: 6,
-    margin: "8px 0 12px",
-  },
-  detailsParticipantRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    fontSize: 12,
-    color: "#0f172a",
-    padding: "4px 0",
-  },
-  hostLabel: {
-    background: "#2d83a0",
-    color: "#fff",
-    borderRadius: 4,
-    padding: "3px 8px",
-    fontSize: 10,
-    fontWeight: 800,
-  },
-  declinedLabel: {
-    background: "#fee2e2",
-    color: "#b91c1c",
-    borderRadius: 4,
-    padding: "3px 8px",
-    fontSize: 10,
-    fontWeight: 800,
-  },
-  joinedLabel: {
-    background: "#d1fae5",
-    color: "#065f46",
-    borderRadius: 4,
-    padding: "3px 8px",
-    fontSize: 10,
-    fontWeight: 800,
-  },
-  reinvitedLabel: {
-    background: "#fef3c7",
-    color: "#92400e",
-    borderRadius: 4,
-    padding: "3px 8px",
-    fontSize: 10,
-    fontWeight: 800,
-  },
-  detailsTopic: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 3,
-    fontSize: 12,
-    color: "#0f172a",
-    marginTop: 8,
-  },
-  joinInput: {
-    width: 100,
-    height: 28,
-    padding: "3px 8px",
-    fontSize: 12,
-    textAlign: "center",
-    margin: "0 auto",
-  },
-  joinError: {
-    color: "#dc2626",
-    fontSize: 12,
-    fontWeight: 700,
-    lineHeight: 1.45,
-    marginTop: 12,
-    textAlign: "center",
-  },
-};

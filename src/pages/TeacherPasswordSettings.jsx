@@ -13,40 +13,28 @@
  * links to the regular change-password flow.
  */
 import { useNavigate } from "react-router-dom";
+import "../styles/teacherPasswordSettings.css";
 
 export default function TeacherPasswordSettings() {
   const navigate = useNavigate();
 
   return (
-    <div style={{ maxWidth: 480, padding: 32 }}>
-      <h2 style={{ fontFamily: "Montserrat, sans-serif", marginBottom: 12 }}>
-        Password settings
-      </h2>
+    <div className="tps-settings-page">
+      <h2 className="tps-settings-title">Password settings</h2>
 
-      <div style={{
-        background: "#eff6ff", border: "1.5px solid #bfdbfe",
-        borderRadius: 10, padding: "16px 18px", marginBottom: 24,
-        fontSize: 14, lineHeight: 1.6, color: "#1e3a5f",
-      }}>
+      <div className="tps-settings-notice">
         <strong>One password for everything.</strong> Your account now uses a single
         password for both learning and teaching. There's no separate teacher
         password anymore — the same password you log in with is used to confirm
         when you switch to teacher mode.
       </div>
 
-      <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 24, lineHeight: 1.6 }}>
+      <p className="tps-settings-body">
         To change your password, use the standard Change Password page. The new
         password will work for both your learner login and entering teacher mode.
       </p>
 
-      <button
-        onClick={() => navigate("/teacher/change-password")}
-        style={{
-          background: "#2563eb", color: "#fff", border: "none",
-          borderRadius: 8, padding: "11px 22px", fontSize: 14,
-          fontWeight: 600, cursor: "pointer",
-        }}
-      >
+      <button className="tps-settings-btn" onClick={() => navigate("/teacher/change-password")}>
         Change password →
       </button>
     </div>

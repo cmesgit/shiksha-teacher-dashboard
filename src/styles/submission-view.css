@@ -20,10 +20,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #425f7f;
+  background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 6px 16px;
   font-size: 13px;
   font-weight: 500;
@@ -32,13 +32,13 @@
   flex-shrink: 0;
   transition: background 0.2s ease, transform 0.1s ease;
 }
-.sv-back-btn:hover { background: #354d67; }
+.sv-back-btn:hover { background: var(--primary-dark); }
 .sv-back-btn:active { transform: scale(0.97); }
 
 /* Header */
 .sv-header {
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   padding: 20px 32px;
   display: flex;
   justify-content: space-between;
@@ -49,7 +49,7 @@
 .sv-title {
   font-size: 20px;
   font-weight: 700;
-  color: #1f2d3d;
+  color: var(--ink);
   margin: 0;
 }
 
@@ -58,7 +58,7 @@
 .sv-search input {
   padding: 6px 32px 6px 12px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   outline: none;
   width: 160px;
@@ -66,7 +66,7 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .sv-search input:focus {
-  border-color: #425f7f;
+  border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(75, 167, 181, 0.12);
 }
 
@@ -82,7 +82,7 @@
 /* Content card */
 .sv-content-card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   padding: 24px 32px 40px;
   flex: 1;
   overflow-y: auto;
@@ -103,7 +103,7 @@
   align-items: baseline;
   gap: 4px;
   padding: 8px 20px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   cursor: pointer;
   border: 2px solid transparent;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
@@ -156,7 +156,7 @@
   background: transparent;
   border: none;
   font-size: 12px;
-  color: #425f7f;
+  color: var(--primary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -176,7 +176,7 @@
 
 .sv-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #38b89a, #425f7f);
+  background: linear-gradient(90deg, #38b89a, var(--primary));
   border-radius: 99px;
   transition: width 0.5s ease;
 }
@@ -207,13 +207,13 @@
   padding: 12px 16px;
   font-size: 13px;
   font-weight: 600;
-  color: #1f2d3d;
+  color: var(--ink);
 }
 
 .sv-table td {
   padding: 14px 16px;
   font-size: 14px;
-  color: #1f2d3d;
+  color: var(--ink);
 }
 
 .sv-table-row {
@@ -250,7 +250,7 @@
   background: #38b89a;
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   padding: 6px 20px;
   font-size: 13px;
   font-weight: 600;

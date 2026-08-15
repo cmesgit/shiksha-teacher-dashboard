@@ -156,6 +156,14 @@
   /* ── Focus ─────────────────────────────────────────────────────────── */
   --focus-ring: 0 0 0 3px rgba(66, 95, 127, .35);
 
+  /* ── Icon sizes ─────────────────────────────────────────────────────
+     Consolidates what used to be 7+ ad-hoc sizes (13/14/15/18/21/22/26/
+     28/30px) scattered across header/sidebar chrome into one scale. */
+  --icon-xs: 14px;  /* inline nav/footer-link icons (Sidebar) */
+  --icon-sm: 18px;  /* icons inside list rows (notification dropdown items) */
+  --icon-md: 22px;  /* header action icons (bell, messages) */
+  --icon-lg: 28px;  /* mobile hamburger, top slider tabs */
+
   /* ═════════════════════════════════════════════════════════════════════
      Legacy aliases — the ~87 stylesheets written against the previous token
      names keep resolving. Prefer the names above in new code.
