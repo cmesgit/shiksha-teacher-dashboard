@@ -35,6 +35,7 @@
  * (or pass []) to hide the Quick actions section entirely.
  */
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   RiGroupLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine, RiSettings3Line,
   RiArrowDownSLine, RiAddLine,
@@ -92,7 +93,10 @@ function PinModal({ profile, onConfirm, onCancel, onForgot, loading, error }) {
     if (ch && i < 3) inputs.current[i + 1]?.focus();
     if (next.length === 4) onConfirm(next);
   };
-  return (
+  // Portalled to document.body: the header this lives under has
+  // backdrop-filter, which makes it the containing block for any
+  // position:fixed descendant and would clip the overlay to the header's box.
+  return createPortal(
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
         <Avatar profile={profile} size={56} />
@@ -115,7 +119,8 @@ function PinModal({ profile, onConfirm, onCancel, onForgot, loading, error }) {
         )}
         <button className="ps-modal__cancel" onClick={onCancel}>Cancel</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -130,7 +135,9 @@ function ResetPinModal({ profile, onConfirm, onCancel, loading, error }) {
     if (!password) return;
     onConfirm(pin, password);
   };
-  return (
+  // Portalled to document.body — same header backdrop-filter clipping issue
+  // as PinModal above.
+  return createPortal(
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
         <Avatar profile={profile} size={56} />
@@ -155,7 +162,8 @@ function ResetPinModal({ profile, onConfirm, onCancel, loading, error }) {
         </button>
         <button className="ps-modal__cancel" onClick={onCancel}>Cancel</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -165,7 +173,9 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
   const [show, setShow] = useState(false);
   const ref = useRef(null);
   useEffect(() => { ref.current?.focus(); }, []);
-  return (
+  // Portalled to document.body — same header backdrop-filter clipping issue
+  // as PinModal above.
+  return createPortal(
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
         <span className="ps-av ps-av--emoji" style={{ width: 56, height: 56, fontSize: 28 }}>🎓</span>
@@ -188,7 +198,8 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
         </button>
         <button className="ps-modal__cancel" onClick={onCancel}>Cancel</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
