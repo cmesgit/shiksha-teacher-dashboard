@@ -29,7 +29,7 @@ export default function MessageIcon({ to = "/teacher/chat" }) {
         title="Messages"
         type="button"
       >
-        <FiMessageSquare size={21} color={unreadCount > 0 ? "#2563eb" : undefined} />
+        <FiMessageSquare size={22} color={unreadCount > 0 ? "#2563eb" : undefined} />
         {unreadCount > 0 && (
           <span className="notif-bell-badge">
             {unreadCount > 9 ? "9+" : unreadCount}

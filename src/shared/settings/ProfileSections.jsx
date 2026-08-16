@@ -20,7 +20,7 @@
  * visible, since the two would otherwise be indistinguishable.
  */
 import { useEffect, useRef, useState } from "react";
-import { RiArrowRightSLine, RiPencilLine, RiLockLine, RiAddLine } from "react-icons/ri";
+import { RiArrowRightSLine, RiPencilLine, RiLockLine, RiAddLine, RiGraduationCapLine } from "react-icons/ri";
 
 import {
   Choice, EmptyCard, Field, Grid2, GroupLabel, SectionHead, initials,
@@ -342,7 +342,7 @@ export function AcademicSection({ form, setField, choices, editName }) {
 
       {!studying && (
         <EmptyCard
-          glyph="🎓"
+          glyph={<RiGraduationCapLine />}
           body="Pick whether this learner is currently studying to see the relevant fields."
         />
       )}

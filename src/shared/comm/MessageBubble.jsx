@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   FiCornerUpLeft, FiCopy, FiTrash2, FiFlag, FiMoreHorizontal, FiDownload,
-  FiFileText, FiCheck, FiClock, FiAlertTriangle,
+  FiFileText, FiCheck, FiClock, FiAlertTriangle, FiSmile,
 } from "react-icons/fi";
 import { Avatar, formatClock } from "./common";
 
@@ -145,9 +145,13 @@ export default function MessageBubble({
           <div className="cc-bubble-meta">
             <span>{formatClock(msg.created_at)}</span>
             {mine && !failed && (
-              isRead
-                ? <FiCheck className="cc-read-tick cc-read-tick-on" size={13} title="Read" />
-                : <FiClock className="cc-read-tick" size={11} title="Sent" />
+              msg._pending
+                // Not yet acked by the server — show a real "sending" state
+                // instead of a "Sent" tick that lies about delivery.
+                ? <span className="cc-sending-label"><FiClock className="cc-read-tick" size={11} /> Sending…</span>
+                : isRead
+                  ? <FiCheck className="cc-read-tick cc-read-tick-on" size={13} title="Read" />
+                  : <FiCheck className="cc-read-tick" size={13} title="Sent" />
             )}
             {failed && (
               <button className="cc-retry-btn" onClick={() => onRetry?.(msg)}>Retry</button>
@@ -172,7 +176,7 @@ export default function MessageBubble({
 
         {!failed && (
           <div className="cc-bubble-actions">
-            <button className="cc-bubble-action-btn" title="React" onClick={() => setPickerOpen((v) => !v)}>🙂</button>
+            <button className="cc-bubble-action-btn" title="React" onClick={() => setPickerOpen((v) => !v)}><FiSmile size={14} /></button>
             <button className="cc-bubble-action-btn" title="Reply" onClick={() => onReply?.(msg)}><FiCornerUpLeft size={14} /></button>
             <button className="cc-bubble-action-btn" title="More" onClick={() => setMenuOpen((v) => !v)}><FiMoreHorizontal size={14} /></button>
           </div>

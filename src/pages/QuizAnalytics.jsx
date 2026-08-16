@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { IoChevronBack } from "react-icons/io5";
+import { IoChevronBack, IoWarningOutline, IoCheckmarkOutline } from "react-icons/io5";
 import api from "../api/apiClient";
 import { useToast } from "../contexts/ToastContext";
 import "../styles/quiz-analytics.css";
@@ -126,7 +126,7 @@ export default function QuizAnalytics() {
         <div className="qa-side">
           {worst && (
             <div className="qa-attention-card">
-              <div className="qa-attention-title">⚠ Needs attention</div>
+              <div className="qa-attention-title"><IoWarningOutline /> Needs attention</div>
               <div className="qa-attention-body">
                 Only {worst.pct_correct}% got Q{worst.order} right. Consider re-teaching this topic or checking the question wording.
               </div>
@@ -155,7 +155,7 @@ export default function QuizAnalytics() {
                 {data.not_attempted.length > 3 && ` +${data.not_attempted.length - 3} more`}
               </div>
               <button className="qa-remind-btn" onClick={sendReminder} disabled={reminding || reminded || !data.not_attempted.length}>
-                {reminded ? "Reminder sent ✓" : reminding ? "Sending…" : "Send reminder"}
+                {reminded ? <>Reminder sent <IoCheckmarkOutline /></> : reminding ? "Sending…" : "Send reminder"}
               </button>
             </div>
           )}

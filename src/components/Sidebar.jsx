@@ -219,7 +219,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
       {/* Return to homepage */}
       <div className="acad-side__home">
         <a href={HOME_URL} className="acad-side__homeLink">
-          <FiHome size={13} /> Return to Homepage
+          <FiHome size={14} /> Return to Homepage
         </a>
       </div>
     </aside>

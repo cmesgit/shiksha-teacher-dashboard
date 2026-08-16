@@ -10,9 +10,9 @@
   align-items: center;
   gap: 4px;
   background: #fff;
-  color: #425f7f;
-  border: 1px solid #cfdbe6;
-  border-radius: 8px;
+  color: var(--primary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -26,9 +26,9 @@
   background: transparent;
   border-radius: 0;
   padding: 4px 4px 16px;
-  border-bottom: 1px solid #e5eaed;
+  border-bottom: 1px solid var(--border);
 }
-.qbk-title { font-family: "Montserrat", system-ui, sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: #1a2c33; margin: 0; }
+.qbk-title { font-family: "Montserrat", system-ui, sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: var(--ink); margin: 0; }
 .qbk-subtitle { font-size: 13px; color: #5a6b78; margin: 6px 0 0; max-width: 640px; }
 
 .qbk-toolbar {
@@ -38,30 +38,30 @@
   flex-wrap: wrap;
   background: #fff;
   border: 1px solid #e3ecee;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   padding: 12px 16px;
 }
 
 .qbk-tabs { display: flex; gap: 6px; flex-shrink: 0; }
 .qbk-tab {
-  border: 1px solid #e5eaed;
+  border: 1px solid var(--border);
   background: #fff;
-  color: #6b7c83;
-  border-radius: 8px;
+  color: var(--ink-muted);
+  border-radius: var(--r-md);
   padding: 8px 14px;
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
 }
-.qbk-tab--active { background: #425f7f; border-color: #425f7f; color: #fff; }
+.qbk-tab--active { background: var(--primary); border-color: var(--primary); color: #fff; }
 
 .qbk-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 .qbk-filters select {
   border: 1px solid #e3ecee;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 8px 10px;
   font-size: 12.5px;
-  color: #374151;
+  color: var(--ink-2);
   background: #fff;
   cursor: pointer;
 }
@@ -71,7 +71,7 @@
   align-items: center;
   gap: 6px;
   border: 1px solid #e3ecee;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 7px 10px;
   background: #fff;
   color: #9aa5ad;
@@ -81,27 +81,27 @@
   outline: none;
   font-size: 12.5px;
   width: 200px;
-  color: #1f2d3d;
+  color: var(--ink);
 }
 
 .qbk-scope-note {
   font-size: 12px;
-  color: #6b7c83;
+  color: var(--ink-muted);
   background: #f5fbfc;
   border: 1px solid #e3ecee;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 9px 14px;
 }
 
 .qbk-loading, .qbk-error, .qbk-empty {
   padding: 40px;
   text-align: center;
-  color: #6b7c83;
+  color: var(--ink-muted);
   background: #fff;
   border: 1px solid #e3ecee;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
 }
-.qbk-error { color: #b91c1c; }
+.qbk-error { color: var(--danger); }
 
 .qbk-grid {
   display: grid;
@@ -114,7 +114,7 @@
 .qbk-card {
   background: #fff;
   border: 1px solid #e3ecee;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -130,14 +130,14 @@
   padding: 3px 9px;
   border-radius: 999px;
 }
-.qbk-chip--topic { background: #e6f4f6; color: #425f7f; }
-.qbk-chip--diff.qbk-chip--easy { background: #e9f8ee; color: #1f8a45; }
+.qbk-chip--topic { background: #e6f4f6; color: var(--primary); }
+.qbk-chip--diff.qbk-chip--easy { background: var(--success-soft); color: #1f8a45; }
 .qbk-chip--diff.qbk-chip--medium { background: #fff4e0; color: #b45309; }
-.qbk-chip--diff.qbk-chip--hard { background: #fdeaea; color: #b91c1c; }
-.qbk-marks { font-size: 11px; color: #6b7c83; font-weight: 600; }
+.qbk-chip--diff.qbk-chip--hard { background: #fdeaea; color: var(--danger); }
+.qbk-marks { font-size: 11px; color: var(--ink-muted); font-weight: 600; }
 .qbk-author { margin-left: auto; font-size: 10.5px; color: #9aa5ad; font-style: italic; }
 
-.qbk-card-text { font-size: 14px; font-weight: 600; color: #1f2d3d; line-height: 1.4; }
+.qbk-card-text { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; }
 
 .qbk-choices { display: flex; flex-direction: column; gap: 5px; }
 .qbk-choice {
@@ -147,17 +147,17 @@
   font-size: 12.5px;
   color: #4b5563;
   padding: 5px 8px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: #f8fafb;
 }
-.qbk-choice--correct { background: #e9f8ee; color: #1f8a45; font-weight: 600; }
+.qbk-choice--correct { background: var(--success-soft); color: #1f8a45; font-weight: 600; }
 .qbk-choice--correct svg { flex-shrink: 0; }
 
 .qbk-explanation {
   font-size: 12px;
-  color: #6b7c83;
+  color: var(--ink-muted);
   background: #f8fafb;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   padding: 8px 10px;
 }
 

@@ -3,6 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import "../styles/quiz-builder.css";
+import {
+  IoTimeOutline, IoClipboardOutline, IoFolderOutline, IoSparklesOutline,
+  IoCloseOutline, IoCheckmarkOutline,
+} from "react-icons/io5";
 
 // Redesigned quiz builder — replaces CreateQuiz.jsx. Single-page split-pane
 // editor: question list (left) + editor (right), plus bulk paste import,
@@ -292,7 +296,14 @@ export default function QuizBuilder() {
         })),
       });
       if (publish) await api.patch(`/teacher/quizzes/${id}/publish/`);
-      toast.success(publish ? "Quiz submitted for review" : "Draft saved");
+      if (publish) {
+        toast.success(
+          "Submitted for admin review — an admin will verify it before it goes live for students.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.success("Draft saved");
+      }
       navigate(`/teacher/classes/${subjectId}/quizzes`);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to save quiz.");
@@ -319,7 +330,7 @@ export default function QuizBuilder() {
         </select>
         {quizType === "mock" && (
           <div className="qb-time-field">
-            <span>⏱</span>
+            <span><IoTimeOutline /></span>
             <input type="number" min={5} max={180} value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} />
             <span>min</span>
           </div>
@@ -329,9 +340,9 @@ export default function QuizBuilder() {
 
       <div className="qb-actions">
         <button className="tk-btn" onClick={addQuestion}>+ Add question</button>
-        <button className="tk-btn tk-btn--ghost" onClick={() => setShowImport(true)}>⇪ Bulk paste / import</button>
-        <button className="tk-btn tk-btn--ghost" onClick={openBank}>🗂 Question bank</button>
-        <button className="qb-ai-btn" onClick={() => { setAiTopic(title); setShowAiModal(true); }}>✦ Generate with AI</button>
+        <button className="tk-btn tk-btn--ghost" onClick={() => setShowImport(true)}><IoClipboardOutline /> Bulk paste / import</button>
+        <button className="tk-btn tk-btn--ghost" onClick={openBank}><IoFolderOutline /> Question bank</button>
+        <button className="qb-ai-btn" onClick={() => { setAiTopic(title); setShowAiModal(true); }}><IoSparklesOutline /> Generate with AI</button>
         <div className="qb-actions-right">
           <button className="tk-btn tk-btn--ghost" disabled={saving} onClick={() => persist({ publish: false })}>
             {saving ? "Saving…" : "Save draft"}
@@ -342,7 +353,7 @@ export default function QuizBuilder() {
         </div>
       </div>
 
-      {aiNote && <div className="qb-ai-note">✦ {aiNote}</div>}
+      {aiNote && <div className="qb-ai-note"><IoSparklesOutline /> {aiNote}</div>}
 
       <div className="qb-split">
         <div className="qb-list">
@@ -354,12 +365,12 @@ export default function QuizBuilder() {
             >
               <span className="qb-list-num">{i + 1}</span>
               <span className="qb-list-text">{q.text || "Untitled question"}</span>
-              {q.source === "ai" && <span className="qb-ai-tag" title="AI-drafted">✦</span>}
+              {q.source === "ai" && <span className="qb-ai-tag" title="AI-drafted"><IoSparklesOutline /></span>}
               <span
                 className="qb-list-del"
                 onClick={(e) => { e.stopPropagation(); deleteQuestion(q._id); }}
               >
-                ✕
+                <IoCloseOutline />
               </span>
             </div>
           ))}
@@ -404,7 +415,7 @@ export default function QuizBuilder() {
                       onClick={() => setCorrect(ci)}
                       title="Mark correct"
                     >
-                      {c.is_correct ? "✓" : ""}
+                      {c.is_correct ? <IoCheckmarkOutline /> : ""}
                     </button>
                     <input
                       className={`qb-choice-input ${c.is_correct ? "qb-choice-input--on" : ""}`}
@@ -444,7 +455,7 @@ export default function QuizBuilder() {
             />
             <div className="qb-modal-footer">
               <span className={`qb-import-count ${importPreview.length ? "qb-import-count--ok" : ""}`}>
-                {importPreview.length ? `✓ ${importPreview.length} question(s) detected` : "Paste above to preview"}
+                {importPreview.length ? <><IoCheckmarkOutline /> {importPreview.length} question(s) detected</> : "Paste above to preview"}
               </span>
               <div className="qb-modal-btns">
                 <button className="tk-btn tk-btn--ghost" onClick={() => setShowImport(false)}>Cancel</button>
@@ -460,7 +471,7 @@ export default function QuizBuilder() {
           <div className="qb-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="qb-drawer-head">
               <h3>Question bank</h3>
-              <span className="qb-drawer-close" onClick={() => setShowBank(false)}>✕</span>
+              <span className="qb-drawer-close" onClick={() => setShowBank(false)}><IoCloseOutline /></span>
             </div>
             <div className="qb-scope-note">Scoped to your assigned subject</div>
             <div className="qb-bank-tabs">
@@ -485,7 +496,7 @@ export default function QuizBuilder() {
                   const on = !!bankSel[key];
                   return (
                     <div key={b.id} className={`qb-bank-row ${on ? "qb-bank-row--on" : ""}`} onClick={() => toggleBankSel(bankTab, b.id)}>
-                      <div className={`qb-bank-check ${on ? "qb-bank-check--on" : ""}`}>{on ? "✓" : ""}</div>
+                      <div className={`qb-bank-check ${on ? "qb-bank-check--on" : ""}`}>{on ? <IoCheckmarkOutline /> : ""}</div>
                       <div className="qb-bank-body">
                         <div className="qb-bank-text">{b.text}</div>
                         <div className="qb-bank-meta">
@@ -511,7 +522,7 @@ export default function QuizBuilder() {
           <div className="qb-modal" onClick={(e) => e.stopPropagation()}>
             <div className="qb-ai-modal-head">
               <h3>Generate with AI</h3>
-              <span className="qb-ai-badge">✦ AI</span>
+              <span className="qb-ai-badge"><IoSparklesOutline /> AI</span>
             </div>
             <p className="qb-modal-desc">
               Drafts land as unpublished — review and edit every question before publishing.
@@ -541,7 +552,7 @@ export default function QuizBuilder() {
               <div className="qb-modal-btns" style={{ marginLeft: "auto" }}>
                 <button className="tk-btn tk-btn--ghost" onClick={() => setShowAiModal(false)}>Cancel</button>
                 <button className="qb-ai-btn" onClick={generateWithAi} disabled={aiLoading || !aiTopic.trim()}>
-                  {aiLoading ? "Generating…" : "✦ Generate"}
+                  {aiLoading ? "Generating…" : <><IoSparklesOutline /> Generate</>}
                 </button>
               </div>
             </div>

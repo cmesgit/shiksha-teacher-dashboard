@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import { IoCheckmarkCircle } from "react-icons/io5";
+import { IoWarningOutline, IoHourglassOutline } from "react-icons/io5";
 import api from "../api/apiClient";
 import "../styles/quiz-draft-preview.css";
 import { LoadingState } from "../components/StateViews";
@@ -84,7 +85,7 @@ export default function QuizDraftPreview() {
       <button className="qdp-back-btn" onClick={() => navigate(-1)}>
         <IoChevronBack /> Back to Quizzes
       </button>
-      <div className="qdp-fetch-error">⚠️ {fetchError}</div>
+      <div className="qdp-fetch-error"><IoWarningOutline /> {fetchError}</div>
     </div>
   );
   if (!quiz) return null;
@@ -103,17 +104,18 @@ export default function QuizDraftPreview() {
 
   const BANNER_COPY = {
     draft: { cls: "qdp-draft-badge", text: "DRAFT — Not visible to students" },
-    pending: { cls: "qdp-draft-badge qdp-badge--pending", text: "⏳ Submitted — awaiting admin verification" },
-    approved: { cls: "qdp-draft-badge qdp-badge--approved", text: "✓ Approved — live for students" },
-    rejected: { cls: "qdp-draft-badge qdp-badge--rejected", text: "⚠ Changes requested by admin" },
+    pending: { cls: "qdp-draft-badge qdp-badge--pending", icon: IoHourglassOutline, text: "Submitted — awaiting admin verification" },
+    approved: { cls: "qdp-draft-badge qdp-badge--approved", icon: IoCheckmarkCircle, text: "Approved — live for students" },
+    rejected: { cls: "qdp-draft-badge qdp-badge--rejected", icon: IoWarningOutline, text: "Changes requested by admin" },
   };
   const banner = BANNER_COPY[reviewStatus] || BANNER_COPY.draft;
+  const BannerIcon = banner.icon;
 
   return (
     <div className="qdp-page">
       {/* Banner */}
       <div className="qdp-draft-banner">
-        <span className={banner.cls}>{banner.text}</span>
+        <span className={banner.cls}>{BannerIcon && <BannerIcon />} {banner.text}</span>
         <div className="qdp-banner-actions">
           {publishError && <span className="qdp-publish-error">{publishError}</span>}
           {canSubmit && (

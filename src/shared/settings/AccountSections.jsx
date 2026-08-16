@@ -23,7 +23,8 @@
 import { useEffect, useState } from "react";
 import {
   RiComputerLine, RiSmartphoneLine, RiTabletLine, RiDownloadLine,
-  RiArrowRightLine, RiShieldKeyholeLine,
+  RiArrowRightLine, RiShieldKeyholeLine, RiBookLine, RiFireLine,
+  RiFocus3Line, RiGraduationCapLine, RiFlashlightLine,
 } from "react-icons/ri";
 
 import {
@@ -216,7 +217,7 @@ export function SessionsSection({ api }) {
       {state.error && <Notice kind="err">{state.error}</Notice>}
 
       {!state.loading && !state.error && state.rows.length === 0 && (
-        <EmptyCard glyph="🖥️" title="No other sessions"
+        <EmptyCard glyph={<RiComputerLine />} title="No other sessions"
           body="You're only signed in here." />
       )}
 
@@ -421,7 +422,7 @@ export function GoalsSection({ api, editProfileId }) {
 
       <div className="st-stats">
         <div className="st-stat st-stat--streak">
-          <span className="st-stat__glyph">🔥</span>
+          <span className="st-stat__glyph"><RiFireLine /></span>
           <div>
             <div className="st-stat__value">
               {goal.streak_days} {goal.streak_days === 1 ? "day" : "days"}
@@ -433,7 +434,7 @@ export function GoalsSection({ api, editProfileId }) {
           </div>
         </div>
         <div className="st-stat st-stat--goal">
-          <span className="st-stat__glyph">🎯</span>
+          <span className="st-stat__glyph"><RiFocus3Line /></span>
           <div>
             <div className="st-stat__value">{goal.daily_minutes} min</div>
             <div className="st-stat__label">Daily goal</div>
@@ -543,7 +544,7 @@ export function BillingSection({ api }) {
 
       <GroupLabel>Active course access</GroupLabel>
       {live.length === 0 ? (
-        <EmptyCard glyph="📚" title="No active course access"
+        <EmptyCard glyph={<RiBookLine />} title="No active course access"
           body="Enrol in a course and it'll show up here with its access dates." />
       ) : live.map((a) => (
         <div key={a.id} className="st-accessrow">
@@ -596,12 +597,12 @@ export function BillingSection({ api }) {
  * ═══════════════════════════════════════════════════════════════════════════ */
 const TRACKS = [
   {
-    key: "academy", emoji: "🎓", title: "Faculty", suffix: "· Academy",
+    key: "academy", icon: RiGraduationCapLine, title: "Faculty", suffix: "· Academy",
     sub: "Academic classroom teaching · syllabus courses & live classes",
     accent: "faculty",
   },
   {
-    key: "skill", emoji: "⚡", title: "Expert", suffix: "· Skill-Dev",
+    key: "skill", icon: RiFlashlightLine, title: "Expert", suffix: "· Skill-Dev",
     sub: "Skill-development sessions · 1:1 & cohort bookings",
     accent: "expert",
   },
@@ -642,7 +643,7 @@ export function TeacherIdentitySection({
         return (
           <div key={t.key} className={`st-track st-track--${status} st-track--${t.accent}`}>
             <div className="st-track__head">
-              <span className={`st-track__icon st-track__icon--${t.accent}`}>{t.emoji}</span>
+              <span className={`st-track__icon st-track__icon--${t.accent}`}><t.icon /></span>
               <div className="st-track__txt">
                 <div className="st-track__title">
                   {t.title} <span className="st-track__suffix">{t.suffix}</span>

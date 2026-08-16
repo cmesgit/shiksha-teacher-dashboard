@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   FiChevronLeft, FiSearch, FiUsers, FiMoreVertical, FiPaperclip, FiSend,
-  FiX, FiBookOpen, FiVolumeX, FiFlag, FiFolder, FiDownload, FiFileText,
+  FiX, FiBookOpen, FiVolumeX, FiFlag, FiFolder, FiDownload, FiFileText, FiSmile,
 } from "react-icons/fi";
 import { ChatAPI, openChatSocket } from "../chatClient";
 import MessageBubble from "./MessageBubble";
@@ -73,6 +73,30 @@ export default function ConversationThread({
   const fileInputRef = useRef(null);
   const seededDraft = useRef(false);
   const pendingFilesRef = useRef(new Map()); // tempId -> { file, caption, reply_to } for retry
+  const ackTimers = useRef(new Map()); // client_id -> timeout; a text send that
+                                       // never gets a server ack becomes "failed"
+
+  // A text message stays optimistic (_pending) only until the server echoes it
+  // back (onMessage matches client_id) or rejects it (onError). If neither
+  // happens within the window — the WS is down / the send was silently dropped
+  // — flip it to a real "failed, tap to retry" state instead of a permanent
+  // fake "Sent". This is the core of the "messages silently drop" fix.
+  const ACK_TIMEOUT_MS = 12000;
+  const scheduleAck = useCallback((client_id) => {
+    clearTimeout(ackTimers.current.get(client_id));
+    const t = setTimeout(() => {
+      ackTimers.current.delete(client_id);
+      setMessages((prev) => prev.map((x) =>
+        (x.client_id === client_id && x._pending)
+          ? { ...x, _pending: false, _failed: true } : x));
+    }, ACK_TIMEOUT_MS);
+    ackTimers.current.set(client_id, t);
+  }, []);
+  const clearAck = useCallback((client_id) => {
+    if (!client_id) return;
+    clearTimeout(ackTimers.current.get(client_id));
+    ackTimers.current.delete(client_id);
+  }, []);
 
   useEffect(() => { setConv(conversation); }, [conversation]);
 
@@ -123,6 +147,8 @@ export default function ConversationThread({
       onDisconnect: () => setOffline(true),
       onHistory: (data) => { setMessages((prev) => (prev.length ? prev : data)); setLoading(false); },
       onMessage: (m) => {
+        // Server acked this optimistic message — cancel its failure timer.
+        if (m.client_id) clearAck(m.client_id);
         setMessages((prev) => {
           if (prev.some((x) => (m.client_id && x.client_id === m.client_id) || x.id === m.id)) {
             return prev.map((x) => ((m.client_id && x.client_id === m.client_id) || x.id === m.id) ? m : x);
@@ -152,6 +178,7 @@ export default function ConversationThread({
       },
       onError: (data) => {
         if (data?.client_id) {
+          clearAck(data.client_id);
           setMessages((prev) => prev.map((x) => (x.client_id === data.client_id ? { ...x, _pending: false, _failed: true } : x)));
         }
         pushToast(data?.reason || "Message couldn't be sent.", "err");
@@ -161,7 +188,12 @@ export default function ConversationThread({
     ChatAPI.markRead(conv.id).catch(() => {});
     // Tell the global Messages badge (Header) to re-fetch its unread total.
     window.dispatchEvent(new Event("shiksha:messages-read"));
-    return () => { alive = false; sock.close(); };
+    return () => {
+      alive = false;
+      sock.close();
+      ackTimers.current.forEach((t) => clearTimeout(t));
+      ackTimers.current.clear();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv?.id]);
 
@@ -211,6 +243,7 @@ export default function ConversationThread({
       sender: { name: "You", identity: "me" }, _pending: true,
     }]);
     sockRef.current?.send(body, client_id, replyTo?.id);
+    scheduleAck(client_id);
     setDraft(""); setReplyTo(null);
   };
 
@@ -221,6 +254,7 @@ export default function ConversationThread({
     }
     setMessages((prev) => prev.map((x) => (x.client_id === msg.client_id ? { ...x, _pending: true, _failed: false } : x)));
     sockRef.current?.send(msg.body, msg.client_id, msg.reply_to?.id);
+    scheduleAck(msg.client_id);
   };
 
   const runUpload = async (tempId) => {
@@ -497,7 +531,7 @@ export default function ConversationThread({
               <FiPaperclip size={17} />
             </button>
             <div className="cc-emoji-anchor">
-              <button className="cc-icon-btn" title="Emoji" onClick={() => setEmojiOpen((v) => !v)}>🙂</button>
+              <button className="cc-icon-btn" title="Emoji" onClick={() => setEmojiOpen((v) => !v)}><FiSmile size={17} /></button>
               {emojiOpen && (
                 <div className="cc-emoji-picker cc-emoji-picker-up">
                   {QUICK_EMOJI.map((e) => (

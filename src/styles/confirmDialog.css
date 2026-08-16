@@ -62,7 +62,7 @@
 
 .tcd__btn {
   padding: 9px 18px;
-  border-radius: 8px;
+  border-radius: var(--r-md);
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
@@ -93,8 +93,8 @@
 .tcd__overlay {
   --tcd-primary: #3b5c7c;
   --tcd-primary-hover: #2b4560;
-  --tcd-danger: #dc2626;
-  --tcd-danger-hover: #b91c1c;
+  --tcd-danger: var(--danger);
+  --tcd-danger-hover: var(--danger);
 }
 /* Skill Dev retint — dialog="{...dialog, tone:'skill'}" */
 .tcd__overlay--skill {

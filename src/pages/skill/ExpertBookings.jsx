@@ -23,6 +23,10 @@ import "../../styles/expertBookings.css";
 import { LoadingState } from "../../components/StateViews";
 import { DAYS, SLOTS, label as slotLabel } from "../../api/availabilityStore";
 
+function fmtRupees(paise) {
+  return `₹${Math.round((paise || 0) / 100)}`;
+}
+
 function fmtWhen(iso) {
   if (!iso) return "TBC";
   try {
@@ -93,6 +97,14 @@ export default function ExpertBookings() {
 
   const startClass = (s) => navigate(`/teacher/skill-session/live/${s.id}`);
 
+  const markPaid = (s) => act(s.id, "marking-paid", async () => {
+    const res = await api.post(`/skill/teacher/sessions/${s.id}/mark-paid/`);
+    setSessions((ss) => ss.map((x) => (x.id === s.id
+      ? { ...x, payment_status: res.data.payment_status, paid_at: res.data.paid_at }
+      : x)));
+    showToast("Marked as paid.");
+  });
+
   const reportNoShow = async () => {
     if (!noShowFor) return;
     await api.post(`/skill/teacher/sessions/${noShowFor.id}/report-no-show/`);
@@ -160,18 +172,28 @@ export default function ExpertBookings() {
         ) : upcoming.map((s) => {
           const name = s.learner?.name || "Student";
           const awaiting = s.status === "needs_reconfirmation";
+          const isPaid = s.payment_status === "paid";
+          const busy = acting[s.id];
           return (
             <div key={s.id} className="eb-row">
               <div className="eb-avatar">{name[0]}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="eb-topic">{s.note || "1-on-1 session"}</div>
-                <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)}</div>
+                <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)} · {fmtRupees(s.amount)}, direct to you</div>
                 {awaiting && <div className="eb-awaitingNote">Awaiting student confirmation</div>}
               </div>
               {!awaiting && <span className="eb-tag eb-tag--confirmed">Confirmed</span>}
+              <span className={`eb-tag ${isPaid ? "eb-tag--completed" : "eb-tag--pending"}`}>
+                {isPaid ? "Paid" : "Payment pending"}
+              </span>
               <div className="eb-actions">
                 {!awaiting && <button className="eb-btn eb-btn--primary" onClick={() => startClass(s)}><Icon.vid size={13} /> Start session</button>}
                 {!awaiting && <button className="eb-btn eb-btn--outline" onClick={() => setProposeFor(s)}>Reschedule</button>}
+                {!isPaid && (
+                  <button className="eb-btn eb-btn--outline" disabled={!!busy} onClick={() => markPaid(s)}>
+                    {busy === "marking-paid" ? "Marking…" : "Mark as paid"}
+                  </button>
+                )}
                 <button className="eb-iconBtn" title="Message" disabled={!s.learner?.id} onClick={() => openChat(s)}><Icon.msg size={14} /></button>
                 <button className="eb-link" onClick={() => setNoteFor(s)}>{s.teacher_note ? "● Notes" : "+ Note"}</button>
               </div>
@@ -183,16 +205,26 @@ export default function ExpertBookings() {
           <div className="sk-empty">No completed sessions yet.</div>
         ) : past.map((s) => {
           const name = s.learner?.name || "Student";
+          const isPaid = s.payment_status === "paid";
+          const busy = acting[s.id];
           return (
             <div key={s.id} className="eb-row">
               <div className="eb-avatar">{name[0]}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="eb-topic">{s.note || "1-on-1 session"}</div>
-                <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)}</div>
+                <div className="eb-meta">{name} · {fmtWhen(s.scheduled_for)} · {fmtRupees(s.amount)}, direct to you</div>
                 {s.no_show && <div className="eb-noShowTag">No-show reported</div>}
               </div>
               <span className="eb-tag eb-tag--completed">Completed</span>
+              <span className={`eb-tag ${isPaid ? "eb-tag--completed" : "eb-tag--pending"}`}>
+                {isPaid ? "Paid" : "Payment pending"}
+              </span>
               <div className="eb-actions">
+                {!isPaid && (
+                  <button className="eb-btn eb-btn--outline" disabled={!!busy} onClick={() => markPaid(s)}>
+                    {busy === "marking-paid" ? "Marking…" : "Mark as paid"}
+                  </button>
+                )}
                 {!s.no_show && <button className="eb-btn eb-btn--outline" onClick={() => setNoShowFor(s)}>Report no-show</button>}
                 <button className="eb-link" onClick={() => setNoteFor(s)}>{s.teacher_note ? "● Notes" : "+ Note"}</button>
               </div>
