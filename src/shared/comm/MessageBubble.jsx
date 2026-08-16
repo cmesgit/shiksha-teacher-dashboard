@@ -145,9 +145,13 @@ export default function MessageBubble({
           <div className="cc-bubble-meta">
             <span>{formatClock(msg.created_at)}</span>
             {mine && !failed && (
-              isRead
-                ? <FiCheck className="cc-read-tick cc-read-tick-on" size={13} title="Read" />
-                : <FiClock className="cc-read-tick" size={11} title="Sent" />
+              msg._pending
+                // Not yet acked by the server — show a real "sending" state
+                // instead of a "Sent" tick that lies about delivery.
+                ? <span className="cc-sending-label"><FiClock className="cc-read-tick" size={11} /> Sending…</span>
+                : isRead
+                  ? <FiCheck className="cc-read-tick cc-read-tick-on" size={13} title="Read" />
+                  : <FiCheck className="cc-read-tick" size={13} title="Sent" />
             )}
             {failed && (
               <button className="cc-retry-btn" onClick={() => onRetry?.(msg)}>Retry</button>

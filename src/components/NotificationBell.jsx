@@ -183,6 +183,11 @@ export default function NotificationBell() {
   const getDisplayType = (notif) =>
     notif.is_private_session ? "PRIVATE_SESSION" : notif.type;
 
+  // Skill-Dev bookings are calendar events, not a live video call — reserve
+  // 🎥 for actual join-now live/group sessions so the icon matches the event.
+  const iconFor = (notif) =>
+    notif.is_skill_session ? "📅" : (TYPE_ICONS[getDisplayType(notif)] || "🔔");
+
   return (
     <div className="notif-bell-wrap" ref={ref}>
       <button className="notif-bell-btn" onClick={handleOpen}>
@@ -228,7 +233,7 @@ export default function NotificationBell() {
                     }}
                   >
                     <span className="notif-bell-icon" style={{ fontSize: 16 }}>
-                      {TYPE_ICONS[displayType] || "🔔"}
+                      {iconFor(notif)}
                     </span>
                     <div className="notif-bell-content">
                       <p className="notif-bell-title">{notif.title}</p>

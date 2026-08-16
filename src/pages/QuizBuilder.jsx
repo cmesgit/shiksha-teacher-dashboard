@@ -296,7 +296,14 @@ export default function QuizBuilder() {
         })),
       });
       if (publish) await api.patch(`/teacher/quizzes/${id}/publish/`);
-      toast.success(publish ? "Quiz submitted for review" : "Draft saved");
+      if (publish) {
+        toast.success(
+          "Submitted for admin review — an admin will verify it before it goes live for students.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.success("Draft saved");
+      }
       navigate(`/teacher/classes/${subjectId}/quizzes`);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to save quiz.");

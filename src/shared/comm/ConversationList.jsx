@@ -147,7 +147,7 @@ export default function ConversationList({
     <aside className="cc-list">
       <div className="cc-list-head">
         <span>Messages</span>
-        <button className="cc-newbtn" title="New message" onClick={onNewChat}><FiPlus size={16} /></button>
+        <button className="cc-newbtn" title="New message" aria-label="Start a new conversation" onClick={onNewChat}><FiPlus size={16} /></button>
       </div>
 
 
