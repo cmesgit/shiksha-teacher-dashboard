@@ -251,6 +251,7 @@ export default function SubmissionView() {
                           type="button"
                           className="sv-review-btn"
                           onClick={() => openGrading(student)}
+                          data-tour="submissions.grade-btn"
                         >
                           {student.marksObtained != null ? "Edit grade" : "Grade"}
                         </button>
@@ -264,7 +265,7 @@ export default function SubmissionView() {
                 {gradingId === student.id && (
                   <tr className="sv-table-row">
                     <td colSpan="6">
-                      <div className="sv-grade-form" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0" }}>
+                      <div className="sv-grade-form" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0" }} data-tour="submissions.marks-input">
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <input
                             type="number"
@@ -290,6 +291,7 @@ export default function SubmissionView() {
                             className="sv-review-btn"
                             disabled={saving}
                             onClick={() => saveGrade(student)}
+                            data-tour="submissions.save-grade"
                           >
                             {saving ? "Saving…" : "Save grade"}
                           </button>

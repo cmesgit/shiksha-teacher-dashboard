@@ -38,11 +38,12 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   RiGroupLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine, RiSettings3Line,
-  RiArrowDownSLine, RiAddLine,
+  RiArrowDownSLine, RiAddLine, RiQuestionLine,
 } from "react-icons/ri";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
 import SettingsModal, { settingsSectionFromUrl } from "./SettingsModal";
+import { useTour } from "../tour/useTour";
 
 const DEFAULT_EMOJI = "📚";
 const initials = (name) =>
@@ -209,6 +210,12 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
     user, profiles, activeProfile, teacherInfo,
     isTeacherContext, selectProfile, setProfilePin, enterTeacherMode, switchTrack, logout,
   } = useAuth();
+  // `tour.state` is null outside a mounted TourProvider (useTour()'s
+  // fallback) — the "Help & tours" row below is gated on it so this
+  // component doesn't show a dead button in apps that haven't mounted the
+  // tour engine yet (TOUR_BUILD_GUIDE.md's phased rollout — student only
+  // so far).
+  const tour = useTour();
 
   const [open, setOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState(null);
@@ -387,6 +394,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           className={`ps-trigger ${open ? "ps-trigger--open" : ""}`}
           onClick={() => setOpen((v) => !v)}
           aria-haspopup="menu" aria-expanded={open} title="Account & profiles"
+          data-tour="header.profile-switcher"
         >
           <span className="ps-av ps-av--initials ps-trigger__av" style={{ background: ctxTint, color: ctxAccent }}>
             {isTeacherContext ? teacherEmoji : initials(accountName)}
@@ -524,6 +532,11 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
               <button className="ps-mi" onClick={() => openSettings("security")} role="menuitem">
                 <RiSettings3Line /> Account settings
               </button>
+              {tour.state && (
+                <button className="ps-mi" onClick={() => { setOpen(false); tour.openHelp(); }} role="menuitem" data-tour="header.help-tours">
+                  <RiQuestionLine /> Help &amp; tours
+                </button>
+              )}
               <button className="ps-mi ps-mi--logout" onClick={() => logout()} role="menuitem">
                 <RiLogoutBoxRLine /> Log out
               </button>

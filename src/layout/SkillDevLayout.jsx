@@ -84,6 +84,7 @@ export default function SkillDevLayout() {
                 key={item.to}
                 className={`sk-link${active ? " active" : ""}`}
                 onClick={() => goTo(item.to)}
+                data-tour={`sidebar-skill.nav-${item.to.replace(/^\/+/, "").replace(/\//g, "-")}`}
               >
                 <span className="sk-link__i">{item.icon}</span>
                 {item.label}

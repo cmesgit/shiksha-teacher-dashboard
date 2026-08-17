@@ -51,7 +51,7 @@ export default function CounselorLayout() {
     end ? pathname === to : pathname === to || pathname.startsWith(to + "/");
 
   const shell = (content, showNav) => (
-    <div className="teacher-layout">
+    <div className="teacher-layout" data-track="counsellor">
       <aside className={`sk-side${sidebarOpen ? " sk-side--open" : ""}`}>
         <div className="sk-side__top">
           <div className="sk-side__brand">
@@ -73,6 +73,7 @@ export default function CounselorLayout() {
                 key={item.to}
                 className={`sk-link${isActive(item.to, item.end) ? " active" : ""}`}
                 onClick={() => { navigate(item.to); setSidebarOpen(false); }}
+                data-tour={`sidebar-counsellor.nav-${item.to.replace(/^\/+/, "").replace(/\//g, "-")}`}
               >
                 <span className="sk-link__i">{item.icon}</span>
                 {item.label}

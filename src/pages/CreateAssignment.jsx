@@ -179,7 +179,7 @@ export default function CreateAssignment() {
 
           {/* Batch (create only) */}
           {!isEditing && (
-            <div className="ca-field">
+            <div className="ca-field" data-tour="assignment-create.batch">
               <label>Batch</label>
               {batches.length === 0 ? (
                 <span className="ca-error">
@@ -243,7 +243,7 @@ export default function CreateAssignment() {
           </div>
 
           {/* Due Date */}
-          <div className="ca-field">
+          <div className="ca-field" data-tour="assignment-create.due-date">
             <label>Due Date</label>
             <input
               type="date"
@@ -336,6 +336,7 @@ export default function CreateAssignment() {
               className="ca-create-btn"
               onClick={handleSubmit}
               disabled={submitting}
+              data-tour="assignment-create.submit"
             >
               {submitting ? "Saving…" : isEditing ? "Update" : "Create"}
             </button>

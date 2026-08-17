@@ -384,6 +384,7 @@ export default function ClassroomUI({
             <button
               className={"cf-tab" + (activePanel === "chat" ? " cf-tab--active" : "")}
               onClick={() => switchTab("chat")}
+              data-tour="live-host.chat-tab"
             >
               Chat
             </button>
@@ -396,6 +397,7 @@ export default function ClassroomUI({
             <button
               className={"cf-tab" + (activePanel === "people" ? " cf-tab--active" : "")}
               onClick={() => switchTab("people")}
+              data-tour="live-host.people-tab"
             >
               People
             </button>

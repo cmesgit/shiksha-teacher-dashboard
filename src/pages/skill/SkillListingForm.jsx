@@ -122,7 +122,7 @@ export default function SkillListingForm() {
               placeholder="e.g. Piano & church accompaniment" maxLength={120} />
           </Field>
 
-          <div className="sk-form__row">
+          <div className="sk-form__row" data-tour="expert-listing.category-price">
             <Field label="Category" error={errors.category}>
               <select className="sk-input" value={form.category} onChange={(e) => set("category", e.target.value)}>
                 <option value="">Choose…</option>
@@ -143,7 +143,7 @@ export default function SkillListingForm() {
           </Field>
 
           <Field label="Skill tags" error={errors.skill_tags}>
-            <div className="sk-tagfield">
+            <div className="sk-tagfield" data-tour="expert-listing.skill-tags">
               {form.skill_tags.map((t) => (
                 <span key={t} className="sk-tagfield__tag">
                   {t}
@@ -185,7 +185,7 @@ export default function SkillListingForm() {
           <span>Goes live immediately. An admin can suspend it later.</span>
           <span>
             <button className="sk-btn sk-btn--ghost" onClick={() => navigate("/teacher/expert/skills")}>Cancel</button>
-            <button className="sk-btn" onClick={submit} disabled={saving}>
+            <button className="sk-btn" onClick={submit} disabled={saving} data-tour="expert-listing.publish">
               {saving ? "Saving…" : id ? "Save changes" : "Publish skill"}
             </button>
           </span>

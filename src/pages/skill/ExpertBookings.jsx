@@ -20,7 +20,7 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import { useSkillToast } from "../../components/useSkillToast";
 import "../../styles/skillDev.css";
 import "../../styles/expertBookings.css";
-import { LoadingState } from "../../components/StateViews";
+import { LoadingState, EmptyState } from "../../components/StateViews";
 import { DAYS, SLOTS, label as slotLabel } from "../../api/availabilityStore";
 
 function fmtRupees(paise) {
@@ -139,7 +139,8 @@ export default function ExpertBookings() {
             </div>
           )}
           {requests.length === 0 ? (
-            <div className="sk-empty">No pending requests right now.</div>
+            <EmptyState icon="inbox" plain title="No pending requests"
+              message="Session requests from students will show up here, with a 24-hour window to accept or decline." />
           ) : requests.map((s) => {
             const left = hoursLeft(s.created_at);
             const name = s.learner?.name || "Student";
@@ -168,7 +169,8 @@ export default function ExpertBookings() {
         </>
       ) : tab === "upcoming" ? (
         upcoming.length === 0 ? (
-          <div className="sk-empty">No upcoming sessions.</div>
+          <EmptyState icon="calendar" plain title="No upcoming sessions"
+            message="Sessions you've accepted will appear here until it's time to start them." />
         ) : upcoming.map((s) => {
           const name = s.learner?.name || "Student";
           const awaiting = s.status === "needs_reconfirmation";
@@ -202,7 +204,8 @@ export default function ExpertBookings() {
         })
       ) : (
         past.length === 0 ? (
-          <div className="sk-empty">No completed sessions yet.</div>
+          <EmptyState icon="clock" plain title="No completed sessions yet"
+            message="Once you've hosted a session, it'll move here along with payment status and any notes you've kept." />
         ) : past.map((s) => {
           const name = s.learner?.name || "Student";
           const isPaid = s.payment_status === "paid";

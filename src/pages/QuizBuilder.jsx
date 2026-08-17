@@ -339,15 +339,15 @@ export default function QuizBuilder() {
       </div>
 
       <div className="qb-actions">
-        <button className="tk-btn" onClick={addQuestion}>+ Add question</button>
+        <button className="tk-btn" onClick={addQuestion} data-tour="quiz-builder.add-question">+ Add question</button>
         <button className="tk-btn tk-btn--ghost" onClick={() => setShowImport(true)}><IoClipboardOutline /> Bulk paste / import</button>
-        <button className="tk-btn tk-btn--ghost" onClick={openBank}><IoFolderOutline /> Question bank</button>
-        <button className="qb-ai-btn" onClick={() => { setAiTopic(title); setShowAiModal(true); }}><IoSparklesOutline /> Generate with AI</button>
+        <button className="tk-btn tk-btn--ghost" onClick={openBank} data-tour="quiz-builder.question-bank"><IoFolderOutline /> Question bank</button>
+        <button className="qb-ai-btn" onClick={() => { setAiTopic(title); setShowAiModal(true); }} data-tour="quiz-builder.ai-generate"><IoSparklesOutline /> Generate with AI</button>
         <div className="qb-actions-right">
           <button className="tk-btn tk-btn--ghost" disabled={saving} onClick={() => persist({ publish: false })}>
             {saving ? "Saving…" : "Save draft"}
           </button>
-          <button className="qb-publish-btn" disabled={saving} onClick={() => persist({ publish: true })}>
+          <button className="qb-publish-btn" disabled={saving} onClick={() => persist({ publish: true })} data-tour="quiz-builder.submit-review">
             Submit for review
           </button>
         </div>

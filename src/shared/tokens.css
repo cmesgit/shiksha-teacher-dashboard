@@ -215,6 +215,26 @@
   --st-cancelled-bg: var(--danger-soft);
 }
 
+/* ── Tour token layer (TOUR_SYSTEM_SPEC.md §9.1 — required, C6) ─────────
+   tours.css (shared/src/tour/) reads ONLY these --tour-* names, never
+   --action/--surface/etc directly — this app's names are one of four
+   disjoint token vocabularies across the three apps, so the indirection
+   here is what lets the SAME tours.css work unmodified everywhere. */
+:root {
+  --tour-surface: var(--surface);
+  --tour-ink:     var(--ink);
+  --tour-ink-2:   var(--ink-2);
+  --tour-muted:   var(--ink-muted);
+  --tour-faint:   var(--ink-faint);
+  --tour-border:  var(--border);
+  --tour-accent:  var(--acc, var(--action));
+  --tour-radius:  var(--r-lg);
+  --tour-shadow:  var(--sh-modal);
+  --tour-focus:   var(--focus-ring);
+  --tour-dot-idle: var(--dot-idle);
+  --z-tour:       10500;
+}
+
 /* ── Per-track accent switch ──────────────────────────────────────────── */
 /* data-track lives on the layout root (StudentLayout / TeacherLayout). */
 [data-track="academy"] {

@@ -464,7 +464,8 @@ export default function SettingsModal({
                   return (
                     <button key={s.key} type="button"
                       className={`st-navitem ${section === s.key ? "on" : ""}`}
-                      onClick={() => go(s.key)}>
+                      onClick={() => go(s.key)}
+                      data-tour={s.key === "sessions" ? "settings.sessions-nav" : undefined}>
                       <Icon className="st-navitem__icon" />
                       <span className="st-navitem__lbl">{s.label}</span>
                     </button>

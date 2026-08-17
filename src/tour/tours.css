@@ -1,0 +1,395 @@
+/**
+ * ┌──────────────────────────────────────────────────────────────────────────┐
+ * │  GENERATED FILE — DO NOT EDIT HERE.                                       │
+ * │  Canonical source: <workspace>/shared/src/tour/tours.css                  │
+ * │  Edit the canonical copy, then run `npm run sync:shared` (any app) to     │
+ * │  propagate. `npm run check:shared` fails if an app's copy has drifted.    │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * tours.css — TOUR_SYSTEM_SPEC.md §9. Reads ONLY `--tour-*` custom
+ * properties (C6) — never an app-specific token name directly. Each app
+ * declares its own small `--tour-*` mapping block (see tokens.css /
+ * theme.css) so this one file works unmodified in all three apps despite
+ * their four disjoint token vocabularies.
+ */
+
+.tour-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tour, 10500);
+}
+
+/* popIn/overlayIn already exist globally in student/teacher tokens.css
+   (C10) — these are harmless duplicates there (identical keyframes,
+   last-defined wins with no visible difference) and the only way
+   shiksha-frontend — which has neither — gets them, since this file is the
+   one shared copy all three apps receive verbatim. */
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Scrim + spotlight (§9.2) ─────────────────────────────────────────── */
+.tour-scrim {
+  animation: overlayIn 200ms ease;
+}
+.tour-scrim__fill {
+  fill: color-mix(in srgb, var(--tour-ink) 55%, transparent);
+}
+.tour-scrim__cutout,
+.tour-scrim__cutout-stroke {
+  transition: x 260ms cubic-bezier(.4, 0, .2, 1),
+              y 260ms cubic-bezier(.4, 0, .2, 1),
+              width 260ms cubic-bezier(.4, 0, .2, 1),
+              height 260ms cubic-bezier(.4, 0, .2, 1);
+}
+.tour-scrim__cutout-stroke {
+  stroke: var(--tour-accent);
+  stroke-opacity: .4;
+  stroke-width: 1;
+}
+
+/* ── The card (§9.3) ──────────────────────────────────────────────────── */
+.tour-card {
+  width: 300px;
+  max-width: 92vw;
+  background: var(--tour-surface);
+  border: 1px solid var(--tour-border);
+  border-radius: var(--tour-radius);
+  box-shadow: var(--tour-shadow);
+  padding: 14px 16px;
+  animation: popIn 220ms cubic-bezier(.4, 0, .2, 1);
+  z-index: 1;
+}
+.tour-card:focus-visible,
+.tour-card:focus {
+  outline: none;
+  box-shadow: var(--tour-shadow), var(--tour-focus);
+}
+
+.tour-card__eyebrow {
+  font-size: 10.5px;
+  color: var(--tour-faint);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 4px;
+}
+.tour-card__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--tour-ink);
+  margin: 0 0 4px;
+}
+.tour-card__body {
+  font-size: 12.5px;
+  color: var(--tour-ink-2);
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.tour-card__dots {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.tour-card__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--tour-dot-idle, var(--tour-border));
+}
+.tour-card__dot--on {
+  background: var(--tour-accent);
+}
+
+.tour-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tour-card__footer-right {
+  display: flex;
+  gap: 8px;
+}
+.tour-card__skip {
+  font-size: 11.5px;
+  color: var(--tour-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.tour-card__back,
+.tour-card__next {
+  font-size: 11.5px;
+  font-weight: 600;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+.tour-card__back {
+  background: transparent;
+  color: var(--tour-ink-2);
+  border: 1px solid var(--tour-border);
+}
+.tour-card__next {
+  background: var(--tour-accent);
+  color: #fff;
+}
+.tour-card__back:focus-visible,
+.tour-card__next:focus-visible,
+.tour-card__skip:focus-visible {
+  outline: none;
+  box-shadow: var(--tour-focus);
+}
+
+/* ── Card pointer + emphasis arrow (§9.4) ─────────────────────────────── */
+.tour-card__pointer path {
+  fill: var(--tour-surface);
+  stroke: var(--tour-border);
+  stroke-width: 1;
+}
+.tour-emphasis-arrow__path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tourArrowDraw 420ms ease-out forwards;
+}
+@keyframes tourArrowDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── Accessibility ─────────────────────────────────────────────────────── */
+.tour-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced motion (C9 / §9.6) ──────────────────────────────────────────
+   student/teacher already zero out all animation/transition durations
+   globally (tokens.css). shiksha-frontend has no such rule, so this tour
+   stylesheet ships its own — scoped to the tour's own classes only, not a
+   blanket `*` reset, since this file is the one thing all three apps share
+   and a blanket reset would be a needless (if harmless) duplicate in the
+   two apps that already have one. */
+@media (prefers-reduced-motion: reduce) {
+  .tour-card,
+  .tour-scrim,
+  .tour-scrim__cutout,
+  .tour-scrim__cutout-stroke,
+  .tour-emphasis-arrow__path,
+  .tour-help__sheet,
+  .tour-help__scrim {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ── Help panel (§6.1) ───────────────────────────────────────────────── */
+.tour-help-root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-tour);
+}
+
+.tour-help__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .32);
+  animation: tour-fade-in .18s ease both;
+}
+
+.tour-help__sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(380px, 100vw);
+  background: var(--tour-surface);
+  color: var(--tour-ink);
+  border-radius: var(--tour-sheet-radius) 0 0 var(--tour-sheet-radius);
+  box-shadow: var(--tour-shadow);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow-y: auto;
+  animation: tour-sheet-in .22s ease both;
+}
+
+@keyframes tour-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tour-sheet-in { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.tour-help__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.tour-help__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tour-ink);
+}
+
+.tour-help__close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--tour-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.tour-help__empty {
+  color: var(--tour-muted);
+  font-size: 13.5px;
+}
+
+.tour-help__autoplay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--tour-ink-2);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--tour-border);
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+.tour-help__list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tour-help__group + .tour-help__group {
+  margin-top: 18px;
+}
+
+.tour-help__groupLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--tour-faint);
+  margin-bottom: 8px;
+}
+
+.tour-help__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--tour-border);
+}
+
+.tour-help__rowLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tour-ink);
+}
+
+.tour-help__rowStatus {
+  font-size: 12px;
+  color: var(--tour-muted);
+  margin-top: 2px;
+}
+
+.tour-help__rowBtn {
+  flex: none;
+  background: var(--tour-accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: var(--hit-min, 32px);
+}
+
+.tour-help__rowBtn:disabled {
+  background: var(--tour-border);
+  color: var(--tour-faint);
+  cursor: not-allowed;
+}
+
+.tour-help__resetAll {
+  margin-top: 16px;
+  background: none;
+  border: 1px solid var(--tour-border);
+  border-radius: var(--tour-radius);
+  color: var(--tour-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+/* ── Welcome-back bar (§6.3) — inline, never fixed/overlay/modal ────────── */
+@keyframes tour-fadeUp { from { transform: translateY(6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.tour-welcomeback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: var(--tour-surface);
+  border: 1px solid var(--tour-border);
+  border-radius: var(--tour-radius);
+  box-shadow: var(--tour-shadow);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  animation: tour-fadeUp .25s ease both;
+}
+
+.tour-welcomeback__text {
+  font-size: 13.5px;
+  color: var(--tour-ink-2);
+}
+
+.tour-welcomeback__actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.tour-welcomeback__show {
+  background: var(--tour-accent);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tour-welcomeback__dismiss {
+  background: none;
+  border: none;
+  color: var(--tour-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 7px 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-welcomeback { animation-duration: .01ms !important; }
+}

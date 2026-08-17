@@ -64,7 +64,7 @@ export default function PrivateSessionAvailability() {
 
         {/* Grid */}
         <div className="tps__availCard">
-          <div className="tps__availGrid">
+          <div className="tps__availGrid" data-tour="private-availability.grid">
             {/* Time labels column */}
             <div className="tps__availTimeCol">
               <div className="tps__availColHeader" />
@@ -112,7 +112,7 @@ export default function PrivateSessionAvailability() {
               <NavIcon name="check" size={14} color="var(--success)" /> Availability saved successfully!
             </span>
           )}
-          <button className="tps__availSaveBtn" onClick={handleSave}>Save Availability</button>
+          <button className="tps__availSaveBtn" onClick={handleSave} data-tour="private-availability.save">Save Availability</button>
         </div>
       </div>
     </div>

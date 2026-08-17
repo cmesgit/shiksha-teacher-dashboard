@@ -199,6 +199,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
               type="button"
               onClick={() => go(item.to)}
               className={`acad-side__item${active ? " active" : ""}`}
+              data-tour={`sidebar.nav-${item.to.replace(/^\/+/, "").replace(/\//g, "-")}`}
             >
               <NavIcon name={item.i} size={14} />
               {item.l}
