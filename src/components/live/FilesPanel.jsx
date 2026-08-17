@@ -1,6 +1,11 @@
 /**
- * FilesPanel.jsx — group-session file sharing, ported from shiksha-frontend's
- * FilesPanel.jsx for feature parity across all three group-session hosts.
+ * FilesPanel.jsx — group- and private-session file sharing, ported from
+ * shiksha-frontend's FilesPanel.jsx for feature parity across all live
+ * session hosts. `sessionType` picks the URL base, same convention as
+ * NotesPanel.jsx's `NOTES_URL` map — the two session kinds are backed by
+ * different Django URL prefixes (sessions_app/urls.py: bare
+ * `<uuid:session_id>/files/` for private, `group-sessions/<uuid>/files/`
+ * for group), not one shared endpoint.
  *
  * Right-hand panel, same 300px shell as the chat/notes/people panels.
  * Everyone uploads; only the host or the uploader may delete a row. Every
@@ -9,22 +14,31 @@
  *
  * `limits.max_upload_mb` / `limits.max_files` drive CLIENT-SIDE pre-checks
  * only (fewer round-trips for an obviously-too-big file) — the real
- * enforcement is server-side in live_files_views.py::session_files (413
- * "too_large" / 409 "too_many"), so every server error is surfaced via its
- * `detail` message rather than re-implemented here.
+ * enforcement is server-side in live_files_views.py (413 "too_large" / 409
+ * "too_many"), so every server error is surfaced via its `detail` message
+ * rather than re-implemented here.
  *
  * Live updates: this deliberately does NOT open a second WebSocket. It
- * receives the *same* `group_session_chat_<id>` socket the classroom UI
- * already holds open for chat and adds an independent
- * `addEventListener("message", …)` listener — additive, side-by-side with
- * the chat panel's own `ws.onmessage` handler, so neither clobbers the
- * other. `session_file_added` / `session_file_removed` match the exact
- * broadcast shape in live_files_views.py + consumers.py
- * (`GroupSessionChatConsumer.session_file_added/_removed`).
+ * receives the *same* chat socket the classroom UI already holds open
+ * (`group_session_chat_<id>` for group, `private_session_chat_<id>` for
+ * private) and adds an independent `addEventListener("message", …)`
+ * listener — additive, side-by-side with the chat panel's own
+ * `ws.onmessage` handler, so neither clobbers the other. Passing no socket
+ * (e.g. a private-session host with no exposed raw WS reference yet) is
+ * safe — the panel just won't get live pushes from other participants
+ * until it's reopened, everything else still works.
+ * `session_file_added` / `session_file_removed` match the exact broadcast
+ * shape in live_files_views.py + consumers.py (both consumers' matching
+ * handler methods).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import groupSessionService from "../../api/groupSessionService";
+import api from "../../api/apiClient";
+
+const FILES_URL = {
+  group: (id) => `/sessions/group-sessions/${id}/files/`,
+  private: (id) => `/sessions/${id}/files/`,
+};
 
 function expiresIn(iso) {
   if (!iso) return "—";
@@ -41,7 +55,14 @@ function kindOf(name) {
     : "FILE";
 }
 
-export default function FilesPanel({ sessionId, isHost, currentUserId, limits, socket }) {
+export default function FilesPanel({
+  sessionId,
+  sessionType = "group",
+  isHost,
+  currentUserId,
+  limits,
+  socket,
+}) {
   const [files, setFiles] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [pending, setPending] = useState([]); // [{name, percent}]
@@ -52,14 +73,15 @@ export default function FilesPanel({ sessionId, isHost, currentUserId, limits, s
   const maxMb = limits?.max_upload_mb ?? 25;
   const maxFiles = limits?.max_files ?? 10;
   const retentionDays = limits?.file_retention_days ?? 2;
+  const url = FILES_URL[sessionType](sessionId);
 
   useEffect(() => {
     let cancelled = false;
     if (!sessionId) return undefined;
-    groupSessionService
-      .listFiles(sessionId)
-      .then((data) => {
-        if (!cancelled) setFiles(Array.isArray(data) ? data : []);
+    api
+      .get(url)
+      .then((res) => {
+        if (!cancelled) setFiles(Array.isArray(res.data) ? res.data : []);
       })
       .catch(() => {})
       .finally(() => {
@@ -68,7 +90,7 @@ export default function FilesPanel({ sessionId, isHost, currentUserId, limits, s
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, url]);
 
   // Additive listener on the room's existing chat socket — see module note.
   useEffect(() => {
@@ -108,11 +130,17 @@ export default function FilesPanel({ sessionId, isHost, currentUserId, limits, s
         }
         setPending((p) => [...p, { name: file.name, percent: 0 }]);
         try {
-          const { data } = await groupSessionService.uploadFile(sessionId, file, (percent) =>
-            setPending((p) =>
-              p.map((row) => (row.name === file.name ? { ...row, percent } : row))
-            )
-          );
+          const body = new FormData();
+          body.append("file", file);
+          const { data } = await api.post(url, body, {
+            headers: { "Content-Type": "multipart/form-data" },
+            onUploadProgress: (e) => {
+              const percent = Math.round((e.loaded / (e.total || 1)) * 100);
+              setPending((p) =>
+                p.map((row) => (row.name === file.name ? { ...row, percent } : row))
+              );
+            },
+          });
           // Own upload lands via the direct response; the WS broadcast also
           // fires for everyone else in the room (and is a harmless no-op
           // dedupe here thanks to the `.some(f.id===)` guard above).
@@ -126,13 +154,13 @@ export default function FilesPanel({ sessionId, isHost, currentUserId, limits, s
         }
       }
     },
-    [maxMb, maxFiles, files.length, pending.length, sessionId]
+    [maxMb, maxFiles, files.length, pending.length, url]
   );
 
   const remove = async (fileId) => {
     setError("");
     try {
-      await groupSessionService.deleteFile(sessionId, fileId);
+      await api.delete(`${url}${fileId}/`);
       setFiles((prev) => prev.filter((f) => f.id !== fileId));
     } catch (err) {
       setError(err?.response?.data?.detail || "Couldn't delete that file.");

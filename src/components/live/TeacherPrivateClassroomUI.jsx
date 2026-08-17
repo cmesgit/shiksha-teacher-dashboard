@@ -6,6 +6,7 @@ import {
 import { Track } from "livekit-client";
 import LiveChatPanel from "./LiveChatPanel";
 import NotesPanel from "./NotesPanel";
+import FilesPanel from "./FilesPanel";
 import Whiteboard from "./Whiteboard";
 import ControlBar from "./ControlBar";
 import React, { useState, useRef, useEffect } from "react";
@@ -320,6 +321,11 @@ export default function TeacherPrivateSessionUI({
 
           {/* NOTES PANEL */}
           {activePanel === "notes" && <NotesPanel sessionId={sessionId} sessionType="private" />}
+
+          {/* FILES PANEL */}
+          {activePanel === "files" && (
+            <FilesPanel sessionId={sessionId} sessionType="private" isHost={true} />
+          )}
 
           {/* PEOPLE PANEL */}
           {activePanel === "people" && (
