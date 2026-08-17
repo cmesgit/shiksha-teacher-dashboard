@@ -626,7 +626,7 @@ export default function GroupSessionClassroomUI({
           {activePanel === "notes" && <NotesPanel sessionId={session?.id} sessionType="group" />}
 
           {activePanel === "files" && (
-            <FilesPanel sessionId={session?.id} isHost={isHost} currentUserId={myUserId} socket={chatSocket} limits={liveLimits} />
+            <FilesPanel sessionId={session?.id} sessionType="group" isHost={isHost} currentUserId={myUserId} socket={chatSocket} limits={liveLimits} />
           )}
 
           {activePanel === "people" && (
