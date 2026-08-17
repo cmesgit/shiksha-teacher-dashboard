@@ -543,6 +543,17 @@
 .ac-menu__item--danger { color: var(--danger); }
 .ac-menu__item--danger:hover { background: var(--danger-soft); }
 
+/* Subject-picker menu items (New assignment/Create quiz/Upload material/
+   Upload recording) — a teacher can teach the same subject across more than
+   one course, so the course title renders as a second, muted line under the
+   subject name rather than only the ambiguous subject name. */
+.ac-menu__item--stacked { flex-direction: column; align-items: flex-start; gap: 1px; }
+.ac-menu__item__meta {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-3, #6b7c83);
+}
+
 /* ── Card grid ─────────────────────────────────────────────────────────── */
 /* The design's other list shape: a 3-up grid of cards (Quizzes dc.html 847,
    Recordings 1096, Cards page 1964). Values are the design's own — note the

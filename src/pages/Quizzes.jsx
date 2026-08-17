@@ -399,10 +399,11 @@ export default function Quizzes() {
                     key={s.subjectId}
                     type="button"
                     role="menuitem"
-                    className="ac-menu__item"
+                    className="ac-menu__item ac-menu__item--stacked"
                     onClick={() => goCreate(s.subjectId)}
                   >
-                    {s.subjectName || "Subject"}
+                    <span>{s.subjectName || "Subject"}</span>
+                    {s.courseTitle && <span className="ac-menu__item__meta">{s.courseTitle}</span>}
                   </button>
                 ))}
               </div>
@@ -427,7 +428,7 @@ export default function Quizzes() {
               className={`ac-pill${subjectFilter === String(s.subjectId) ? " is-active" : ""}`}
               onClick={() => setSubjectFilter(String(s.subjectId))}
             >
-              {s.subjectName || "Subject"}
+              {[s.subjectName || "Subject", s.courseTitle].filter(Boolean).join(" · ")}
             </button>
           ))}
         </div>

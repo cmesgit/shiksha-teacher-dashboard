@@ -172,7 +172,7 @@ export default function PrivateSessionLive() {
         serverUrl={livekitData.livekit_url}
         token={livekitData.token}
         connect={true}
-        video={true}
+        video={false}
         audio={true}
         style={liveKitWrap}
         onDisconnected={handleControlBarLeave}

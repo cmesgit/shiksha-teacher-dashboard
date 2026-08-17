@@ -150,7 +150,7 @@ export default function TeacherLiveSession() {
         serverUrl={sessionData.livekit_url}
         token={sessionData.token}
         connect={true}
-        video
+        video={false}
         audio
         style={liveKitWrap}
         onError={(err) => setError(err?.message || "Lost connection to the session.")}

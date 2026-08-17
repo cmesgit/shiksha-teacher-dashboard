@@ -188,11 +188,23 @@ export default function Assignments() {
     return [ALL_BATCHES, ...names];
   }, [decorated]);
 
+  // Defensive dedupe by subjectId, same as the sibling Quizzes/StudyMaterials/
+  // SessionRecordings screens — a data glitch upstream shouldn't render (or
+  // key) the same subject twice.
+  const subjects = useMemo(() => {
+    const seen = new Map();
+    for (const c of classes || []) {
+      const key = c.subjectId == null ? null : String(c.subjectId);
+      if (key && !seen.has(key)) seen.set(key, c);
+    }
+    return [...seen.values()];
+  }, [classes]);
+
   // Only offer a pill for subjects that actually have an assignment.
   const subjectsWithWork = useMemo(() => {
     const ids = new Set(decorated.map((a) => String(a.subjectId)));
-    return (classes || []).filter((c) => ids.has(String(c.subjectId)));
-  }, [classes, decorated]);
+    return subjects.filter((c) => ids.has(String(c.subjectId)));
+  }, [subjects, decorated]);
 
   const rows = useMemo(
     () =>
@@ -215,7 +227,7 @@ export default function Assignments() {
   // Creating needs a subject. If a pill is active (or there's only one class)
   // that's unambiguous; otherwise the button opens a subject menu.
   const createSubjectId =
-    subjectFilter || (classes && classes.length === 1 ? classes[0].subjectId : null);
+    subjectFilter || (subjects.length === 1 ? subjects[0].subjectId : null);
 
   const handleNewClick = () => {
     if (createSubjectId) createFor(createSubjectId);
@@ -317,15 +329,16 @@ export default function Assignments() {
             </button>
             {newMenuOpen && !createSubjectId && (
               <div className="ac-menu" role="menu">
-                {classes.map((c) => (
+                {subjects.map((c) => (
                   <button
                     key={c.subjectId}
                     type="button"
                     role="menuitem"
-                    className="ac-menu__item"
+                    className="ac-menu__item ac-menu__item--stacked"
                     onClick={() => { setNewMenuOpen(false); createFor(c.subjectId); }}
                   >
-                    {c.subjectName}
+                    <span>{c.subjectName}</span>
+                    {c.courseTitle && <span className="ac-menu__item__meta">{c.courseTitle}</span>}
                   </button>
                 ))}
               </div>
@@ -350,7 +363,7 @@ export default function Assignments() {
               className={`ac-pill${subjectFilter === String(c.subjectId) ? " is-active" : ""}`}
               onClick={() => setSubjectFilter(String(c.subjectId))}
             >
-              {c.subjectName}
+              {[c.subjectName, c.courseTitle].filter(Boolean).join(" · ")}
             </button>
           ))}
         </div>

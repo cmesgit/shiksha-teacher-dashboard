@@ -135,7 +135,7 @@ export default function SkillSessionLive() {
         serverUrl={livekitData.ws_url || livekitData.livekit_url}
         token={livekitData.token}
         connect={true}
-        video={true}
+        video={false}
         audio={true}
         style={liveKitWrap}
         onDisconnected={goBack}
