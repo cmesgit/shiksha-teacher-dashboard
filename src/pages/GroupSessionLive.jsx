@@ -348,7 +348,7 @@ export default function GroupSessionLive() {
         serverUrl={livekitData.livekit_url}
         token={livekitData.token}
         connect={true}
-        video={true}
+        video={false}
         audio={true}
         style={liveKitWrap}
         onDisconnected={() => navigate("/group-sessions")}
@@ -381,6 +381,7 @@ export default function GroupSessionLive() {
           groupSession={true}
           groupSessionRemainingMs={remainingMs}
           isHost={isHost}
+          liveLimits={livekitData.limits}
           onLeave={() => navigate("/group-sessions")}
           onEndSession={isHost ? handleEndSession : null}
         />

@@ -332,10 +332,11 @@ export default function StudyMaterials() {
                       key={s.subjectId}
                       type="button"
                       role="menuitem"
-                      className="ac-menu__item"
+                      className="ac-menu__item ac-menu__item--stacked"
                       onClick={() => goUpload(s.subjectId)}
                     >
-                      {s.subjectName}
+                      <span>{s.subjectName}</span>
+                      {s.courseTitle && <span className="ac-menu__item__meta">{s.courseTitle}</span>}
                     </button>
                   ))}
                 </div>
@@ -375,7 +376,7 @@ export default function StudyMaterials() {
                   className={`ac-pill${subjectFilter === String(s.subjectId) ? " is-active" : ""}`}
                   onClick={() => setSubjectFilter(String(s.subjectId))}
                 >
-                  {s.subjectName}
+                  {[s.subjectName, s.courseTitle].filter(Boolean).join(" · ")}
                 </button>
               ))}
             </div>

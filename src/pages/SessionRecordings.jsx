@@ -336,10 +336,11 @@ export default function SessionRecordings() {
                     key={c.subjectId}
                     type="button"
                     role="menuitem"
-                    className="ac-menu__item"
+                    className="ac-menu__item ac-menu__item--stacked"
                     onClick={() => { setUploadMenuOpen(false); uploadFor(c.subjectId); }}
                   >
-                    {c.subjectName}
+                    <span>{c.subjectName}</span>
+                    {c.courseTitle && <span className="ac-menu__item__meta">{c.courseTitle}</span>}
                   </button>
                 ))}
               </div>
@@ -372,7 +373,7 @@ export default function SessionRecordings() {
                   className={`ac-pill${subjectFilter === String(c.subjectId) ? " is-active" : ""}`}
                   onClick={() => setSubjectFilter(String(c.subjectId))}
                 >
-                  {c.subjectName}
+                  {[c.subjectName, c.courseTitle].filter(Boolean).join(" · ")}
                 </button>
               ))}
             </div>

@@ -162,6 +162,23 @@ const groupSessionService = {
     return res.data;
   },
 
+  async listFiles(sessionId) {
+    const res = await api.get(`/sessions/group-sessions/${sessionId}/files/`);
+    return res.data;
+  },
+  uploadFile(sessionId, file, onProgress) {
+    const body = new FormData();
+    body.append("file", file);
+    return api.post(`/sessions/group-sessions/${sessionId}/files/`, body, {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (e) =>
+        onProgress?.(Math.round((e.loaded / (e.total || 1)) * 100)),
+    });
+  },
+  deleteFile(sessionId, fileId) {
+    return api.delete(`/sessions/group-sessions/${sessionId}/files/${fileId}/`);
+  },
+
   async clearHistory({ all = false, sessionIds = null } = {}) {
     const body = all ? { all: true } : { session_ids: sessionIds || [] };
     const res = await api.post(
@@ -283,6 +300,9 @@ export const {
   setAdmitMode,
   hideFromHistory,
   clearHistory,
+  listFiles,
+  uploadFile,
+  deleteFile,
 } = groupSessionService;
 
 export default groupSessionService;
