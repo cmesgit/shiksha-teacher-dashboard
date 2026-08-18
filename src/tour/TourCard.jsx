@@ -29,7 +29,7 @@ function focusableIn(root) {
 // contribute nothing to normal flow) for position.js's cardSize input.
 const TourCard = forwardRef(function TourCard({
   step, stepIndex, totalSteps, placement, arrowOffset, style,
-  onNext, onBack, onSkip,
+  onNext, onBack, onSkip, hideProgress = false, hideSkip = false,
 }, forwardedRef) {
   const cardRef = useRef(null);
   useImperativeHandle(forwardedRef, () => cardRef.current, []);
@@ -95,13 +95,13 @@ const TourCard = forwardRef(function TourCard({
     >
       <CardPointer placement={placement} arrowOffset={arrowOffset} />
 
-      {totalSteps <= 6 && (
+      {!hideProgress && totalSteps <= 6 && (
         <div className="tour-card__eyebrow">STEP {stepIndex + 1} OF {totalSteps}</div>
       )}
       <h3 id={titleId} className="tour-card__title">{step.title}</h3>
       <p id={bodyId} className="tour-card__body">{step.body}</p>
 
-      {totalSteps <= 6 && (
+      {!hideProgress && totalSteps <= 6 && (
         <div className="tour-card__dots" aria-hidden="true">
           {Array.from({ length: totalSteps }, (_, i) => (
             <span key={i} className={`tour-card__dot${i === stepIndex ? " tour-card__dot--on" : ""}`} />
@@ -110,9 +110,11 @@ const TourCard = forwardRef(function TourCard({
       )}
 
       <div className="tour-card__footer">
-        <button type="button" className="tour-card__skip" onClick={onSkip}>
-          Skip tour
-        </button>
+        {hideSkip ? <span /> : (
+          <button type="button" className="tour-card__skip" onClick={onSkip}>
+            Skip tour
+          </button>
+        )}
         <div className="tour-card__footer-right">
           {stepIndex > 0 && (
             <button type="button" className="tour-card__back" onClick={onBack}>Back</button>

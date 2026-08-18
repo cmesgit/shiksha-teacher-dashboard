@@ -31,6 +31,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import TourOverlay from "./TourOverlay";
 import HelpPanel from "./HelpPanel";
+import Beacon from "./Beacon";
 import {
   computeIdentityKey, readMirror, writeMirror, emptyTourState,
   fetchTourState, patchTourFireAndForget,
@@ -151,6 +152,33 @@ export function TourProvider({ children, registry = [], track }) {
 
   const onInterrupted = useCallback(() => close("interrupted"), [close]);
 
+  // ── T3 beacons (§9.5) — passive, always-on-until-seen, so they skip R1/R2/
+  // R3/R10 (those rate-limit *auto-triggered tours*, not a self-serve hint)
+  // but still respect R9, R4, S1 (unless insideModal) and S2/S7. Evaluated
+  // on every render rather than a live MutationObserver — acceptable here
+  // because S1/S2 false-negatives just mean a beacon dot stays visible one
+  // render longer next to a freshly-opened dialog, not a spotlight stacking
+  // on top of one. ────────────────────────────────────────────────────────
+  const visibleBeacons = useMemo(() => {
+    const s = stateRef.current;
+    if (s.features?.tours_enabled === false) return []; // R9
+    if (window.innerWidth < 768) return []; // S7 — no mobile beacon layout designed yet
+    return registry.filter((e) => {
+      if (e.tier !== "T3") return false;
+      if (!matchesRoute(e.trigger?.match, location.pathname)) return false;
+      if (e.key in (s.tours || {})) return false; // R4 — seen (dismissed or clicked) is permanent
+      if (e.featureFlag && s.features?.[e.featureFlag] === false) return false;
+      if (!e.insideModal && document.querySelector(S1_SELECTOR)) return false; // S1
+      if (document.querySelector("[data-tour-block]")) return false; // S2
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registry, location.pathname, state]);
+
+  const dismissBeacon = useCallback((entry) => {
+    patch({ tour_key: entry.key, status: "completed", version: entry.version ?? 1, step: 1 });
+  }, [patch]);
+
   const replay = useCallback(
     (key) => start(key, { bypassRules: true, force: true }),
     [start]
@@ -262,6 +290,9 @@ export function TourProvider({ children, registry = [], track }) {
   return (
     <TourContext.Provider value={value}>
       {children}
+      {!active && visibleBeacons.map((entry) => (
+        <Beacon key={entry.key} entry={entry} onDismiss={() => dismissBeacon(entry)} />
+      ))}
       {active && (
         <TourOverlay
           entry={active.entry}

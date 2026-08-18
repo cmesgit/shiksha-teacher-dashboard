@@ -150,6 +150,101 @@
   box-shadow: var(--tour-focus);
 }
 
+/* ── Per-page "Tour" header button (§6.1 entry point 2) ─────────────────
+   Deliberately app-agnostic (own tokens, not the host page's button
+   classes) since this same file/class ships into three apps with three
+   unrelated design systems. */
+.tour-header-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--tour-accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tour-accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: var(--hit-min, 30px);
+}
+.tour-header-btn:hover {
+  background: color-mix(in srgb, var(--tour-accent) 10%, transparent);
+}
+.tour-header-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--tour-focus);
+}
+
+/* ── Beacon (T3, §9.5) ────────────────────────────────────────────────────
+   Reuses the livePulse ring shape (student's tokens.css / teacher's
+   groupSessions.css both already have a version of this) but scoped under
+   the tour-* namespace with its own keyframe name so this file still works
+   verbatim in shiksha-frontend, which has neither. */
+.tour-beacon {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: var(--z-tour, 10500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tour-beacon__dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--tour-accent);
+}
+.tour-beacon__ring {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--tour-accent);
+  opacity: .55;
+  animation: tourBeaconPulse 1.8s ease-out 3;
+}
+@keyframes tourBeaconPulse {
+  from { transform: scale(1); opacity: .55; }
+  to   { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-beacon__ring { animation: none; opacity: 0; }
+}
+
+/* ── Mobile bottom sheet (§10, C13) ────────────────────────────────────────
+   Below 768px the card is a full-width sheet pinned above the bottom nav
+   (`--bottom-nav-h` if an app defines one, else 0 — none of the three apps
+   currently ship a real always-on bottom nav, so this degrades to "pinned
+   to the bottom edge" there; the rule stays app-agnostic rather than
+   hardcoding a height that would be wrong the day one does exist). `!important`
+   is required to beat TourOverlay's inline `top`/`left` (position.js's own
+   output), which this rule intentionally replaces wholesale on small
+   screens rather than clamps. The pointer/arrow are hidden — a full-width
+   sheet isn't "pointing" at any one edge, so drawing one would look like a
+   positioning bug rather than a deliberate design. */
+@media (max-width: 768px) {
+  .tour-card {
+    position: fixed !important;
+    top: auto !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(var(--bottom-nav-h, 0px) + 12px) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  .tour-card__pointer,
+  .tour-emphasis-arrow {
+    display: none;
+  }
+}
+
 /* ── Card pointer + emphasis arrow (§9.4) ─────────────────────────────── */
 .tour-card__pointer path {
   fill: var(--tour-surface);

@@ -115,7 +115,7 @@ export default function QuizBank() {
         </div>
       </div>
 
-      <div className="qbk-toolbar">
+      <div className="qbk-toolbar" data-tour="quiz-bank.toolbar">
         <div className="qbk-tabs">
           <button
             className={`qbk-tab ${scope === "mine" ? "qbk-tab--active" : ""}`}

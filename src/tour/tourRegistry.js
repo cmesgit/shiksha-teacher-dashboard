@@ -50,12 +50,11 @@
  * falls through to the base accent, matching how the console already looked
  * before `data-track` existed there at all (not a new regression).
  *
- * NOT built in this pass: the three T3 beacon entries
- * (`teacher.beacon.quiz-bank`, `teacher.beacon.batch-progress`,
- * `teacher.beacon.recording-upload`) — same reason as the student app's
- * three T3s (see that app's tourRegistry.js header): `shared/src/tour/`
- * still has no `Beacon.jsx`. Flagging rather than repurposing the spotlight
- * overlay to fake a pulsing-dot hint.
+ * The three T3 beacon entries below each needed one new `data-tour`
+ * attribute (unlike the student app's, whose anchors phase 3 already left
+ * behind): `batch-progress.panel`, `quiz-bank.toolbar`,
+ * `recording-upload.dropzone` — all attribute-only additions, added
+ * alongside `shared/src/tour/Beacon.jsx` (§9.5's engine piece).
  */
 
 const track = (name) => () =>
@@ -344,6 +343,54 @@ export const tourRegistry = [
         placement: "top",
         title: "Goes live immediately",
         body: "Students can book this the moment you publish — an admin can suspend it later if needed.",
+      },
+    ],
+  },
+
+  // ── T3 — Beacon hints ────────────────────────────────────────────────
+  {
+    key: "teacher.beacon.quiz-bank",
+    label: "Quiz Bank",
+    version: 1,
+    tier: "T3",
+    trigger: { match: "/teacher/quiz-bank" },
+    steps: [
+      {
+        target: '[data-tour="quiz-bank.toolbar"]',
+        placement: "bottom",
+        title: "Not the same as Quizzes",
+        body: "This is a searchable library of finalized questions to reuse — building a new quiz still happens under Quizzes.",
+      },
+    ],
+  },
+  {
+    key: "teacher.beacon.batch-progress",
+    label: "Batch progress",
+    version: 1,
+    tier: "T3",
+    trigger: { match: "/teacher/batch-progress" },
+    steps: [
+      {
+        target: '[data-tour="batch-progress.panel"]',
+        placement: "top",
+        title: "Completion, at a glance",
+        body: "See how far each batch has gotten through the syllabus without opening every class individually.",
+      },
+    ],
+  },
+  {
+    key: "teacher.beacon.recording-upload",
+    label: "Uploading a recording",
+    version: 1,
+    tier: "T3",
+    trigger: { match: "/teacher/classes/" },
+    conditions: [(ctx) => /\/session-recordings\/upload$/.test(ctx.location.pathname)],
+    steps: [
+      {
+        target: '[data-tour="recording-upload.dropzone"]',
+        placement: "top",
+        title: "Large files are fine",
+        body: "Drop the video here — processing happens in the background, so you can leave the page once the upload finishes.",
       },
     ],
   },

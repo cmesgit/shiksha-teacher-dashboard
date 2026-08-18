@@ -96,7 +96,7 @@ export default function BatchProgress() {
         ))}
       </div>
 
-      <div className="bp-panel">
+      <div className="bp-panel" data-tour="batch-progress.panel">
         <h3>Batch Completion</h3>
 
         {loading ? (

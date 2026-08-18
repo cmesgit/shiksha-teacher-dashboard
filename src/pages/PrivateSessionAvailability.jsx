@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import * as privateSession from "../api/privateSessionService";
 import "../styles/privateSessions.css";
 import { LoadingState } from "../components/StateViews";
 import NavIcon from "../components/NavIcon";
+import TourHeaderButton from "../tour/TourHeaderButton";
 
 export default function PrivateSessionAvailability() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [availability, setAvailability] = useState({});
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,7 @@ export default function PrivateSessionAvailability() {
       <div className="tps__headerBox">
         <button className="tps__backBtn" onClick={() => navigate("/teacher/private-sessions")}>← Back</button>
         <h2 className="tps__title" style={{ marginLeft: 12 }}>Private Session Availability</h2>
+        <div style={{ marginLeft: "auto" }}><TourHeaderButton pathname={pathname} /></div>
       </div>
 
       <div className="tps__bodyBox">

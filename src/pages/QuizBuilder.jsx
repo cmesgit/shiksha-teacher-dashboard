@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/apiClient";
+import TourHeaderButton from "../tour/TourHeaderButton";
 import "../styles/quiz-builder.css";
 import {
   IoTimeOutline, IoClipboardOutline, IoFolderOutline, IoSparklesOutline,
@@ -68,6 +69,7 @@ function parseBulkImport(text) {
 
 export default function QuizBuilder() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { subjectId: subjectIdParam, quizId: quizIdParam } = useParams();
 
   const [quizId, setQuizId] = useState(quizIdParam || null);
@@ -316,9 +318,12 @@ export default function QuizBuilder() {
 
   return (
     <div className="qb-page">
-      <button className="qb-back" onClick={() => navigate(subjectId ? `/teacher/classes/${subjectId}/quizzes` : "/teacher/quizzes")}>
-        ← Back to quizzes
-      </button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <button className="qb-back" onClick={() => navigate(subjectId ? `/teacher/classes/${subjectId}/quizzes` : "/teacher/quizzes")}>
+          ← Back to quizzes
+        </button>
+        <TourHeaderButton pathname={pathname} />
+      </div>
 
       {error && <div className="qb-error">{error}</div>}
 

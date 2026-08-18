@@ -5,12 +5,13 @@ import { FaRegFile, FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 // No external dep — crypto.randomUUID() is built into all modern browsers
 import api from "../api/apiClient";
+import TourHeaderButton from "../tour/TourHeaderButton";
 import "../styles/create-assignment.css";
 
 export default function CreateAssignment() {
   const navigate = useNavigate();
   const { subjectId } = useParams();
-  const { state: editData } = useLocation();
+  const { state: editData, pathname } = useLocation();
 
   const isEditing = Boolean(editData);
 
@@ -170,8 +171,9 @@ export default function CreateAssignment() {
         <IoChevronBack /> Back
       </button>
 
-      <div className="ca-title-container">
+      <div className="ca-title-container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h2>{isEditing ? "Edit Assignment" : "Create Assignment"}</h2>
+        <TourHeaderButton pathname={pathname} />
       </div>
 
       <div className="ca-form-container">

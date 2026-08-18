@@ -11,11 +11,12 @@
  * only be uploaded after the listing exists, so a new skill is saved first.
  */
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import api from "../../shared/apiClient";
 import { useSkillToast } from "../../components/useSkillToast";
 import IntroVideoUpload from "../../components/skill/IntroVideoUpload";
 import { LoadingState } from "../../components/StateViews";
+import TourHeaderButton from "../../tour/TourHeaderButton";
 import "../../styles/skillDev.css";
 import "../../styles/skillListings.css";
 
@@ -30,6 +31,7 @@ const firstError = (v) => (Array.isArray(v) ? v[0] : typeof v === "string" ? v :
 export default function SkillListingForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const showToast = useSkillToast();
 
   const [form, setForm]         = useState(BLANK);
@@ -112,6 +114,7 @@ export default function SkillListingForm() {
           <div className="sk-head__title">{id ? "Edit skill" : "Add a skill"}</div>
           <div className="sk-head__sub">Students book this separately from your other skills.</div>
         </div>
+        <TourHeaderButton pathname={pathname} />
       </div>
 
       <div className="rd-card">

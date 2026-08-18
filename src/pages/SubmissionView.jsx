@@ -1,12 +1,14 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { IoChevronBack } from "react-icons/io5";
 import { Fragment, useEffect, useState } from "react";
 import api from "../api/apiClient";
 import "../styles/submission-view.css";
 import { LoadingState, ErrorState } from "../components/StateViews";
+import TourHeaderButton from "../tour/TourHeaderButton";
 
 export default function SubmissionView() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { assignmentId } = useParams();
 
   const [students, setStudents] = useState([]);
@@ -128,8 +130,9 @@ export default function SubmissionView() {
         <IoChevronBack /> Back
       </button>
 
-      <div className="sv-header">
+      <div className="sv-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h2 className="sv-title">Assignment Submissions</h2>
+        <TourHeaderButton pathname={pathname} />
       </div>
 
       <div className="sv-content-card">

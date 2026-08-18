@@ -178,7 +178,7 @@ export default function UploadRecording() {
               accept="video/mp4,video/webm,video/quicktime"
               onChange={handleFileChange}
             />
-            <div className="ur-dropzone" onClick={() => fileInputRef.current?.click()}>
+            <div className="ur-dropzone" data-tour="recording-upload.dropzone" onClick={() => fileInputRef.current?.click()}>
               {videoFile ? (
                 <>
                   <FiCheckCircle size={26} className="ur-dropzone__doneIcon" />
