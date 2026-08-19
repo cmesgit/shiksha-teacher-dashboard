@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { ToastProvider } from './contexts/ToastContext.jsx'
 import "./styles/live.css";
+import "./tour/tours.css";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
