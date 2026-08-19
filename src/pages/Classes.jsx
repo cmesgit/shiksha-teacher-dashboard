@@ -49,8 +49,10 @@ export default function Classes() {
       <div className="classes-container">
 
         <div className="classes-top">
+          {/* Course-qualified: "Mathematics — Live Sessions" alone never said
+              which class's Mathematics you were looking at. */}
           <h2>
-            {dashboard.name} — {hoveredTitle}
+            {[dashboard.name, dashboard.course_title].filter(Boolean).join(" · ")} — {hoveredTitle}
           </h2>
         </div>
 

@@ -9,7 +9,7 @@
  *   This makes it accessible at /teacher/expert/inbox — the path that
  *   ExpertBookings.openChat() and the SkillDevLayout Messages nav both point to.
  */
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, useParams } from "react-router-dom";
 import { useEffect } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -46,6 +46,7 @@ import StudentDetail from "../pages/StudentDetail";
 import AllStudents from "../pages/AllStudents";
 import AllStudentDetail from "../pages/AllStudentDetail";
 import ProtectedTeacherRoute from "./ProtectedTeacherRoute";
+import RequireTrack from "./RequireTrack";
 import QuizStudentAttemptsView from "../pages/QuizStudentAttemptsView";
 import PrivateSessionsDashboard from "../pages/PrivateSessionsDashboard";
 import PrivateSessionAvailability from "../pages/PrivateSessionAvailability";
@@ -104,10 +105,19 @@ function LegacyQuizRedirect({ to }) {
 
 function DashboardEntry() {
   const { teacherInfo } = useAuth();
-  const goesToExpert =
-    teacherInfo?.type === "GUEST" ||
-    teacherInfo?.active_track === "skill";
-  if (goesToExpert) return <Navigate to="/teacher/expert" replace />;
+  const academy = teacherInfo?.tracks?.academy ?? "locked";
+  const skill = teacherInfo?.tracks?.skill ?? "locked";
+
+  // Route on real approval, not the legacy `type` field. `type` (GUEST /
+  // FACULTY / BOTH) is a display label that sync_type_from_tracks() counts as
+  // "on" while a track is merely PENDING, and it isn't updated when a track is
+  // revoked — so a BOTH teacher who lost academy approval still landed here.
+  if (teacherInfo?.active_track === "skill" && skill === "approved") {
+    return <Navigate to="/teacher/expert" replace />;
+  }
+  if (academy !== "approved" && skill === "approved") {
+    return <Navigate to="/teacher/expert" replace />;
+  }
   return <TeacherDashboard />;
 }
 
@@ -126,7 +136,11 @@ export default function TeacherRoutes() {
       {/* ── Skill Dev / Expert — SkillDevLayout ── */}
       <Route
         path="/teacher/expert"
-        element={<ProtectedTeacherRoute><SkillDevLayout /></ProtectedTeacherRoute>}
+        element={
+          <ProtectedTeacherRoute>
+            <RequireTrack track="skill"><SkillDevLayout /></RequireTrack>
+          </ProtectedTeacherRoute>
+        }
       >
         <Route index element={<ExpertDashboard />} />
         <Route path="bookings" element={<ExpertBookings />} />
@@ -157,6 +171,20 @@ export default function TeacherRoutes() {
         path="/teacher"
         element={<ProtectedTeacherRoute><TeacherLayout /></ProtectedTeacherRoute>}
       >
+        {/* ACCOUNT-LEVEL, deliberately OUTSIDE the academy gate below. These
+            belong to the person, not the track — gating them would lock a
+            skill-only expert out of their own password. Chat is out too
+            because DMs are cross-track by design (chat.services
+            .teacher_is_public_faculty). */}
+        <Route path="change-password" element={<ChangePassword />} />
+        <Route path="chat" element={<Chat />} />
+        <Route path="settings/teacher-password" element={<TeacherPasswordSettings />} />
+
+        {/* Everything below teaches board classes and is Academy-only.
+            Pathless layout route so one gate covers all of it — previously
+            each of these was reachable by typing the URL regardless of track,
+            rendering empty gradebooks and rosters to guest experts. */}
+        <Route element={<RequireTrack track="academy"><Outlet /></RequireTrack>}>
         <Route path="profile" element={<FacultyProfile />} />
         {/* Old split pages both fold into the unified faculty profile. */}
         <Route path="private-details" element={<Navigate to="/teacher/profile" replace />} />
@@ -165,9 +193,6 @@ export default function TeacherRoutes() {
         <Route path="students/:studentId" element={<AllStudentDetail />} />
         <Route path="classes" element={<ClassesList />} />
         <Route path="classes/:subjectId" element={<Classes />} />
-        <Route path="change-password" element={<ChangePassword />} />
-        <Route path="chat" element={<Chat />} />
-        <Route path="settings/teacher-password" element={<TeacherPasswordSettings />} />
 
         {/* Assignments */}
         <Route path="classes/:subjectId/assignments" element={<Assignments />} />
@@ -245,6 +270,7 @@ export default function TeacherRoutes() {
         {/* Batch Progress (linked from Sidebar; param name must be :batchId) */}
         <Route path="batch-progress" element={<BatchProgress />} />
         <Route path="batch-progress/:batchId" element={<BatchProgressDetail />} />
+        </Route>{/* /RequireTrack academy */}
       </Route>
     </Routes>
   );

@@ -12,6 +12,9 @@ import { HiDotsVertical } from "react-icons/hi";
 export default function ClassroomUI({
   role,
   sessionId: sessionIdProp,
+  // Whatever /livestream/sessions/:id/join/ returned — carries subject_name,
+  // course_name and batch_name so the room can say which class this is.
+  sessionMeta,
   onLeave,
 }) {
   const isPresenter = role === "PRESENTER";
@@ -370,9 +373,17 @@ export default function ClassroomUI({
         <div className="cf-sidebar">
 
           <div className="cf-session-info">
-            <div className="cf-session-subject">Live Session</div>
+            {/* Course + batch, not just the subject: a teacher may hold the
+                same subject in several courses/batches, and "Mathematics"
+                alone does not say which class is on the other side. */}
+            <div className="cf-session-subject">
+              {sessionMeta?.subject_name || "Live Session"}
+            </div>
             <div className="cf-session-topic">
-              {isPresenter ? "You're teaching" : "Session in progress"}
+              {[sessionMeta?.course_name, sessionMeta?.batch_name]
+                .filter(Boolean)
+                .join(" · ") ||
+                (isPresenter ? "You're teaching" : "Session in progress")}
             </div>
             <div className="cf-timer-row">
               <span className="cf-timer-dot" />
@@ -546,6 +557,22 @@ export default function ClassroomUI({
           {activePanel === "info" && (
             <div className="side-panel">
               <div className="side-panel__body">
+                {sessionMeta?.course_name && (
+                  <div className="side-panel__field">
+                    <div className="side-panel__field-label">Course</div>
+                    <div className="side-panel__field-value">
+                      {sessionMeta.course_name}
+                    </div>
+                  </div>
+                )}
+                {sessionMeta?.batch_name && (
+                  <div className="side-panel__field">
+                    <div className="side-panel__field-label">Batch</div>
+                    <div className="side-panel__field-value">
+                      {sessionMeta.batch_name}
+                    </div>
+                  </div>
+                )}
                 <div className="side-panel__field">
                   <div className="side-panel__field-label">Session ID</div>
                   <div className="side-panel__field-value">{sessionId}</div>

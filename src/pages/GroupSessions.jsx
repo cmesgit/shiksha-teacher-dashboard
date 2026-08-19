@@ -631,8 +631,7 @@ function ScheduleSessionModal({
               <label className="gs-compact-label">Select Date:</label>
               <input
                 type="date"
-                className="sg__input"
-                className="gs-date-input"
+                className="sg__input gs-date-input"
                 value={date}
                 min={getLocalDateValue()}
                 onChange={(e) => {
@@ -649,8 +648,7 @@ function ScheduleSessionModal({
               <label className="gs-compact-label">Start Time:</label>
               <input
                 type="time"
-                className="sg__input"
-                className="gs-time-input"
+                className="sg__input gs-time-input"
                 value={time}
                 min={date === getLocalDateValue() ? minTimeToday : undefined}
                 onChange={(e) => {
@@ -684,8 +682,7 @@ function ScheduleSessionModal({
 
             <label className="gs-compact-label">Topic (optional):</label>
             <input
-              className="sg__input"
-              className="gs-topic-input"
+              className="sg__input gs-topic-input"
               value={topic}
               maxLength={255}
               placeholder='Discussion on "What comes first ?"'
@@ -1056,8 +1053,7 @@ function JoinSessionDialog({ open, busy, error, onClose, onEnter }) {
 
         <label className="gs-compact-label" style={{ textAlign: "center" }}>Enter Session ID:</label>
         <input
-          className="sg__input"
-          className="gs-join-input"
+          className="sg__input gs-join-input"
           value={code}
           autoFocus
           placeholder="SHR7J2"

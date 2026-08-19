@@ -170,9 +170,11 @@ export default function FacultyProfile() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const photoRef = useRef(null);
 
-  const academyStatus =
-    teacherInfo?.tracks?.academy ||
-    (display?.is_approved ? "approved" : "pending");
+  // No is_approved fallback: it means "approved on ANY track", and the Skill
+  // track auto-approves at signup — so an unvetted guest expert resolved to
+  // "approved" here and got docsLocked=true, i.e. treated as vetted faculty
+  // whose documents are final. Absent track data must read as not-approved.
+  const academyStatus = teacherInfo?.tracks?.academy ?? "locked";
   const docsLocked = academyStatus === "approved";
 
   const load = async () => {

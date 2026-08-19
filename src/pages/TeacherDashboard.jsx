@@ -269,7 +269,12 @@ export default function TeacherDashboard() {
   const navigate       = useNavigate();
   const { teacherInfo, user } = useAuth();
 
-  const academyStatus = teacherInfo?.tracks?.academy ?? "approved"; // older /me/ shapes: assume approved
+  // Fail CLOSED. This used to default to "approved" for "older /me/ shapes",
+  // which meant any response missing `tracks` (a serializer change, a partial
+  // cache, a failed refresh) silently opened the Academy dashboard to
+  // non-faculty — defeating AcademyGate below, the only real gate on this
+  // screen. Matches TrackSwitcher, which already defaults to "locked".
+  const academyStatus = teacherInfo?.tracks?.academy ?? "locked";
   const rejectionReason = teacherInfo?.academy_rejection_reason || "";
 
   const [data, setData]       = useState(null);

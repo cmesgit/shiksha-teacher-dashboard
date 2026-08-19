@@ -159,6 +159,7 @@ export default function TeacherLiveSession() {
         <ClassroomUI
           role={sessionData.role}
           sessionId={id}
+          sessionMeta={sessionData}
           onLeave={handleControlBarLeave}
         />
         <RoomAudioRenderer />

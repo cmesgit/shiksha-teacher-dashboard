@@ -35,10 +35,20 @@ export default function ScheduleSessionModal({ initialSubjectId, editSession, on
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : [];
         // De-dupe by subject_id — a teacher can appear once per batch in this list.
+        // Keep course_title: a teacher who takes Mathematics in both Class 9 and
+        // Class 10 has two distinct subject rows that render identically without
+        // it, so the dropdown gave no way to tell which course you were
+        // scheduling into.
         const seen = new Map();
         list.forEach((c) => {
           const id = c.subject_id || c.id;
-          if (id && !seen.has(id)) seen.set(id, { id, name: c.subject_name || c.name });
+          if (id && !seen.has(id)) {
+            seen.set(id, {
+              id,
+              name: c.subject_name || c.name,
+              courseTitle: c.course_title,
+            });
+          }
         });
         const uniq = [...seen.values()];
         setSubjects(uniq);
@@ -167,8 +177,12 @@ export default function ScheduleSessionModal({ initialSubjectId, editSession, on
             <div className="scheduleModal__field">
               <label className="scheduleModal__label">Subject</label>
               <select className="scheduleModal__input" value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+                {/* <option> can't carry the two-line .ac-menu__item--stacked
+                    treatment the other pickers use, so disambiguate inline. */}
                 {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {[s.name, s.courseTitle].filter(Boolean).join(" — ")}
+                  </option>
                 ))}
               </select>
             </div>

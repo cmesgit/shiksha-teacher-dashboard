@@ -65,9 +65,16 @@ function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, 
   const status = session.computed_status;
   const start = new Date(session.start_time);
   const chip = subjectChipPalette(session.subject_name || session.subject_id);
-  const batchLine = session.batch_name
-    ? `${session.batch_name}${session.batch_student_count != null ? ` · ${session.batch_student_count} students` : ""}`
-    : session.course_name;
+  // Course AND batch, not one-or-the-other: when a batch existed the course
+  // vanished, so two same-subject rows from different courses were identical.
+  const batchLine = [
+    session.course_name,
+    session.batch_name
+      ? `${session.batch_name}${session.batch_student_count != null ? ` · ${session.batch_student_count} students` : ""}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   let metaNode;
   if (status === "SCHEDULED") {

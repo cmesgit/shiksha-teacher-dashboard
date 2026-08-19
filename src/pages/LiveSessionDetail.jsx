@@ -72,7 +72,13 @@ export default function LiveSessionDetail() {
       <div className="lsd-head">
         <div>
           <h1 className="lsd-title">{session.title}</h1>
-          <p className="lsd-sub">{session.subject_name} — {session.course_name} · {session.teacher}</p>
+          {/* batch_name is already on the payload — it was just never shown. */}
+          <p className="lsd-sub">
+            {[session.subject_name, session.course_name, session.batch_name]
+              .filter(Boolean)
+              .join(" · ")}{" "}
+            · {session.teacher}
+          </p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span className={`ac-tag ac-tag--${session.computed_status === "COMPLETED" ? "success" : session.computed_status === "CANCELLED" ? "danger" : "neutral"}`}>
