@@ -208,7 +208,13 @@
   border-radius: 999px;
   background: var(--tour-accent);
   opacity: .55;
-  animation: tourBeaconPulse 1.8s ease-out 3;
+  /* Loops forever, not `3`. §9.5 makes a T3 beacon a passive affordance that
+     "stays visible indefinitely" and is only cleared by R4 (click/dismiss) —
+     with 3 iterations it went inert ~5.4s after mount, i.e. before most
+     visitors have finished reading the page it is annotating, leaving a
+     static dot with nothing to draw the eye. The reduced-motion rule below
+     still kills it outright. */
+  animation: tourBeaconPulse 1.8s ease-out infinite;
 }
 @keyframes tourBeaconPulse {
   from { transform: scale(1); opacity: .55; }

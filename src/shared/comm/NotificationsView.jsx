@@ -15,6 +15,7 @@ import {
   FiCalendar, FiBookOpen, FiCreditCard, FiUserCheck,
 } from "react-icons/fi";
 import api from "../apiClient";
+import useNotificationNavigator from "../useNotificationNavigator";
 import { EmptyState, Spinner, dayLabel, timeAgo } from "./common";
 
 const CATEGORY_ICONS = {
@@ -40,31 +41,54 @@ function iconFor(n) {
   return CATEGORY_ICONS[cat] || FiBell;
 }
 
-export default function NotificationsView({ identity, onNavigate }) {
+export default function NotificationsView({ identity, track, onNavigate }) {
   const [items, setItems] = useState(null);
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState(false);
+  // `track` prop overrides, otherwise take the app's current track. The
+  // hook is app-local, so this works identically in both dashboards
+  // without ChatPanel (shared, no router/CourseContext access) having to
+  // thread anything through.
+  const { openLink, activeTrack } = useNotificationNavigator();
+  const scope = track ?? activeTrack;
 
   const load = async () => {
     try {
+      // `track` scopes the list to the caller's product track, exactly like
+      // the bell. Cross-track rows (chat/forum/counselling) come back under
+      // BOTH tracks — the server filters on `track__in=["", track]` — so
+      // scoping here never hides a DM.
       const params = { page_size: 60 };
       if (identity) params.identity = identity;
+      if (scope) params.track = scope;
       const { data } = await api.get("/notifications/", { params });
       setItems(data.results || []);
     } catch { setError(true); setItems([]); }
   };
 
-  useEffect(() => { load(); }, [identity]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [identity, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markAll = async () => {
     setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    try { await api.post("/notifications/read/"); } catch { /* */ }
+    // Scoped: clearing this track's list must not clear the other one.
+    try { await api.post("/notifications/read/", scope ? { track: scope } : {}); } catch { /* */ }
   };
 
   const markOne = async (n) => {
     setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
     try { await api.post(`/notifications/${n.id}/read/`); } catch { /* */ }
-    if (n.link_url) onNavigate?.(n.link_url);
+
+    // Actually navigate. This used to call `onNavigate?.(n.link_url)`, but
+    // both mounts passed `onNavigate={() => setView("inbox")}` and dropped
+    // the argument, so every click in this view was a dead end. The
+    // navigator is app-local (student routes at root, teacher under
+    // /teacher) and also persists the track where that app needs it.
+    if (!n.link_url) return;
+    const routed = openLink(n.link_url);
+    // Let the host close/redirect the panel only once we know the link was
+    // usable — otherwise a row with an unroutable link_url would still
+    // yank the user back to the inbox.
+    if (routed) onNavigate?.(n.link_url);
   };
 
   const verbs = useMemo(() => {

@@ -37,9 +37,21 @@
 //    one silent /accounts/refresh/ → reconnect, exponential backoff,
 //    StrictMode-safe teardown (via refcounting instead of a flag).
 //
-// Public API: { notifications, unreadCount, loading,
+// 6. TRACK SCOPING (Academy vs Skill Dev). useNotificationSocket({ track })
+//    scopes the feed server-side via ?track=, so an Academy bell never
+//    renders a Skill Dev booking (and vice versa) — the isolation had to be
+//    server-side, not a .filter() on the results, because `limit=20` across
+//    both tracks can return twenty academy rows and leave the skill bell
+//    looking empty while skill rows exist.
+//    Cross-track rows (chat/forum/counselling) are returned by BOTH scopes;
+//    only the opposite track is hidden. `crossTrackUnread` is how many
+//    unread rows the OTHER track is holding, for the "2 new in Skill Dev"
+//    peek. Live WS pushes are filtered with the same rule, so the realtime
+//    path can't leak what the REST scope excluded.
+//
+// Public API: { notifications, unreadCount, crossTrackUnread, loading,
 //               markAllRead, markOneRead, clearNotifications,
-//               onEvent }   ← onEvent is the only addition.
+//               onEvent }
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../api/apiClient";
@@ -77,9 +89,36 @@ function normalize(raw) {
   };
 }
 
+// ── track scoping helpers ───────────────────────────────────────────
+// Vocabulary matches the backend (notifications/tracks.py + the
+// ?track= filter on /activity/feed/): "academy" | "skill" | null.
+const VALID_TRACKS = new Set(["academy", "skill"]);
+
+function normalizeTrack(track) {
+  const value = String(track ?? "").trim().toLowerCase();
+  return VALID_TRACKS.has(value) ? value : null;
+}
+
+// Does a pushed row belong in a bell scoped to `scope`?
+// A row with no track (cross-track: chat, forum, counselling) belongs in
+// BOTH — same rule the server's `__in=["", track]` filter applies. An
+// unscoped bell (scope === null) accepts everything.
+function belongsToScope(row, scope) {
+  if (!scope) return true;
+  const rowTrack = normalizeTrack(row?.track);
+  return rowTrack === null || rowTrack === scope;
+}
+
 // ── module-level singleton store ────────────────────────────────────
 const store = {
-  state: { notifications: [], unreadCount: 0, loading: true },
+  state: { notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true },
+  // The track this shared feed is currently scoped to. One store per tab
+  // means one scope per tab: whichever consumer passes an explicit
+  // `track` owns it (in practice the bell, which is the only component
+  // that renders a scoped list). Consumers that pass nothing simply read
+  // whatever scope the bell established, which is what you want — the
+  // dashboard list and the bell should never disagree about what exists.
+  track: null,
   listeners: new Set(),      // React subscribers (state changes)
   eventListeners: new Set(), // onEvent subscribers (raw pushes)
   consumers: 0,              // mounted hook instances (refcount)
@@ -102,6 +141,17 @@ function setState(patch) {
 
 function upsert(item) {
   const n = normalize(item);
+
+  // Out-of-scope push: don't put it in this bell's list. It still has to
+  // COUNT though — that's exactly what the cross-track peek reports, and
+  // dropping it silently is how a user misses a booking confirmation.
+  if (!belongsToScope(n, store.track)) {
+    if (!n.is_read) {
+      setState({ crossTrackUnread: store.state.crossTrackUnread + 1 });
+    }
+    return;
+  }
+
   const prev = store.state.notifications;
   const withoutDupe = prev.filter((x) => !(x.id && n.id && x.id === n.id));
   const isNew = withoutDupe.length === prev.length;
@@ -116,17 +166,34 @@ function upsert(item) {
 
 // ── REST feed (fills the bell on load / after profile switch) ───────
 async function fetchFeed() {
+  const scope = store.track;
   try {
-    const res = await api.get("/activity/feed/?limit=20");
+    const query = `limit=20${scope ? `&track=${encodeURIComponent(scope)}` : ""}`;
+    const res = await api.get(`/activity/feed/?${query}`);
+    // A scope change mid-flight would otherwise land the OLD track's rows
+    // in the new track's bell — the classic stale-response race. Drop it.
+    if (store.track !== scope) return;
     const items = (res.data?.results ?? res.data ?? []).map(normalize);
     setState({
       notifications: items,
       unreadCount: items.filter((x) => !x.is_read).length,
+      crossTrackUnread: res.data?.cross_track_unread ?? 0,
       loading: false,
     });
   } catch {
     setState({ loading: false }); // WS may still deliver
   }
+}
+
+// Re-scope the shared feed. No-op when the scope is unchanged, so the
+// effect that calls this can run on every render without thrashing.
+function setFeedTrack(track) {
+  const next = normalizeTrack(track);
+  if (store.track === next) return;
+  store.track = next;
+  if (!store.started) return;   // start() will fetch with the new scope
+  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true });
+  fetchFeed();
 }
 
 // ── websocket lifecycle ─────────────────────────────────────────────
@@ -239,7 +306,13 @@ async function markAllRead() {
     unreadCount: 0,
     notifications: store.state.notifications.map((n) => ({ ...n, is_read: true })),
   });
-  try { await api.post("/activity/feed/read-all/"); } catch { /* */ }
+  try {
+    // Scoped: clearing the Academy bell must not clear the Skill Dev one.
+    // crossTrackUnread is deliberately NOT zeroed above — those rows are
+    // still unread, and the peek should keep reporting them.
+    await api.post("/activity/feed/read-all/",
+                   store.track ? { track: store.track } : {});
+  } catch { /* */ }
 }
 
 async function markOneRead(id) {
@@ -254,7 +327,7 @@ async function markOneRead(id) {
 }
 
 function clearNotifications() {
-  setState({ notifications: [], unreadCount: 0 });
+  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0 });
 }
 
 // Identity switched (profile / context). The feed + unread count are
@@ -262,12 +335,12 @@ function clearNotifications() {
 // one's. The WS group is per-ACCOUNT, so the socket itself stays valid — only
 // the feed needs to be reloaded.
 function resetForIdentity() {
-  setState({ notifications: [], unreadCount: 0, loading: true });
+  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true });
   fetchFeed();
 }
 
 // ── the hook ────────────────────────────────────────────────────────
-export default function useNotificationSocket() {
+export default function useNotificationSocket({ track } = {}) {
   // Force-update tick: every setState() in the module store calls every
   // subscribed listener, and each listener just bumps its own component's
   // state to trigger a re-render. Plain useState — works on any React
@@ -278,6 +351,19 @@ export default function useNotificationSocket() {
   // previous profile's notifications on screen.
   const { activeProfile, context } = useAuth();
   const idRef = useRef(undefined);
+
+  // Scope BEFORE the mount effect below runs start(). Effects fire in
+  // declaration order, and setFeedTrack() is a no-op fetch-wise while
+  // `started` is false — so start()'s own fetchFeed() is the one that
+  // runs, already carrying the right ?track=. Declaring this second would
+  // cost an extra unscoped round-trip on every mount.
+  //
+  // `track: undefined` means "don't care" (the dashboard list), and must
+  // NOT reset the bell's scope to null — hence the explicit check rather
+  // than calling setFeedTrack(track) unconditionally.
+  useEffect(() => {
+    if (track !== undefined) setFeedTrack(track);
+  }, [track]);
 
   useEffect(() => {
     const listener = () => setTick((t) => t + 1);
@@ -316,6 +402,8 @@ export default function useNotificationSocket() {
   return {
     notifications: state.notifications,
     unreadCount: state.unreadCount,
+    // Unread rows sitting in the OTHER track — 0 when unscoped.
+    crossTrackUnread: state.crossTrackUnread,
     loading: state.loading,
     markAllRead,
     markOneRead,

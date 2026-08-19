@@ -53,10 +53,6 @@ export default function Beacon({ entry, onDismiss }) {
   const [dotRect, setDotRect] = useState(null);
   const [open, setOpen] = useState(false);
   const [cardPos, setCardPos] = useState(null);
-  // The ring's `animation-iteration-count: 3` won't restart on :hover by
-  // itself (a finished CSS animation needs a remount, not just a pseudo-
-  // class toggle) — bumping this key remounts the <span> to replay it.
-  const [pulseKey, setPulseKey] = useState(0);
 
   // Deliberately NOT TourOverlay's R6/R7 two-attempt-then-give-up poll — that
   // rule exists for a step inside an already-RUNNING tour, where giving up
@@ -79,26 +75,69 @@ export default function Beacon({ entry, onDismiss }) {
   // rAF-deferred, same as TourOverlay's own `recompute` — a setState call
   // straight in an effect body triggers cascading-render lint (and is
   // genuinely a smell); deferring one tick avoids it either way.
+  //
+  // Keeps the last measurement in a ref and bails when nothing moved, so the
+  // polling below (which fires unconditionally, several times a second) can't
+  // turn into a render loop. Comparison is on the two edges the dot is
+  // actually placed from, plus the size, at sub-pixel tolerance.
   const rafScheduled = useRef(false);
+  const lastRect = useRef(null);
   const recompute = useCallback(() => {
     if (rafScheduled.current) return;
     rafScheduled.current = true;
     requestAnimationFrame(() => {
       rafScheduled.current = false;
-      if (targetEl) setDotRect(targetEl.getBoundingClientRect());
+      if (!targetEl) return;
+      const r = targetEl.getBoundingClientRect();
+      const p = lastRect.current;
+      const same = p
+        && Math.abs(p.top - r.top) < 0.5 && Math.abs(p.right - r.right) < 0.5
+        && Math.abs(p.width - r.width) < 0.5 && Math.abs(p.height - r.height) < 0.5;
+      if (same) return;
+      lastRect.current = r;
+      setDotRect(r);
     });
   }, [targetEl]);
 
   useEffect(() => {
     if (!targetEl) return undefined;
+    lastRect.current = null;
     recompute();
     window.addEventListener("scroll", recompute, { capture: true, passive: true });
     window.addEventListener("resize", recompute, { passive: true });
+
+    // A CSS transform/opacity animation on the target — or, far more commonly,
+    // on one of its ANCESTORS (page-entry fades like Explore's `.exp-in` wrap
+    // its whole content) — moves the target visually while firing no scroll,
+    // no resize and no ResizeObserver callback (the border box never changes
+    // size). Measuring once, one rAF after the target appears, therefore lands
+    // mid-animation and the dot stays permanently offset by however far the
+    // animation still had to travel. Two independent corrections:
+    //
+    //  1. document-level capture for animationend/transitionend. Capture is
+    //     required, not stylistic: these events bubble UP from the animating
+    //     element, so a listener on the target never hears an ancestor's
+    //     animation. Capturing at the document sees every one of them.
+    //  2. a slow rect poll as the backstop, for animations that are
+    //     interrupted, infinite, or driven by something that emits no event at
+    //     all (Web Animations API `.cancel()`, JS-driven layout, etc.).
+    const onMotionEnd = () => recompute();
+    document.addEventListener("animationend", onMotionEnd, true);
+    document.addEventListener("animationcancel", onMotionEnd, true);
+    document.addEventListener("transitionend", onMotionEnd, true);
+    document.addEventListener("transitioncancel", onMotionEnd, true);
+    const pollId = setInterval(recompute, 500);
+
     const ro = new ResizeObserver(recompute);
     ro.observe(targetEl);
     return () => {
       window.removeEventListener("scroll", recompute, { capture: true });
       window.removeEventListener("resize", recompute);
+      document.removeEventListener("animationend", onMotionEnd, true);
+      document.removeEventListener("animationcancel", onMotionEnd, true);
+      document.removeEventListener("transitionend", onMotionEnd, true);
+      document.removeEventListener("transitioncancel", onMotionEnd, true);
+      clearInterval(pollId);
       ro.disconnect();
     };
   }, [targetEl, recompute]);
@@ -135,9 +174,12 @@ export default function Beacon({ entry, onDismiss }) {
         style={{ top: dotRect.top - 4, left: dotRect.right - 4 }}
         aria-label={step.title}
         onClick={() => setOpen((v) => !v)}
-        onMouseEnter={() => setPulseKey((k) => k + 1)}
       >
-        <span key={pulseKey} className="tour-beacon__ring" />
+        {/* No remount-on-hover key any more: that existed only to replay a
+            ring animation that stopped after 3 iterations. The ring now loops
+            indefinitely (tours.css, §9.5 "stays visible indefinitely"), so
+            remounting it would just snap a mid-flight pulse back to scale(1). */}
+        <span className="tour-beacon__ring" />
         <span className="tour-beacon__dot" />
       </button>
       {open && cardPos && (

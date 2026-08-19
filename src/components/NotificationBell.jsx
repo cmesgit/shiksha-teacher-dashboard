@@ -13,7 +13,20 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoNotificationsOutline, IoNotificationsSharp } from "react-icons/io5";
 import useNotificationSocket from "../hooks/useNotificationSocket";
-import { useAuth } from "../contexts/AuthContext";
+import useNotificationNavigator from "../shared/useNotificationNavigator";
+
+// Landing route per track for the cross-track peek. Unlike the student
+// app there is nothing to persist here — the route IS the track, so
+// navigating re-scopes the bell on its own.
+const TRACK_HOME = {
+  academy: "/teacher/dashboard",
+  skill: "/teacher/expert/bookings",
+};
+
+const TRACK_LABEL = {
+  academy: "Academy",
+  skill: "Skill Dev",
+};
 
 const TYPE_ICONS = {
   ASSIGNMENT:      "📝",
@@ -44,17 +57,27 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
-  const { teacherInfo } = useAuth();
-  const isSkillActive = teacherInfo?.active_track === "skill";
+
+  // Track comes from the ROUTE, not from teacherInfo.active_track. This app
+  // mounts two route-scoped layouts (TeacherLayout / SkillDevLayout behind
+  // RequireTrack), so the URL *is* the track. `active_track` is a server
+  // field that lags in-app navigation: sitting on /teacher/expert/* with
+  // active_track still "academy" used to send "See all" to the Academy
+  // inbox. Sourced from the navigator hook so the bell and the Comm Center
+  // list can never disagree about which track is live.
+  const { openLink, activeTrack } = useNotificationNavigator();
+  const isSkillActive = activeTrack === "skill";
+  const otherTrack = isSkillActive ? "academy" : "skill";
 
   const {
     notifications,
     unreadCount,
+    crossTrackUnread,
     loading,
     markAllRead,
     markOneRead,
     clearNotifications,
-  } = useNotificationSocket();
+  } = useNotificationSocket({ track: activeTrack });
 
   useEffect(() => {
     const handler = (e) => {
@@ -77,35 +100,12 @@ export default function NotificationBell() {
     // that prefix or it falls through to the root RedirectToMainLogin and
     // the user lands on a blank page.
 
-    // Chat links are a bare conversation path (/chat/<id>) that doesn't
-    // match any route in this app, and don't start with /teacher, so they
-    // used to fall into the counsellor-schedule catch-all below. ChatPanel
-    // opens a conversation via router state, not a URL param.
-    if (link_url) {
-      const chatMatch = link_url.match(/^\/chat\/([^/?]+)/);
-      if (chatMatch) {
-        navigate("/teacher/chat", { state: { conversationId: chatMatch[1] } });
-        setOpen(false);
-        return;
-      }
-    }
-
     // notifications-app events (counseling.*, forum.*, ...) carry a
-    // link_url. The backend's counsellor-facing paths are /counselor/...
-    // (app-agnostic, no /teacher prefix) — map them into this app's route
-    // space. Anything else with a link_url that already looks like a real
-    // in-app path (e.g. future /teacher/... or /forum/... verbs) is used
-    // as-is; anything unrecognised falls back to the counsellor schedule
-    // rather than a dead route.
+    // link_url. The /counselor/... → /teacher/counsellor/... mapping and
+    // the unrecognised-path fallback both live in the navigator hook now,
+    // shared with the Comm Center list.
     if (link_url && link_url.startsWith("/")) {
-      const mapped = link_url
-        .replace(/^\/counselor\/appointments/, "/teacher/counsellor/appointments")
-        .replace(/^\/counselor\/availability/, "/teacher/counsellor/availability")
-        .replace(/^\/counselor\/apply/, "/teacher/counsellor")
-        .replace(/^\/counselor$/, "/teacher/counsellor");
-      navigate(mapped.startsWith("/teacher") ? mapped : "/teacher/counsellor");
-      setOpen(false);
-      return;
+      if (openLink(link_url)) { setOpen(false); return; }
     }
 
     // Live session (scheduled or "now LIVE") notifications carry the real
@@ -252,6 +252,20 @@ export default function NotificationBell() {
               })
             )}
           </div>
+
+          {/* Cross-track peek — the bell is scoped to the track whose
+              routes you're on, so without this an Academy faculty member
+              who is also a Skill Dev expert would never see a booking
+              come in. Navigating re-scopes the bell automatically. */}
+          {crossTrackUnread > 0 && (
+            <button
+              className="notif-bell-crosstrack"
+              onClick={() => { setOpen(false); navigate(TRACK_HOME[otherTrack]); }}
+            >
+              <span className="notif-bell-crosstrack__icon">↪</span>
+              {crossTrackUnread} new in {TRACK_LABEL[otherTrack]}
+            </button>
+          )}
 
           <button
             className="notif-bell-seeall"

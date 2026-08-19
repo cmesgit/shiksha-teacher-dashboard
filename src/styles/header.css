@@ -23,6 +23,13 @@
 .notif-bell-header { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; font-weight:600; font-size:14px; border-bottom:1px solid var(--divider); }
 .notif-clear-btn { background:none; border:none; color:var(--ink-muted); font-size:12px; cursor:pointer; font-family:inherit; }
 .notif-bell-list { max-height:380px; overflow-y:auto; }
+/* Cross-track peek ("2 new in Skill Dev"). Accent-tinted and left-aligned
+   so it reads as a separate affordance from the neutral, centred See-all
+   button directly below it. */
+.notif-bell-crosstrack { display:flex; align-items:center; gap:8px; width:100%; border:none; border-top:1px solid var(--divider); background:color-mix(in srgb, var(--acc, var(--primary)) 10%, var(--surface)); color:var(--acc-ink, var(--primary)); font-weight:700; font-size:12.5px; padding:10px 16px; cursor:pointer; text-align:left; }
+.notif-bell-crosstrack:hover { background:color-mix(in srgb, var(--acc, var(--primary)) 16%, var(--surface)); }
+.notif-bell-crosstrack__icon { font-size:14px; line-height:1; }
+
 .notif-bell-seeall { display:block; width:100%; border:none; border-top:1px solid var(--divider); background:var(--surface-muted); color:var(--acc-ink, var(--primary)); font-weight:700; font-size:12.5px; padding:11px 16px; cursor:pointer; text-align:center; }
 .notif-bell-seeall:hover { background:var(--divider); }
 .notif-bell-empty { padding:24px; text-align:center; color:var(--ink-faint); font-size:13px; }
