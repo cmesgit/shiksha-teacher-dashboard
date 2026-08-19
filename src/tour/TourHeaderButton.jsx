@@ -19,12 +19,35 @@
  * pattern usable everywhere, rather than a component only 4 unrelated pages
  * could reach.
  */
+import { useEffect, useState } from "react";
 import { useTour } from "./useTour";
 
 export default function TourHeaderButton({ pathname }) {
-  const { availableForRoute, state, start, replay } = useTour();
+  const { availableForRoute, state, start, replay, canRun } = useTour();
   const entry = availableForRoute(pathname).find((e) => e.tier === "T1" || e.tier === "T2");
-  if (!entry) return null;
+
+  // Route match is necessary but NOT sufficient — the tour's anchors have to
+  // be on screen too. Tour targets commonly live inside a "has data" branch,
+  // so on an empty page the button rendered, the first step resolved to
+  // nothing, and the tour closed on the spot: a button that visibly does
+  // nothing. Reported on Recordings, where BOTH steps anchor inside the
+  // recordings grid, so a learner with no recordings could never run it.
+  //
+  // Re-checked after paint and whenever the route changes, because the page's
+  // data usually arrives after this first renders — a render-time DOM query
+  // alone would see the pre-data DOM and stay wrong.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!entry) { setReady(false); return undefined; }
+    const check = () => setReady(canRun(entry));
+    check();
+    // One more pass on the next frame catches the common
+    // "list rendered in the same commit" case.
+    const id = requestAnimationFrame(check);
+    return () => cancelAnimationFrame(id);
+  });
+
+  if (!entry || !ready) return null;
 
   const seen = entry.key in (state?.tours || {});
 

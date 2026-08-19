@@ -18,7 +18,7 @@ import { IoClose } from "react-icons/io5";
 import { FiHome } from "react-icons/fi";
 import { useAuth } from "../contexts/AuthContext";
 import NavIcon from "./NavIcon";
-import { NAV } from "../utils/academyNav";
+import { NAV, activeNavTo } from "../utils/academyNav";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { HOME_URL } from "../config/urls";
 import "../styles/academySidebar.css";
@@ -111,10 +111,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     return [subjectPart, coursePart].filter(Boolean).join(" · ");
   }, [classes]);
 
-  const isActive = (to) =>
-    to === "/teacher/dashboard"
-      ? location.pathname === to
-      : location.pathname.startsWith(to);
+  // Resolve ONE winning nav item for the route, rather than letting each
+  // item answer "am I a prefix of this?" independently — which lit "Classes"
+  // on every per-class drill-down and could light two items at once.
+  const activeTo = activeNavTo(location.pathname);
+  const isActive = (to) => to === activeTo;
 
   const go = (to) => { navigate(to); setSidebarOpen(false); };
 

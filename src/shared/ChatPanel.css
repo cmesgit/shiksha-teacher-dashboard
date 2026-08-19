@@ -494,3 +494,32 @@
 .cc-theme-skill .cc-count-pill { background: var(--cc-accent); }
 .cc-theme-skill .cc-muted-icon,
 .cc-theme-skill .cc-announcement-tag { color: var(--cc-accent); }
+
+/* Banner shown when a REQUESTED conversation couldn't be opened (the
+   directTo/courseRoom seed failed). Spans the full panel above the sidebar
+   and thread, because the failure isn't scoped to either one. */
+.cc-seed-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 12.5px;
+}
+.cc-seed-error button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 4px;
+}

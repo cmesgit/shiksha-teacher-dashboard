@@ -34,6 +34,7 @@ const TYPE_ICONS = {
   SESSION:         "🎥",
   SUBMISSION:      "📬",
   PRIVATE_SESSION: "🔒",
+  MATERIAL:        "📚",
 };
 
 const TYPE_COLORS = {
@@ -42,6 +43,7 @@ const TYPE_COLORS = {
   SESSION:         "#ef4444",
   SUBMISSION:      "#2563eb",
   PRIVATE_SESSION: "#015865",
+  MATERIAL:        "#0d9488",
 };
 
 function timeAgo(isoString) {
@@ -163,6 +165,10 @@ export default function NotificationBell() {
         }
       }
       else if (type === "SESSION")    navigate(`/teacher/classes/${subject_id}/live-sessions`);
+      // MATERIAL rows come from the REST feed with no link_url (the
+      // ActivitySerializer has no such field), so this branch — not
+      // openLink above — is what routes them on a reloaded page.
+      else if (type === "MATERIAL")   navigate(`/teacher/classes/${subject_id}/study-materials`);
       else                            navigate(`/teacher/classes/${subject_id}`);
     } else {
       // No subject_id — always navigate somewhere so the click is never
@@ -200,6 +206,14 @@ export default function NotificationBell() {
           <span className="notif-bell-badge">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
+        )}
+        {/* The badge above is TRACK-SCOPED, so an unread notification in the
+            other track produced no signal at all on the closed bell — the
+            "N new in <track>" peek inside the dropdown was undiscoverable
+            unless you already thought to open it. This dot says "there is
+            something in the other track" without faking an in-track count. */}
+        {crossTrackUnread > 0 && (
+          <span className="notif-bell-crossdot" title={`${crossTrackUnread} new in ${TRACK_LABEL[otherTrack]}`} />
         )}
       </button>
 

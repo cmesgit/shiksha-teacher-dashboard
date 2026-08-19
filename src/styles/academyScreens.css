@@ -46,7 +46,14 @@
   margin-bottom: 16px;
 }
 .ac-head__title {
-  margin: 0;
+  /* line-height and margin-bottom are both load-bearing. Montserrat's
+     `normal` line-height equals ascent+descent exactly (27px box for a 22px
+     font), i.e. ZERO leading — so the descender of the "g" in "Assignments"
+     bottomed out flush against the h1's box edge, and with only the
+     subtitle's 3px top margin below it the two lines read as one collided
+     block. Keep both values if you restyle this. */
+  margin: 0 0 6px;
+  line-height: 1.25;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: var(--fs-page-title);
@@ -54,7 +61,8 @@
   color: var(--ink);
 }
 .ac-head__sub {
-  margin: 3px 0 0;
+  margin: 0;
+  line-height: 1.45;
   font-size: var(--fs-body);
   color: var(--ink-muted);
 }
@@ -224,8 +232,11 @@
   box-shadow: var(--sh-card);
   padding: 16px;
 }
-/* Study Materials' rows run edge to edge with their own dividers. */
-.ac-listCard--flush { padding: 0; overflow: hidden; }
+/* Study Materials' rows run edge to edge with their own dividers.
+   NOT overflow:hidden — see the note on .ac-row below. Corner rounding is
+   done per-row (.ac-row--flush:first-child/:last-child) instead of by
+   clipping the card, so hover backgrounds still stay inside the radius. */
+.ac-listCard--flush { padding: 0; }
 
 .ac-list { display: flex; flex-direction: column; gap: 8px; }
 
@@ -236,7 +247,14 @@
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: 11px 14px;
-  overflow: hidden;
+  /* NO overflow:hidden here. The row-level dropdowns ("Manage ▾" on Study
+     Materials, "⋯" on Assignments) are .ac-menu, absolutely positioned at
+     top: calc(100% + 6px) — entirely BELOW the ~48px row box. An
+     overflow:hidden ancestor clips a descendant no matter its z-index, so
+     the panel rendered as a 2px sliver and both menus read as "won't
+     open". Nothing here needs clipping: the long-text truncation this
+     looked like it was protecting is already done locally by
+     .stm-topic (study-materials.css) with text-overflow: ellipsis. */
   transition: border-color .15s, background .15s;
 }
 .ac-row:hover {
@@ -260,7 +278,18 @@
   padding: 13px 18px;
   gap: 14px;
 }
-.ac-row--flush:last-child { border-bottom-width: 0; }
+/* Replaces the clipping the flush card's overflow:hidden used to provide:
+   without these, a hovered first/last row's background square-corners past
+   the card's own radius. */
+.ac-row--flush:first-child {
+  border-top-left-radius: var(--r-lg);
+  border-top-right-radius: var(--r-lg);
+}
+.ac-row--flush:last-child {
+  border-bottom-width: 0;
+  border-bottom-left-radius: var(--r-lg);
+  border-bottom-right-radius: var(--r-lg);
+}
 
 /* Time / day block */
 .ac-row__when { width: 62px; flex-shrink: 0; text-align: center; }

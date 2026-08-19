@@ -44,6 +44,26 @@ const SESSION_FLAG = "shiksha_tour_auto_fired_session"; // R1
 const DAY_MS = 24 * 60 * 60 * 1000; // R2
 const S1_SELECTOR = '[role="dialog"], .st-overlay, .cd__overlay, .tcd__overlay, .ps-modal-overlay, .confirm-overlay';
 
+/* The steps of `entry` that apply right now.
+ *
+ * A step may carry an optional `when(ctx)` predicate, evaluated once when
+ * the tour starts, with the same ctx shape as an entry's `conditions`
+ * ({ ...auth, location }). Steps without one always apply.
+ *
+ * This exists so a tour's advertised length matches what it can actually
+ * show. A step anchored to conditionally-rendered UI (say, an upload
+ * dropzone that disappears once you've submitted) used to still count
+ * toward "STEP 1 OF 2", and the tour then closed instead of advancing.
+ * A throwing predicate drops the step — the safe direction, since a step
+ * whose own guard errors is unlikely to render.
+ */
+function resolveSteps(entry, ctx) {
+  return (entry.steps || []).filter((s) => {
+    if (typeof s.when !== "function") return true;
+    try { return s.when(ctx); } catch { return false; }
+  });
+}
+
 function matchesRoute(match, pathname) {
   if (!match) return false;
   return match === pathname || (match !== "/" && pathname.startsWith(match));
@@ -62,6 +82,13 @@ export function TourProvider({ children, registry = [], track }) {
   const [state, setState] = useState(() => readMirror(identityKey) || emptyTourState());
   const stateRef = useRef(state);
   stateRef.current = state;
+  // Same latest-value-without-a-dep pattern as stateRef: `start` must stay
+  // referentially stable, but per-step `when(ctx)` predicates need the
+  // current auth + route.
+  const authRef = useRef(auth);
+  authRef.current = auth;
+  const locationRef = useRef(location);
+  locationRef.current = location;
 
   const [active, setActive] = useState(null); // { entry, stepIndex, auto }
   const activeRef = useRef(active);
@@ -122,14 +149,30 @@ export function TourProvider({ children, registry = [], track }) {
       : keyOrEntry;
     if (!entry || !entry.steps?.length) return false;
     if (!opts.bypassRules && stateRef.current.features?.tours_enabled === false) return false; // R9 — even manual starts respect the kill switch
-    setActive({ entry, stepIndex: 0, auto: !!opts.auto });
+
+    // Per-step `when(ctx)` — resolve the step list ONCE, here, so the whole
+    // tour (current step, "N of M" counter, next/back, missing-target
+    // handling) agrees on how many steps there are.
+    //
+    // Without this, a step whose anchor only exists in some page states
+    // still counted toward the total: the assignment tour advertised
+    // "STEP 1 OF 2" on an already-submitted assignment, then vanished on
+    // Next, because step 2 targeted the upload dropzone — which isn't
+    // rendered once you've submitted. The engine's missing-target handling
+    // was right (skip it; it was last, so complete); the step LIST was the
+    // lie. Steps with no `when` always run, so existing entries are
+    // unaffected.
+    const steps = resolveSteps(entry, { ...authRef.current, location: locationRef.current });
+    if (!steps.length) return false;
+
+    setActive({ entry, steps, stepIndex: 0, auto: !!opts.auto });
     return true;
   }, [registry]);
 
   const next = useCallback(() => {
     const cur = activeRef.current;
     if (!cur) return;
-    const isLast = cur.stepIndex >= cur.entry.steps.length - 1;
+    const isLast = cur.stepIndex >= cur.steps.length - 1;
     if (isLast) close("completed", { auto: cur.auto });
     else setActive({ ...cur, stepIndex: cur.stepIndex + 1 });
   }, [close]);
@@ -145,7 +188,7 @@ export function TourProvider({ children, registry = [], track }) {
     const cur = activeRef.current;
     if (!cur) return;
     if (cur.stepIndex === 0) { setActive(null); return; }
-    const isLast = cur.stepIndex >= cur.entry.steps.length - 1;
+    const isLast = cur.stepIndex >= cur.steps.length - 1;
     if (isLast) close("completed", { auto: cur.auto });
     else setActive({ ...cur, stepIndex: cur.stepIndex + 1 });
   }, [close]);
@@ -205,6 +248,30 @@ export function TourProvider({ children, registry = [], track }) {
     (pathname) => registry.filter((e) => matchesRoute(e.trigger?.match, pathname)),
     [registry]
   );
+
+  /* Can this tour actually run against the DOM as it stands right now?
+   *
+   * Route matching alone is not enough. Tour anchors routinely live inside a
+   * "has data" branch, so on an empty page they simply don't exist — the
+   * Recordings tour anchors both its steps inside the recordings grid, so a
+   * learner with no recordings yet got a "Replay tour" button that resolved
+   * step 1 to nothing and silently closed. From the outside that is a button
+   * that does nothing, which is worse than no button.
+   *
+   * Callers use this to decide whether to OFFER a tour at all.
+   */
+  const canRun = useCallback((keyOrEntry) => {
+    const entry = typeof keyOrEntry === "string"
+      ? registry.find((e) => e.key === keyOrEntry)
+      : keyOrEntry;
+    if (!entry) return false;
+    const steps = resolveSteps(entry, { ...authRef.current, location: locationRef.current });
+    // One resolvable anchor is enough: a later missing step is handled
+    // gracefully (skipped), it is only a dead FIRST step that aborts.
+    return steps.some((s) => {
+      try { return !!document.querySelector(s.target); } catch { return false; }
+    });
+  }, [registry]);
 
   // ── Auto-trigger rule engine (§5) ───────────────────────────────────────
   const canAutoStart = useCallback((entry) => {
@@ -283,9 +350,9 @@ export function TourProvider({ children, registry = [], track }) {
   }, [start, close, resetTours]);
 
   const value = useMemo(() => ({
-    start, stop: close, replay, state, active, setAutoplay, resetTours, availableForRoute,
+    start, stop: close, replay, state, active, setAutoplay, resetTours, availableForRoute, canRun,
     helpOpen, openHelp, closeHelp,
-  }), [start, close, replay, state, active, setAutoplay, resetTours, availableForRoute, helpOpen, openHelp, closeHelp]);
+  }), [start, close, replay, state, active, setAutoplay, resetTours, availableForRoute, canRun, helpOpen, openHelp, closeHelp]);
 
   return (
     <TourContext.Provider value={value}>
@@ -296,9 +363,9 @@ export function TourProvider({ children, registry = [], track }) {
       {active && (
         <TourOverlay
           entry={active.entry}
-          step={active.entry.steps[active.stepIndex]}
+          step={active.steps[active.stepIndex]}
           stepIndex={active.stepIndex}
-          totalSteps={active.entry.steps.length}
+          totalSteps={active.steps.length}
           track={track}
           onNext={next}
           onBack={back}

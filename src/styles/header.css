@@ -46,3 +46,20 @@
   .header__right{gap:10px}
 }
 @media (min-width:1240px){ .hamburgerBtn{display:none} }
+
+/* Cross-track hint on the CLOSED bell. The numeric badge is track-scoped, so
+   without this an unread Skill Dev notification was completely invisible
+   while the user sat in Academy — the "N new in Skill Dev" row inside the
+   dropdown only helps someone who already opened it. Deliberately a small
+   neutral dot, not a count: it must not read as in-track unread. */
+.notif-bell-crossdot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #64748b;
+  border: 1.5px solid #fff;
+  pointer-events: none;
+}

@@ -37,19 +37,47 @@ const EXTRA_TITLES = [
   { to: "/teacher/quiz-bank", l: "Question Bank" },
 ];
 
+// `to` maps each per-class drill-down back to the sidebar item that owns it.
+// Without it the sidebar's prefix match lit "Classes" while the teacher was
+// looking at Assignments, because /teacher/classes/:id/assignments starts
+// with /teacher/classes and never with /teacher/assignments.
 const CLASS_SUBSCREENS = [
-  { seg: "assignments", l: "Assignments" },
-  { seg: "quizzes", l: "Quizzes" },
-  { seg: "study-materials", l: "Study Materials" },
-  { seg: "session-recordings", l: "Recordings" },
-  { seg: "students", l: "Students" },
-  { seg: "live-sessions", l: "Live Sessions" },
+  { seg: "assignments", l: "Assignments", to: "/teacher/assignments" },
+  { seg: "quizzes", l: "Quizzes", to: "/teacher/quizzes" },
+  { seg: "study-materials", l: "Study Materials", to: "/teacher/study-materials" },
+  { seg: "session-recordings", l: "Recordings", to: "/teacher/recordings" },
+  { seg: "students", l: "Students", to: "/teacher/students" },
+  { seg: "live-sessions", l: "Live Sessions", to: "/teacher/live-sessions" },
 ];
+
+/** The /teacher/classes/:id/<seg> screen this pathname is on, if any. */
+function classSubscreen(pathname) {
+  const m = pathname.match(/^\/teacher\/classes\/[^/]+\/([^/]+)/);
+  return m ? CLASS_SUBSCREENS.find((s) => s.seg === m[1]) : undefined;
+}
 
 // Longest path first so deeper routes win over their prefixes.
 const MATCHERS = [...NAV.filter((n) => n.l), ...EXTRA_TITLES]
   .slice()
   .sort((a, b) => b.to.length - a.to.length);
+
+// Sidebar highlighting: only NAV items (never EXTRA_TITLES, which aren't
+// rendered there), most-specific sibling wins, and exactly ONE item active.
+const NAV_MATCHERS = NAV.filter((n) => n.l).slice().sort((a, b) => b.to.length - a.to.length);
+
+/** Which NAV item's `to` should be highlighted for this pathname. */
+export function activeNavTo(pathname) {
+  // Checked first, or /teacher/classes swallows every drill-down.
+  const sub = classSubscreen(pathname);
+  if (sub) return sub.to;
+
+  // The trailing "/" boundary matters: a bare startsWith(to) would also
+  // light "Classes" for a sibling route like /teacher/classes-archive.
+  const hit = NAV_MATCHERS.find(
+    (n) => pathname === n.to || pathname.startsWith(`${n.to}/`)
+  );
+  return hit ? hit.to : null;
+}
 
 function humanise(pathname) {
   const segs = pathname.split("/").filter(Boolean);
@@ -61,11 +89,10 @@ function humanise(pathname) {
 /** The header/tab title for a pathname, taken from the active nav item. */
 export function pageTitleFor(pathname) {
   // /teacher/classes/:subjectId/<sub> — name the sub-screen, not "Classes".
-  const cls = pathname.match(/^\/teacher\/classes\/[^/]+\/([^/]+)/);
-  if (cls) {
-    const hit = CLASS_SUBSCREENS.find((s) => s.seg === cls[1]);
-    if (hit) return hit.l;
-  }
+  // Same table activeNavTo uses, so the highlight and the title agree.
+  const cls = classSubscreen(pathname);
+  if (cls) return cls.l;
+
   const hit = MATCHERS.find(
     (n) => pathname === n.to || pathname.startsWith(`${n.to}/`)
   );

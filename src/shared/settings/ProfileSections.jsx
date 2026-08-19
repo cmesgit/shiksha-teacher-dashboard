@@ -237,9 +237,15 @@ export function PersonalSection({ form, setField, choices, api, editName }) {
         </Field>
       </Grid2>
 
+      {/* Gender's placeholder must NOT be "Prefer not to say". Choice renders
+          the placeholder as its own <option value="">, and the backend's
+          gender choices already contain a real ("prefer_not_to_say",
+          "Prefer not to say") — so the list showed that label twice, and the
+          first one silently saved an empty string instead. "Select…" is the
+          blank state; the real option is the answer. */}
       <Field label="Gender">
         <Choice value={form.gender} onChange={(v) => setField("gender", v)}
-          options={choices.gender || []} placeholder="Prefer not to say" />
+          options={choices.gender || []} placeholder="Select…" />
       </Field>
 
       <GroupLabel>Address</GroupLabel>

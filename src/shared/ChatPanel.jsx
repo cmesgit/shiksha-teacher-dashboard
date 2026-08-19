@@ -89,6 +89,8 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
   const [profileIdentity, setProfileIdentity] = useState(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [showThreadOnMobile, setShowThreadOnMobile] = useState(false);
+  // Why a requested conversation (directTo / courseRoom) couldn't be opened.
+  const [seedError, setSeedError] = useState(null);
   const compact = useCompact();
   const seeded = useRef(false);
 
@@ -148,8 +150,19 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
           const conv = await ChatAPI.courseRoom(courseRoom.id, courseRoom.title);
           openRoomLike(conv);
         }
-      } catch {
-        /* the list still loads below; a toast here would need a place to live outside any one view */
+      } catch (err) {
+        // Do NOT swallow this. Every caller that passes directTo/courseRoom
+        // does so because the user asked for a SPECIFIC conversation — the
+        // learner's "Message" button on a teacher's profile, a course-room
+        // link, the people directory. Failing silently drops them on the
+        // generic inbox looking like the button did nothing, which is
+        // exactly how the teacher-profile Message button was reported.
+        // The list below still loads, so this is a banner, not a blocker.
+        setSeedError(
+          err?.response?.data?.detail
+          || err?.response?.data?.target_id
+          || "Couldn't open that conversation. It may no longer be available to you."
+        );
       }
       loadConversations();
     })();
@@ -222,6 +235,12 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
 
   return (
     <div className={"cc-root" + (compact ? " cc-root-compact" : "") + (theme ? ` cc-theme-${theme}` : "")}>
+      {seedError && (
+        <div className="cc-seed-error" role="alert">
+          <span>{seedError}</span>
+          <button type="button" onClick={() => setSeedError(null)} aria-label="Dismiss">×</button>
+        </div>
+      )}
       <nav className="cc-sidebar">
         {SIDEBAR_ITEMS.map((item) => {
           const isActive = item.kind === "category" ? (view === "inbox" && category === item.key) : view === item.key;
