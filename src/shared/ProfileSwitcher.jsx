@@ -238,6 +238,17 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   };
   const [modalError, setModalError] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
+  // A failed PIN-free select (e.g. the profile was deleted server-side) used
+  // to fail completely silently: handleSelectProfile closes the dropdown
+  // before doSelect's catch runs, and modalError only ever rendered inside
+  // the three PIN/password modals — none of which mount for this path. This
+  // toast is anchored to .ps-root so it shows regardless of open/modal state.
+  const [selectError, setSelectError] = useState("");
+  useEffect(() => {
+    if (!selectError) return;
+    const t = setTimeout(() => setSelectError(""), 5000);
+    return () => clearTimeout(t);
+  }, [selectError]);
   const ref = useRef(null);
   const triggerRef = useRef(null);
 
@@ -276,15 +287,21 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   const handleSelectProfile = (p) => {
     setOpen(false);
     if (p.requires_pin) { setModalError(""); setPinTarget(p); }
-    else doSelect(p.id, "");
+    else { setSelectError(""); doSelect(p.id, "", { silent: true }); }
   };
-  const doSelect = async (id, pin) => {
+  const doSelect = async (id, pin, { silent } = {}) => {
     setModalLoading(true); setModalError("");
     try {
       await selectProfile(id, pin || undefined);
       closeAll();
       if (learnUrl && isTeacherContext) window.location.href = learnUrl;
-    } catch (err) { setModalError(err.message || "Wrong PIN."); }
+    } catch (err) {
+      const message = err.message || "Wrong PIN.";
+      // silent (no PIN/password modal mounted to show modalError in) → surface
+      // it as the standalone toast instead of dropping it on the floor.
+      if (silent) setSelectError(message);
+      else setModalError(message);
+    }
     finally { setModalLoading(false); }
   };
 
@@ -405,6 +422,10 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           </span>
           <RiArrowDownSLine className="ps-trigger__chevron" />
         </button>
+
+        {selectError && (
+          <div className="ps-select-toast" role="alert">{selectError}</div>
+        )}
 
         {open && (
           <div className="ps-prof ps-scroll" role="menu">

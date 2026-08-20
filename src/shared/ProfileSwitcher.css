@@ -164,6 +164,18 @@
   background: #fef2f2; border-radius: 6px; padding: 6px 10px;
   width: 100%; box-sizing: border-box;
 }
+
+/* Standalone toast for a select failure with no modal mounted to show
+   .ps-modal__error in (e.g. a PIN-free profile that 404s/403s) — anchored
+   under the trigger pill via .ps-root's position:relative. */
+.ps-select-toast {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 90;
+  min-width: 200px; max-width: 280px;
+  font-size: 12px; color: #dc2626; text-align: left;
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+  padding: 8px 12px; box-shadow: 0 8px 24px rgba(15,23,42,.14);
+  animation: ps-pop .16s ease;
+}
 .ps-modal__confirm {
   width: 100%; padding: 11px; background: #015865; color: #fff;
   border: none; border-radius: 8px; font-size: 14px; font-weight: 600;

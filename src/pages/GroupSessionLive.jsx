@@ -349,7 +349,12 @@ export default function GroupSessionLive() {
         token={livekitData.token}
         connect={true}
         video={false}
-        audio={true}
+        // Publish audio only for the host. Publishing for every joiner used to
+        // race the ControlBar's mount-effect force-mute — audio={true} put the
+        // mic on the wire a render before it got muted, briefly broadcasting a
+        // student's room to the class, and fired an unwanted mic-permission
+        // prompt for participants who never speak.
+        audio={isHost}
         style={liveKitWrap}
         onDisconnected={() => navigate("/group-sessions")}
         onError={(err) => setError(err?.message || "Lost connection to the group session.")}
