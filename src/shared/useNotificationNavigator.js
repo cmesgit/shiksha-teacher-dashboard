@@ -100,9 +100,18 @@ export default function useNotificationNavigator() {
     // don't start with /teacher, so they would otherwise be swallowed by
     // the counsellor fallback below. ChatPanel opens a conversation from
     // router state, not a URL param.
+    //
+    // Land in the inbox for the track the user is ALREADY IN. The inbox
+    // itself is shared — /teacher/chat and /teacher/expert/inbox render the
+    // same ChatPanel over the same conversation list, differing only in
+    // theme and chrome — so this never hides a message. It just stops a
+    // message notification from yanking someone out of Skill Dev and into
+    // the Academy layout mid-task, which is what hardcoding /teacher/chat
+    // did.
     const chatMatch = linkUrl.match(/^\/chat\/([^/?]+)/);
     if (chatMatch) {
-      navigate("/teacher/chat", { state: { conversationId: chatMatch[1] } });
+      const inbox = activeTrack === "skill" ? "/teacher/expert/inbox" : "/teacher/chat";
+      navigate(inbox, { state: { conversationId: chatMatch[1] } });
       return true;
     }
 
@@ -126,7 +135,11 @@ export default function useNotificationNavigator() {
     // instead of navigating. Never invent a destination here — that is what
     // produced the career-counsellor-form bug.
     return false;
-  }, [navigate]);
+    // activeTrack is a real dependency: without it this callback would be
+    // created once and capture the track the user happened to load on, so a
+    // chat notification would keep opening the Academy inbox even after they
+    // moved into Skill Dev.
+  }, [navigate, activeTrack]);
 
   return { goTracked, openLink, activeTrack };
 }

@@ -91,10 +91,29 @@ function TrackGate({ track, status }) {
 export default function RequireTrack({ track, children }) {
   const { teacherInfo, loading } = useAuth();
 
-  // Don't gate before /me/ has resolved — that would flash the locked card at
-  // legitimate teachers on every cold load. (bootstrap() sets teacherInfo
-  // before it clears `loading`, so once this passes the data is present.)
-  if (loading) return children;
+  // While /me/ is in flight, render NEITHER the children nor the gate.
+  //
+  // Returning `children` here (the previous behaviour) avoided flashing the
+  // locked card at legitimate teachers, but bought that with a worse
+  // problem: on every cold load or deep link the protected screens mounted
+  // and fired their API calls before entitlement was known — so an
+  // academy-only teacher opening /teacher/expert/bookings briefly rendered
+  // the Skill Dev layout and requested its data, then had it swapped for the
+  // gate. Returning the gate instead would flash "not added yet" at everyone.
+  // A neutral placeholder is the only option that is wrong for nobody.
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          minHeight: "60vh", color: "#6b7c83", fontSize: 14,
+        }}
+        aria-busy="true"
+      >
+        Loading…
+      </div>
+    );
+  }
 
   const status = teacherInfo?.tracks?.[track] ?? "locked";
   if (status === "approved") return children;

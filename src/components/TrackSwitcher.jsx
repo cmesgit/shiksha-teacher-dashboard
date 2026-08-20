@@ -53,7 +53,7 @@ const COUNSELLOR_TRACK = {
 export default function TrackSwitcher() {
   const navigate     = useNavigate();
   const { pathname } = useLocation();
-  const { teacherInfo, hasRole } = useAuth();
+  const { teacherInfo, hasRole, switchTrack } = useAuth();
 
   // Real per-track approval status (see serialize_teacher() on the backend).
   // `type` (GUEST/FACULTY/BOTH) is a legacy display field only — it's not
@@ -100,7 +100,25 @@ export default function TrackSwitcher() {
       return;
     }
     if (track.key === current) return;
+
+    // Tell the SERVER, not just the router.
+    //
+    // This used to be `navigate(track.route)` alone, which left
+    // teacherInfo.active_track pointing at the old track. Everything that
+    // reads that field then disagreed with the URL: inside the Skill Dev
+    // layout the header's message icon and quick actions pointed at Academy
+    // routes, the breadcrumb chip read "Faculty · Academy", and the profile
+    // switcher showed the wrong track's label and accent. That is precisely
+    // "track A's chrome around track B's data".
+    //
+    // Navigate FIRST so the switch feels instant — the route is the real
+    // source of truth for which layout mounts — then reconcile the server in
+    // the background. A failure here is non-fatal: the UI is already correct,
+    // only the persisted preference lags, so it must not block or throw.
     navigate(track.route);
+    Promise.resolve(switchTrack(track.key)).catch(() => {
+      /* preference only; the route already switched the UI */
+    });
   };
 
   return (

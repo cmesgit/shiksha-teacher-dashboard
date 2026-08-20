@@ -16,23 +16,40 @@
  *
  *   learnerId = LearnerProfile UUID — what StartDirectView KIND_LEARNER expects.
  */
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import ChatPanel from "../shared/ChatPanel";
 import "../shared/ChatPanel.css";
 
 const DIRECTORY_NOTE = "To reach a student, reply to their message or message them from a course room.";
 
+// A cross-APP hop (from the public site) can only carry a URL, not router
+// state — so a chat deep link from there used to land on the inbox with no
+// conversation selected. Accept ?conversation=<id> as an equivalent to
+// state.conversationId; in-app navigation keeps using state, which survives
+// a shared link being pasted around less readily.
 export default function SkillInbox() {
   const { state } = useLocation();
+  const [searchParams] = useSearchParams();
 
   // When arriving from ExpertBookings Message button, open that learner's DM directly.
   const directTo = state?.learnerId
     ? { kind: "LEARNER", id: state.learnerId }
     : undefined;
 
+  // Chat notifications now land in whichever inbox matches the expert's
+  // current track, so this one has to be able to open a specific thread —
+  // it previously only ever opened the list.
+  const conversationId =
+    state?.conversationId || searchParams.get("conversation") || undefined;
+
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-      <ChatPanel directTo={directTo} theme="skill" directoryContactsNote={DIRECTORY_NOTE} />
+      <ChatPanel
+        directTo={directTo}
+        conversationId={conversationId}
+        theme="skill"
+        directoryContactsNote={DIRECTORY_NOTE}
+      />
     </div>
   );
 }

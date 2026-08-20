@@ -118,7 +118,15 @@ function DashboardEntry() {
   if (academy !== "approved" && skill === "approved") {
     return <Navigate to="/teacher/expert" replace />;
   }
-  return <TeacherDashboard />;
+  // This route now sits outside the pathless academy RequireTrack (so the
+  // redirects above can actually run), which means the academy gate has to
+  // be applied here instead — otherwise an unapproved teacher would reach
+  // the real dashboard.
+  return (
+    <RequireTrack track="academy">
+      <TeacherDashboard />
+    </RequireTrack>
+  );
 }
 
 export default function TeacherRoutes() {
@@ -126,12 +134,18 @@ export default function TeacherRoutes() {
     <Routes>
       <Route path="/" element={<RedirectToMainLogin />} />
 
-      {/* Fullscreen live routes */}
-      <Route path="/teacher/live/:id" element={<ProtectedTeacherRoute><TeacherLiveSession /></ProtectedTeacherRoute>} />
-      <Route path="/teacher/private-session/live/:id" element={<ProtectedTeacherRoute><PrivateSessionLive /></ProtectedTeacherRoute>} />
-      <Route path="/teacher/group-session/live/:id" element={<ProtectedTeacherRoute><GroupSessionLive /></ProtectedTeacherRoute>} />
+      {/* Fullscreen live routes.
+          TRACK-GATED. These were the only routes in the app with no
+          RequireTrack, so a skill-only expert could open an Academy live
+          room and an academy-only teacher could open the Skill Dev one just
+          by URL. The rooms request a LiveKit token on mount, so this was the
+          highest-value gap in the route table. The backend enforces its own
+          checks too — this stops the wrong room ever mounting. */}
+      <Route path="/teacher/live/:id" element={<ProtectedTeacherRoute><RequireTrack track="academy"><TeacherLiveSession /></RequireTrack></ProtectedTeacherRoute>} />
+      <Route path="/teacher/private-session/live/:id" element={<ProtectedTeacherRoute><RequireTrack track="academy"><PrivateSessionLive /></RequireTrack></ProtectedTeacherRoute>} />
+      <Route path="/teacher/group-session/live/:id" element={<ProtectedTeacherRoute><RequireTrack track="academy"><GroupSessionLive /></RequireTrack></ProtectedTeacherRoute>} />
       {/* Skill-dev 1-on-1 LiveKit room (separate from Academy private sessions) */}
-      <Route path="/teacher/skill-session/live/:id" element={<ProtectedTeacherRoute><SkillSessionLive /></ProtectedTeacherRoute>} />
+      <Route path="/teacher/skill-session/live/:id" element={<ProtectedTeacherRoute><RequireTrack track="skill"><SkillSessionLive /></RequireTrack></ProtectedTeacherRoute>} />
 
       {/* ── Skill Dev / Expert — SkillDevLayout ── */}
       <Route
@@ -184,11 +198,19 @@ export default function TeacherRoutes() {
             Pathless layout route so one gate covers all of it — previously
             each of these was reachable by typing the URL regardless of track,
             rendering empty gradebooks and rosters to guest experts. */}
+        {/* dashboard is deliberately OUTSIDE the academy gate. It is the
+            landing route the header, profile switcher and track switcher all
+            point at, and DashboardEntry's job is to decide WHICH dashboard a
+            teacher should see. Inside the gate that decision was unreachable:
+            a skill-only expert following their own header link hit "Academy
+            track not added yet" instead of their expert dashboard.
+            DashboardEntry now renders the gate itself when appropriate. */}
+        <Route path="dashboard" element={<DashboardEntry />} />
+
         <Route element={<RequireTrack track="academy"><Outlet /></RequireTrack>}>
         <Route path="profile" element={<FacultyProfile />} />
         {/* Old split pages both fold into the unified faculty profile. */}
         <Route path="private-details" element={<Navigate to="/teacher/profile" replace />} />
-        <Route path="dashboard" element={<DashboardEntry />} />
         <Route path="students" element={<AllStudents />} />
         <Route path="students/:studentId" element={<AllStudentDetail />} />
         <Route path="classes" element={<ClassesList />} />
@@ -272,6 +294,12 @@ export default function TeacherRoutes() {
         <Route path="batch-progress/:batchId" element={<BatchProgressDetail />} />
         </Route>{/* /RequireTrack academy */}
       </Route>
+
+      {/* Catch-all, genuinely last. This app had none, so any unmatched
+          /teacher/... URL rendered a completely blank page — no layout, no
+          header, no way back. Send it to the dashboard, which then routes on
+          the user's own track entitlement. */}
+      <Route path="*" element={<Navigate to="/teacher/dashboard" replace />} />
     </Routes>
   );
 }

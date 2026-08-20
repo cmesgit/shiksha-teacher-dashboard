@@ -7,14 +7,20 @@
 // `.cc-theme-academy` block) instead of the hub's original terracotta/teal
 // theme. pages/SkillInbox.jsx mounts the exact same component with
 // `theme="skill"` instead.
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import ChatPanel from "../shared/ChatPanel";
 import "../shared/ChatPanel.css";
 
 const DIRECTORY_NOTE = "To reach a student, reply to their message or message them from a course room.";
 
+// A cross-APP hop (from the public site) can only carry a URL, not router
+// state — so a chat deep link from there used to land on the inbox with no
+// conversation selected. Accept ?conversation=<id> as an equivalent to
+// state.conversationId; in-app navigation keeps using state, which survives
+// a shared link being pasted around less readily.
 export default function Chat() {
   const { state } = useLocation();
+  const [searchParams] = useSearchParams();
 
   const directTo = state?.learnerId
     ? { kind: "LEARNER", id: state.learnerId }
@@ -26,7 +32,7 @@ export default function Chat() {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-      <ChatPanel directTo={directTo} courseRoom={courseRoom} conversationId={state?.conversationId} theme="academy" directoryContactsNote={DIRECTORY_NOTE} />
+      <ChatPanel directTo={directTo} courseRoom={courseRoom} conversationId={state?.conversationId || searchParams.get("conversation")} theme="academy" directoryContactsNote={DIRECTORY_NOTE} />
     </div>
   );
 }
