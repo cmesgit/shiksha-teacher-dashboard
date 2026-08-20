@@ -8,6 +8,10 @@ import { useToast } from "../../contexts/ToastContext";
 export default function ControlBar({
   onLeave,
   onEndSession,
+  // Optional: only the regular Live Session shell passes this. Private and
+  // group sessions have their own duration rules, so the button stays hidden
+  // there rather than calling a livestream-only endpoint.
+  onExtendSession = null,
   role,
   activePanel,
   onTogglePanel,
@@ -426,6 +430,26 @@ export default function ControlBar({
               </svg>
             </div>
             <span className="cb-label">Leave</span>
+          </button>
+        )}
+
+        {/* Extend. A class that overruns its scheduled slot used to lock out
+            anyone who reconnected — the room stayed open, but a student whose
+            wifi blipped was told the session had ended. There is a 30-minute
+            grace server-side; this is for when a lesson needs longer. */}
+        {isPresenter && onExtendSession && (
+          <button
+            className="cb-btn"
+            onClick={() => onExtendSession(15)}
+            title="Add 15 minutes to this class"
+          >
+            <div className="cb-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 15 14" />
+              </svg>
+            </div>
+            <span className="cb-label">+15 min</span>
           </button>
         )}
 

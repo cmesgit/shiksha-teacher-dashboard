@@ -28,6 +28,19 @@ export default function ScheduleSessionModal({ initialSubjectId, editSession, on
   );
   const [submitting, setSubmitting] = useState(false);
 
+  // Repeat. A term of classes could only be created one at a time, so a
+  // 6-month batch at two classes a week meant ~50 passes through this form.
+  // Edit mode never repeats — rescheduling one class is not a pattern change.
+  const [repeat, setRepeat] = useState("none");
+  const [days, setDays] = useState([]);          // 0 = Mon … 6 = Sun
+  const [endMode, setEndMode] = useState("count");
+  const [count, setCount] = useState(24);
+  const [until, setUntil] = useState("");
+  const repeats = !isEdit && repeat !== "none";
+
+  const toggleDay = (d) =>
+    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
+
   useEffect(() => {
     if (isEdit) return; // subject/batch are fixed in edit mode — nothing to pick
     api
@@ -105,6 +118,38 @@ export default function ScheduleSessionModal({ initialSubjectId, editSession, on
           end_time: end.toISOString(),
         });
         toast.success("Session updated!");
+      } else if (repeats) {
+        const body = {
+          title: title.trim(),
+          description: "",
+          subject_id: subjectId,
+          batch_id: batchId,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          repeat,
+        };
+        if (repeat === "weekly") {
+          // Empty means "the weekday the first class falls on", which is what
+          // the server defaults to — don't send [] and imply "no days".
+          if (days.length) body.days_of_week = days;
+        }
+        if (endMode === "count") body.count = Number(count);
+        else body.until = until;
+
+        const { data } = await api.post("/livestream/sessions/recurring/", body);
+        // Report skips explicitly. A bulk tool that silently drops dates is
+        // worse than none, because the teacher believes the timetable is
+        // complete and only finds out when a class doesn't happen.
+        if (data.skipped_count) {
+          toast.success(`${data.created_count} classes scheduled.`);
+          toast(
+            `${data.skipped_count} date${data.skipped_count === 1 ? "" : "s"} skipped — ` +
+            `${data.skipped[0]?.reason || "unavailable"}.`,
+            { icon: "⚠️", duration: 6000 },
+          );
+        } else {
+          toast.success(`${data.created_count} classes scheduled.`);
+        }
       } else {
         await api.post("/livestream/sessions/", {
           title: title.trim(),
@@ -212,12 +257,93 @@ export default function ScheduleSessionModal({ initialSubjectId, editSession, on
           </div>
         </div>
 
+        {!isEdit && (
+          <>
+            <div className="scheduleModal__field">
+              <label className="scheduleModal__label">Repeat</label>
+              <select
+                className="scheduleModal__input"
+                value={repeat}
+                onChange={(e) => setRepeat(e.target.value)}
+              >
+                <option value="none">Does not repeat</option>
+                <option value="weekly">Weekly</option>
+                <option value="weekdays">Every weekday (Mon–Fri)</option>
+                <option value="daily">Daily</option>
+              </select>
+            </div>
+
+            {repeat === "weekly" && (
+              <div className="scheduleModal__field">
+                <label className="scheduleModal__label">
+                  On these days <span className="scheduleModal__hint">(defaults to the start date's day)</span>
+                </label>
+                <div className="scheduleModal__days">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, i) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={`scheduleModal__day ${days.includes(i) ? "is-on" : ""}`}
+                      onClick={() => toggleDay(i)}
+                      aria-pressed={days.includes(i)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {repeats && (
+              <div className="scheduleModal__row">
+                <div className="scheduleModal__field">
+                  <label className="scheduleModal__label">Ends</label>
+                  <select
+                    className="scheduleModal__input"
+                    value={endMode}
+                    onChange={(e) => setEndMode(e.target.value)}
+                  >
+                    <option value="count">After a number of classes</option>
+                    <option value="until">On a date</option>
+                  </select>
+                </div>
+                <div className="scheduleModal__field">
+                  <label className="scheduleModal__label">
+                    {endMode === "count" ? "Number of classes" : "Last date"}
+                  </label>
+                  {endMode === "count" ? (
+                    <input
+                      type="number" min="1" max="200"
+                      className="scheduleModal__input"
+                      value={count}
+                      onChange={(e) => setCount(e.target.value)}
+                    />
+                  ) : (
+                    <input
+                      type="date"
+                      className="scheduleModal__input"
+                      value={until}
+                      onChange={(e) => setUntil(e.target.value)}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <div className="scheduleModal__footer">
           <button type="button" className="scheduleModal__btn scheduleModal__btn--outline" onClick={onClose}>
             Cancel
           </button>
           <button type="button" className="scheduleModal__btn scheduleModal__btn--primary" disabled={submitting} onClick={submit}>
-            {submitting ? (isEdit ? "Saving…" : "Scheduling…") : (isEdit ? "Save changes" : "Schedule session")}
+            {submitting
+              ? (isEdit ? "Saving…" : "Scheduling…")
+              : isEdit
+                ? "Save changes"
+                : repeats
+                  ? `Schedule ${endMode === "count" ? count : ""} classes`.replace("  ", " ")
+                  : "Schedule session"}
           </button>
         </div>
       </div>

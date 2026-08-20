@@ -148,3 +148,39 @@
   color: #9ca3af;
   cursor: default;
 }
+
+/* ── Repeat (recurring series) ───────────────────────────────────────── */
+
+.scheduleModal__hint {
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.scheduleModal__days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scheduleModal__day {
+  flex: 1 1 auto;
+  min-width: 44px;
+  padding: 8px 4px;
+  border: 1px solid #dfe4e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scheduleModal__day:hover {
+  background: #f5f7f9;
+}
+
+.scheduleModal__day.is-on {
+  background: #7a1c1c;
+  border-color: #7a1c1c;
+  color: #fff;
+}

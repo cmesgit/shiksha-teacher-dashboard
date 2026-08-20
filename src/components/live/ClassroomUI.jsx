@@ -4,6 +4,8 @@ import LiveChatPanel from "./LiveChatPanel";
 import NotesPanel from "./NotesPanel";
 import ControlBar from "./ControlBar";
 import React, { useState, useRef, useEffect } from "react";
+import toast from "react-hot-toast";
+import api from "../../api/apiClient";
 import "../../styles/live.css";
 import useLiveSessionChat from "../../hooks/useLiveSessionChat";
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
@@ -41,6 +43,33 @@ export default function ClassroomUI({
     window.location.pathname.split("/").filter(Boolean).pop();
 
   const { messages: chatMessages, sendMessage } = useLiveSessionChat(sessionId);
+
+  // Push back the end of a class that is running long. Without this a lesson
+  // that overran its scheduled slot kept running for whoever was already
+  // connected, but anyone who reconnected was told the session had ended.
+  const extendSession = async (minutes = 15) => {
+    try {
+      await api.post(`/livestream/sessions/${sessionId}/extend/`, { minutes });
+      toast.success(`Class extended by ${minutes} minutes.`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Could not extend the class.");
+    }
+  };
+
+  // Remove a disruptive participant for the rest of this class. The server
+  // records the removal as well as disconnecting them — a LiveKit token is a
+  // bearer credential with no revocation, so without that record the student
+  // would simply rejoin on refresh.
+  const removeParticipant = async (userId, name) => {
+    if (!window.confirm(`Remove ${name || "this participant"} from the class? They won't be able to rejoin.`)) return;
+    try {
+      const { data } = await api.post(`/livestream/sessions/${sessionId}/remove/`, { user_id: userId });
+      toast.success(data.detail || "Removed.");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Could not remove them.");
+    }
+  };
+
 
   /* ───── SESSION DURATION TIMER — lives in the sidebar's session-info
      block now (spec section 10), not the control bar. ───── */
@@ -194,24 +223,44 @@ export default function ClassroomUI({
     setOpenMenuId(null);
   };
 
+  // Server-enforced, not a request. This was a "force-mute" data message —
+  // the student's own browser was asked to mute itself, so a client that
+  // ignored it stayed audible to the whole class. The server mutes the
+  // published track at LiveKit instead. The data message is still sent as
+  // well, so the student's own UI updates to show they were muted rather
+  // than their mic button silently disagreeing with what everyone hears.
   const toggleStudentMic = async (identity, isMicOn) => {
-    if (isMicOn) {
-      await sendToStudent(identity, { type: "force-mute" });
-    } else {
-      await sendToStudent(identity, { type: "force-unmute" });
-    }
     setOpenMenuId(null);
+    try {
+      await api.post(`/livestream/sessions/${sessionId}/mute/`, {
+        user_id: userIdFromIdentity(identity),
+        muted: Boolean(isMicOn),
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Could not change their mic.");
+      return;
+    }
+    sendToStudent(identity, { type: isMicOn ? "force-mute" : "force-unmute" })
+      .catch(() => {});
   };
 
+  // The LiveKit participant identity is "{userId}_{sessionId}". Everything
+  // server-side is keyed on the bare user id.
+  const userIdFromIdentity = (identity) => String(identity || "").split("_")[0];
+
   const kickStudent = async (identity, name) => {
-    if (!window.confirm(`Remove ${name || identity} from the session?`)) return;
-    try {
-      await sendToStudent(identity, { type: "kick" });
-    } catch (err) {
-      console.error("Kick error:", err);
-    }
+    // This used to be `sendToStudent(identity, {type: "kick"})` — a LiveKit
+    // data message POLITELY ASKING the student's own browser to disconnect.
+    // It relied entirely on their client cooperating: ignore the message, or
+    // just press refresh, and they were still in the class. The server now
+    // both disconnects them and records the removal, which is what makes it
+    // survive a rejoin (a LiveKit token is a bearer credential with a 2h TTL
+    // and no revocation).
+    if (!window.confirm(`Remove ${name || "this student"} from the class? They won't be able to rejoin.`)) return;
     setOpenMenuId(null);
+    await removeParticipant(userIdFromIdentity(identity), name);
   };
+
 
   /* ───── TRACKS ───── */
   const tracks = useTracks([
@@ -536,11 +585,15 @@ export default function ClassroomUI({
 
                             {openMenuId === p.identity && (
                               <div className="ppl-menu">
+                                {/* No Mute item here: the mic icon on this
+                                    row already toggles it, and now does so
+                                    server-side. Two mute controls with
+                                    different guarantees is worse than one. */}
                                 <button
                                   className="ppl-menu-item ppl-menu-item--danger"
                                   onClick={() => kickStudent(p.identity, p.name)}
                                 >
-                                  Kick from session
+                                  Remove from class
                                 </button>
                               </div>
                             )}
@@ -600,6 +653,7 @@ export default function ClassroomUI({
       {/* CONTROL BAR — full width, beneath the video+sidebar row */}
       <ControlBar
         onLeave={onLeave}
+        onExtendSession={role === "PRESENTER" ? extendSession : null}
         role={role}
         sessionId={sessionId}
         hideTimer
