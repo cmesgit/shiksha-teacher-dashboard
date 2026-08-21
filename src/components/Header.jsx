@@ -53,6 +53,7 @@ export default function Header({ onMenuClick, isExpertPage }) {
       <MessageIcon to={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
       <NotificationBell />
       <ProfileSwitcher
+        compact
         teacherSignupUrl={`${HOME_URL}/signup?role=teacher`}
         learnUrl={APP_URL}
         teachUrl={window.location.origin + "/teacher/dashboard"}

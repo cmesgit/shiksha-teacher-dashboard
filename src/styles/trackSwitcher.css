@@ -12,4 +12,15 @@
 .trackSwitcher__lock { font-size:13px; opacity:.8; }
 .trackSwitcher__badge { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.3px;
   background:rgba(154,123,24,.18); color:#9a7b18; padding:2px 6px; border-radius:100px; }
-@media (max-width:600px){ .trackSwitcher{margin-right:8px} .trackSwitcher__seg{padding:6px 10px;font-size:11px} .trackSwitcher__badge{display:none} }
+/* Narrow screens: icon-only segments. Same header-overflow fix as the student
+   app (see its copy of this file); this side has THREE segments, so the row is
+   even wider. Both/all tracks stay reachable — collapsing the labels beats
+   hiding the control. The buttons carry aria-label/title, so the accessible
+   name survives the `span{display:none}`. margin-right goes to 0: .header__right
+   already supplies a 10px gap, so the 8px was double-spacing. */
+@media (max-width:600px){
+  .trackSwitcher{margin-right:0}
+  .trackSwitcher__seg{padding:7px 9px;font-size:11px;gap:0}
+  .trackSwitcher__seg > span{display:none}
+  .trackSwitcher__badge{display:none}
+}

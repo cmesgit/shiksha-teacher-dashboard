@@ -140,6 +140,10 @@ export default function TrackSwitcher() {
               !accessible ? "is-locked" : "",
             ].join(" ").trim()}
             title={accessible ? label : lockTitle}
+            /* The label <span> is display:none below 600px (trackSwitcher.css),
+               which also removes it from the accessibility tree — so name the
+               button explicitly rather than relying on the title attribute. */
+            aria-label={accessible ? label : `${label} — ${lockTitle}`}
             onClick={() => handleClick({ key, route })}
           >
             {!accessible ? <RiLockLine className="trackSwitcher__lock" /> : <Icon size={13} />}

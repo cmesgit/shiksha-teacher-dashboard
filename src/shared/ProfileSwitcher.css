@@ -24,9 +24,26 @@
 .ps-trigger__chevron { color: #93a0a8; font-size: 15px; flex-shrink: 0; transition: transform .15s; }
 .ps-trigger--open .ps-trigger__chevron { transform: rotate(180deg); }
 
+/* Narrow screens, opt-in via the `compact` prop (see ProfileSwitcher.jsx for
+   why this is not automatic): drop to an avatar-only pill, 193px → 42px.
+   The dashboard headers pack a track switcher, messages, a bell and this into
+   one flex row; at 375px the row needed 484px of a 293px slot and the whole
+   page scrolled sideways. The name/role text is the affordable half of that —
+   it is still the first thing in the dropdown this opens. The chevron goes too:
+   `aria-haspopup="menu"` + `aria-expanded` carry the affordance for AT, and the
+   pill border carries it visually. */
+@media (max-width: 600px) {
+  .ps-root--compact .ps-trigger { padding: 4px; gap: 0; }
+  .ps-root--compact .ps-trigger__txt,
+  .ps-root--compact .ps-trigger__chevron { display: none; }
+}
+
 /* Dropdown panel */
+/* max-width: the 320px panel is anchored right:0 to a trigger that sits ~16px
+   from the viewport edge, so anything under ~344px wide clipped it off-screen.
+   A max-width only ever shrinks it — on desktop the 320px width still wins. */
 .ps-prof {
-  position: absolute; top: 52px; right: 0; width: 320px; max-height: 78vh;
+  position: absolute; top: 52px; right: 0; width: 320px; max-width: calc(100vw - 24px); max-height: 78vh;
   overflow-y: auto; background: #fff; border-radius: 16px; border: 1px solid #eceff1;
   box-shadow: 0 18px 54px rgba(15,23,42,.20); z-index: 80; animation: ps-pop .16s ease;
 }

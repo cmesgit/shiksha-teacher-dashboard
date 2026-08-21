@@ -205,7 +205,15 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
 }
 
 /* ── Main ── */
-export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, quickActions = [] }) {
+/* `compact` — collapse the trigger to avatar-only on narrow screens (≤600px).
+   Opt-in, NOT automatic, because the two mount contexts want opposite things:
+   the dashboard headers sit in a crowded flex row (track switcher + messages +
+   bell + this) that overflows a 375px phone, so there the name/role text has to
+   go; shiksha-frontend's Navbar hides its top-bar copy below 640px entirely and
+   re-mounts this inside the mobile DRAWER, where there is plenty of room and
+   the account name is the whole point. A bare viewport media query would strip
+   the name in the drawer too. */
+export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, quickActions = [], compact = false }) {
   const {
     user, profiles, activeProfile, teacherInfo,
     isTeacherContext, selectProfile, setProfilePin, enterTeacherMode, switchTrack, logout,
@@ -405,7 +413,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
 
   return (
     <>
-      <div className="ps-root" ref={ref}>
+      <div className={`ps-root${compact ? " ps-root--compact" : ""}`} ref={ref}>
         <button
           ref={triggerRef}
           className={`ps-trigger ${open ? "ps-trigger--open" : ""}`}
