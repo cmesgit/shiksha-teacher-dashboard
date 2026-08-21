@@ -1,0 +1,66 @@
+/* BoardPill — see BoardPill.jsx for why the board has to appear everywhere.
+
+   Deliberately a NEW namespace rather than a rename of the three existing
+   copies of this treatment (.shop-card__pill in browseCourses.css,
+   .mc-card__pill in myCourses.css, .myCourseDetail__chip). Those three are
+   byte-identical and shipping correctly, and they carry non-board pills too
+   (stream, status), so folding them in would be a pure-risk refactor with no
+   user-visible gain. Consolidating them is worth doing on its own later.
+
+   Values match those three exactly, so a board pill added next to an existing
+   pill row lines up rather than looking almost-right. */
+
+.board-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  /* Never let a long board name stretch a table cell or a flex row — the
+     pill is the least important thing in any row it appears in. */
+  flex-shrink: 0;
+}
+
+/* Filled — cards, list rows, pill rows. */
+.board-pill--soft {
+  color: var(--academy, #425f7f);
+  background: var(--academy-soft, #e6edee);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+/* Bare text — sidebars, <option>-adjacent meta lines, dense two-line rows and
+   anywhere already inside a filled chip, where a second filled pill reads as a
+   button. The middot is a separator, so it is decorative: it must not be
+   announced, hence aria-hidden is impossible on a pseudo-element and we rely
+   on the pill's own aria-label carrying "Board: MBSE" instead. */
+.board-pill--text {
+  color: var(--ink-muted, #6b7c83);
+  font-weight: 700;
+  opacity: 0.9;
+}
+.board-pill--text::before {
+  content: "·";
+  margin: 0 5px;
+  opacity: 0.7;
+}
+/* First child in its container means there is nothing to separate from. */
+.board-pill--text:first-child::before { content: none; margin: 0; }
+
+/* On the Skill Dev track the academy tokens resolve to academy blue, which is
+   wrong there. Boards only exist on academy courses, so a board pill inside a
+   skill-themed subtree is a mistake worth making visible in review rather than
+   silently mis-tinted — fall back to a neutral. See ChatPanel.css's note on
+   data-track leaking var(--acc) into /skill-messages for the same trap. */
+[data-track="skill"] .board-pill--soft {
+  color: var(--ink-muted, #6b7c83);
+  background: var(--divider, #eceff1);
+}
+
+@media (max-width: 600px) {
+  /* The dashboard headers and card rows are already tight at 375px (see the
+     header-overflow fix); shave the pill rather than let it wrap a row. */
+  .board-pill--soft { padding: 3px 7px; letter-spacing: 0.3px; }
+}

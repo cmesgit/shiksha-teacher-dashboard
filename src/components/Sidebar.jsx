@@ -20,6 +20,7 @@ import { useAuth } from "../contexts/AuthContext";
 import NavIcon from "./NavIcon";
 import { NAV, activeNavTo } from "../utils/academyNav";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
+import { courseLabel } from "../shared/boardLabel";
 import { HOME_URL } from "../config/urls";
 import "../styles/academySidebar.css";
 
@@ -101,12 +102,16 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     if (!classes.length) return "";
     const uniq = (xs) => [...new Set(xs.filter(Boolean))];
     const subjects = uniq(classes.map((c) => c.subjectName));
-    const courses = uniq(classes.map((c) => c.courseTitle));
+    // Count courses by (title, board), not title alone. MBSE and CBSE each run
+    // a course titled "Class 9", so deduping on the title merged two distinct
+    // classes into one — a teacher who teaches both saw "Class 9" instead of
+    // "2 classes", i.e. the count was silently wrong, not just terse.
+    const courseKeys = uniq(classes.map((c) => courseLabel(c.courseTitle, c.board)));
     const subjectPart =
       subjects.length <= 2 ? subjects.join(" & ") : `${subjects.length} subjects`;
     const coursePart =
-      courses.length === 1 ? courses[0]
-        : courses.length ? `${courses.length} classes`
+      courseKeys.length === 1 ? courseKeys[0]
+        : courseKeys.length ? `${courseKeys.length} classes`
         : "";
     return [subjectPart, coursePart].filter(Boolean).join(" · ");
   }, [classes]);
@@ -175,7 +180,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
               <div key={c.subjectId} className="acad-side__menuItem acad-side__menuItem--static">
                 <span className="acad-side__menuItemTitle">{c.subjectName}</span>
                 {c.courseTitle && (
-                  <span className="acad-side__menuItemMeta">{c.courseTitle}</span>
+                  <span className="acad-side__menuItemMeta">
+                    {courseLabel(c.courseTitle, c.board)}
+                  </span>
                 )}
               </div>
             ))}

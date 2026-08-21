@@ -28,6 +28,7 @@ import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { subjectChipSlot } from "../utils/subjectChips";
+import { courseLabel } from "../shared/boardLabel";
 import "../styles/academyScreens.css";
 
 // The design's teacher head chips are a BATCH filter, not a status one:
@@ -35,6 +36,13 @@ import "../styles/academyScreens.css";
 // and is matched against the row's meta line. Assignment.batch drives this;
 // NULL batch means course-wide, shown as "All batches".
 const ALL_BATCHES = "All";
+
+/* Stable identity for a batch as it appears in this list. A batch name is only
+   unique within its course, and two boards run a course with the same title, so
+   the name alone is not an identity — see batchChips below. NUL-joined because
+   it cannot occur in any of the three parts, unlike "·" or "|". */
+const batchKeyOf = (a) =>
+  [a.batch_name || "", a.course_title || "", a.board_name || ""].join("\u0000");
 
 const fmtDue = (d) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
@@ -161,7 +169,10 @@ export default function Assignments() {
         const dueTs = a.due_date ? new Date(a.due_date).getTime() : null;
         const overdue = dueTs != null && dueTs < now;
         const meta = [
-          a.batch_name || null,
+          // Batch name alone is ambiguous across boards, and for a course-wide
+          // assignment there is no batch name at all — in both cases the board
+          // is what tells the teacher which "Class 9" this row belongs to.
+          courseLabel(a.batch_name || a.course_title || null, a.board_name) || null,
           a.chapter_name || null,
           a.total_submissions > 0
             ? `${a.total_submissions} submission${a.total_submissions === 1 ? "" : "s"}`
@@ -183,9 +194,33 @@ export default function Assignments() {
   // Batch chips, from the batches that actually appear in the list. The design
   // hardcodes ["All","10-A","10-B","9-A"]; deriving them keeps the control
   // truthful for any timetable.
+  //
+  // Keyed on (batch_name, course, board), NOT on batch_name alone. A batch name
+  // is only unique within its course, and MBSE and CBSE each run a course
+  // titled "Class 9" — so a bare Set of names merged two different batches into
+  // one chip, and because the filter below compared names with ===, clicking it
+  // showed BOTH boards' assignments while claiming to be one batch.
+  //
+  // The board is spelled out only on the chips where it actually disambiguates
+  // something. Putting it on every chip would push a 4-chip row past the header
+  // width to say nothing most of the time.
   const batchChips = useMemo(() => {
-    const names = [...new Set(decorated.map((a) => a.batch_name).filter(Boolean))].sort();
-    return [ALL_BATCHES, ...names];
+    const byKey = new Map();
+    for (const a of decorated) {
+      if (!a.batch_name) continue;
+      const key = batchKeyOf(a);
+      if (!byKey.has(key)) {
+        byKey.set(key, { key, name: a.batch_name, board: a.board_name || "" });
+      }
+    }
+    const items = [...byKey.values()];
+    const nameCounts = new Map();
+    for (const it of items) nameCounts.set(it.name, (nameCounts.get(it.name) || 0) + 1);
+    for (const it of items) {
+      it.label = nameCounts.get(it.name) > 1 ? courseLabel(it.name, it.board) : it.name;
+    }
+    items.sort((a, b) => a.label.localeCompare(b.label));
+    return [{ key: ALL_BATCHES, label: "All" }, ...items];
   }, [decorated]);
 
   // Defensive dedupe by subjectId, same as the sibling Quizzes/StudyMaterials/
@@ -210,7 +245,7 @@ export default function Assignments() {
     () =>
       decorated
         .filter((a) => !subjectFilter || String(a.subjectId) === subjectFilter)
-        .filter((a) => batchFilter === ALL_BATCHES || (a.batch_name || "") === batchFilter)
+        .filter((a) => batchFilter === ALL_BATCHES || batchKeyOf(a) === batchFilter)
         .sort((a, b) => {
           // Not-yet-due first (soonest deadline first), then overdue (most recent first).
           if (a.overdue !== b.overdue) return a.overdue ? 1 : -1;
@@ -256,7 +291,9 @@ export default function Assignments() {
       title: "Delete this assignment?",
       message:
         `“${a.title}” will be removed for every student in ` +
-        `${a.batch_name || a.subjectName || "this class"}. This can't be undone.`,
+        // Name the board here too — this is a destructive confirm, and "every
+        // student in Class 9" is exactly the sentence you must not be wrong about.
+        `${courseLabel(a.batch_name || a.subjectName || "this class", a.board_name)}. This can't be undone.`,
       confirmLabel: "Delete assignment",
       danger: true,
       onConfirm: () => handleDeleteConfirm(a.id),
@@ -301,12 +338,12 @@ export default function Assignments() {
           <div className="ac-pills">
             {batchChips.map((b) => (
               <button
-                key={b}
+                key={b.key}
                 type="button"
-                className={`ac-pill ac-pill--sm${batchFilter === b ? " is-active" : ""}`}
-                onClick={() => setBatchFilter(b)}
+                className={`ac-pill ac-pill--sm${batchFilter === b.key ? " is-active" : ""}`}
+                onClick={() => setBatchFilter(b.key)}
               >
-                {b === ALL_BATCHES ? "All" : b}
+                {b.label}
               </button>
             ))}
           </div>
@@ -338,7 +375,11 @@ export default function Assignments() {
                     onClick={() => { setNewMenuOpen(false); createFor(c.subjectId); }}
                   >
                     <span>{c.subjectName}</span>
-                    {c.courseTitle && <span className="ac-menu__item__meta">{c.courseTitle}</span>}
+                    {c.courseTitle && (
+                      <span className="ac-menu__item__meta">
+                        {courseLabel(c.courseTitle, c.board)}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -363,7 +404,7 @@ export default function Assignments() {
               className={`ac-pill${subjectFilter === String(c.subjectId) ? " is-active" : ""}`}
               onClick={() => setSubjectFilter(String(c.subjectId))}
             >
-              {[c.subjectName, c.courseTitle].filter(Boolean).join(" · ")}
+              {[c.subjectName, courseLabel(c.courseTitle, c.board)].filter(Boolean).join(" · ")}
             </button>
           ))}
         </div>

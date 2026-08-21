@@ -25,17 +25,19 @@
 // The old card's real "💬 Class chat" shortcut isn't shown in the design, but
 // per this project's standing rule (don't drop real functionality just
 // because the mockup is silent) it survives as a small icon action beside
-// "Open batch". /my-batches groups by course_title, not course_id, so the
-// chat button needs a courseTitle → courseId lookup — built from the shared
-// TeacherClassesContext (one GET /courses/teacher/my-classes/, already fired
-// for every other Academy screen, not a new request of our own).
+// "Open batch". It reads course_id straight off the /my-batches group — this
+// screen used to pull in TeacherClassesContext purely to map course_title →
+// course_id, which was both unnecessary (the endpoint already returns
+// course_id) and wrong once two boards shared a course title. Dropping that
+// also means this screen no longer waits on a second request before it can
+// render.
 // ──────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMessageCircle } from "react-icons/fi";
 import api from "../api/apiClient";
-import { useTeacherClasses } from "../contexts/TeacherClassesContext";
+import BoardPill from "../shared/BoardPill";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 import "../styles/academyScreens.css";
 
@@ -45,7 +47,6 @@ const stripClassPrefix = (name) => (name || "").replace(/^Class\s+/i, "").trim()
 
 export default function ClassesList() {
   const navigate = useNavigate();
-  const { classes, loading: classesLoading, error: classesError } = useTeacherClasses();
 
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,27 +77,34 @@ export default function ClassesList() {
   }, []);
 
   // Same flattening BatchProgress.jsx uses: one row per batch, carrying its
-  // group's course title along.
+  // group's course id, title and board along.
+  //
+  // courseId comes straight off the group. There used to be a courseTitle →
+  // courseId Map built from the classes context here, on the stated grounds
+  // that "/my-batches only ever returns course_title" — that was simply not
+  // true (see courses/teacher_batch_views.py, which appends "course_id" beside
+  // "course_title"), and it was actively harmful: the Map was keyed on title
+  // with a `!map.has()` first-wins guard, so with MBSE and CBSE both running a
+  // course titled "Class 9" the second board's batches resolved to the FIRST
+  // board's course id and the class-chat button below opened the wrong board's
+  // room. Reading the id from the group removes the ambiguity rather than
+  // patching it, and drops a dependency on the classes context entirely.
   const flatBatches = useMemo(
-    () => groups.flatMap((g) => (g.batches || []).map((b) => ({ ...b, courseTitle: g.course_title }))),
+    () => groups.flatMap((g) => (g.batches || []).map((b) => ({
+      ...b,
+      courseId: g.course_id || null,
+      courseTitle: g.course_title,
+      board: g.board || "",
+    }))),
     [groups]
   );
 
-  // courseTitle → courseId, from the shared classes list (the only place a
-  // course id is available — /my-batches only ever returns course_title).
-  const courseIdByTitle = useMemo(() => {
-    const map = new Map();
-    for (const c of classes || []) {
-      if (c.courseTitle && c.courseId && !map.has(c.courseTitle)) {
-        map.set(c.courseTitle, c.courseId);
-      }
-    }
-    return map;
-  }, [classes]);
-
   const openBatch = (b) => {
     navigate(`/teacher/batch-progress/${b.id}`, {
-      state: { batchName: b.name, batchCode: b.code, courseTitle: b.courseTitle },
+      state: {
+        batchName: b.name, batchCode: b.code,
+        courseTitle: b.courseTitle, board: b.board,
+      },
     });
   };
 
@@ -104,11 +112,8 @@ export default function ClassesList() {
     navigate("/teacher/chat", { state: { courseId, courseTitle } });
   };
 
-  if (classesLoading || loading) {
+  if (loading) {
     return <div className="ac-screen"><LoadingState label="Loading classes" /></div>;
-  }
-  if (classesError) {
-    return <div className="ac-screen"><ErrorState message={classesError} /></div>;
   }
   if (error) {
     return <div className="ac-screen"><ErrorState message={error} /></div>;
@@ -137,7 +142,7 @@ export default function ClassesList() {
           {flatBatches.map((b) => {
             const avatarText = b.code || stripClassPrefix(b.name) || b.name;
             const percent = Math.min(100, Math.max(0, b.percent || 0));
-            const courseId = courseIdByTitle.get(b.courseTitle);
+            const courseId = b.courseId;
             const footText = `Ch ${b.chapters_done ?? 0} of ${b.chapters_total ?? 0} covered`;
 
             return (
@@ -151,6 +156,7 @@ export default function ClassesList() {
                   <div className="ac-card__title">{b.name}</div>
                   <div className="ac-card__meta">
                     {[b.courseTitle, b.year].filter(Boolean).join(" · ")}
+                    <BoardPill board={b.board} tone="text" />
                   </div>
                 </div>
 
