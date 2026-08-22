@@ -8,10 +8,10 @@
 // WHY THIS EXISTS
 // ───────────────
 // Chat used to be reachable only as a sidebar item, with no global
-// unread indicator — a teacher on the Students or Courses page never
-// knew a message had arrived. This hook powers a Messages icon that
-// lives in the Header (so it's on EVERY page), showing a single
-// account-wide unread badge that stays live.
+// unread indicator — a user on another page never knew a message had
+// arrived. This hook powers a Messages icon that lives in the Header
+// (so it's on EVERY page), showing a single account-wide unread badge
+// that stays live.
 //
 // DESIGN — mirrors useNotificationSocket.js on purpose:
 //   • ONE module-level store shared by every consumer (the Header icon
@@ -30,8 +30,13 @@
 //   • DECREMENT on read: ConversationThread dispatches a
 //     `shiksha:messages-read` window event after ChatAPI.markRead; we
 //     re-fetch on that, plus on window focus / tab visibility.
+//   • The raw conversation list from that same fetch is also exposed
+//     (`conversations`) — the header's mini-chat popup renders straight
+//     off it instead of firing a second `GET /chat/conversations/`, and
+//     inherits every refresh trigger below (push/focus/read-event/
+//     profile-switch) for free.
 //
-// Public API: { unreadCount, loading, refresh }
+// Public API: { unreadCount, conversations, loading, refresh }
 
 import { useEffect, useState } from "react";
 import { ChatAPI } from "./chatClient";
@@ -43,7 +48,7 @@ const REFRESH_DEBOUNCE_MS = 350;
 
 // ── module-level singleton store ────────────────────────────────────
 const store = {
-  state: { unreadCount: 0, loading: true },
+  state: { unreadCount: 0, conversations: [], loading: true },
   listeners: new Set(), // React subscribers (state changes)
   consumers: 0, // mounted hook instances (refcount)
   refreshing: false, // an in-flight fetch is running
@@ -72,9 +77,9 @@ async function runRefresh() {
     const convs = await ChatAPI.conversations();
     const list = Array.isArray(convs) ? convs : [];
     const total = list.reduce((n, c) => n + (Number(c?.unread) || 0), 0);
-    setState({ unreadCount: total, loading: false });
+    setState({ unreadCount: total, conversations: list, loading: false });
   } catch {
-    // Leave the last known count in place; a later push/focus retries.
+    // Leave the last known count/list in place; a later push/focus retries.
     setState({ loading: false });
   } finally {
     store.refreshing = false;
@@ -171,12 +176,13 @@ export default function useMessageBadge() {
   // re-fetch the new identity's total. Runs on mount too (harmless — the
   // count is already 0 and a fetch is already in flight).
   useEffect(() => {
-    setState({ unreadCount: 0, loading: true });
+    setState({ unreadCount: 0, conversations: [], loading: true });
     refreshMessageBadge();
   }, [activeProfile?.id, context]);
 
   return {
     unreadCount: store.state.unreadCount,
+    conversations: store.state.conversations,
     loading: store.state.loading,
     refresh: refreshMessageBadge,
   };

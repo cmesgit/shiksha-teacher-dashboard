@@ -19,12 +19,14 @@ import { HiOutlineMenuAlt3 } from "react-icons/hi";
 import { RiDashboardLine, RiBookOpenLine } from "react-icons/ri";
 import ProfileSwitcher from "../shared/ProfileSwitcher";
 import TrackSwitcher from "./TrackSwitcher";
-import MessageIcon from "./MessageIcon";
+import MessagesPopover from "../shared/MessagesPopover";
 import NotificationBell from "./NotificationBell";
 import { useAuth } from "../contexts/AuthContext";
 import { pageTitleFor } from "../utils/academyNav";
 import "../styles/header.css";
 import "../shared/ProfileSwitcher.css";
+import "../shared/ChatPanel.css";
+import "../shared/MessagesPopover.css";
 import { HOME_URL, APP_URL } from "../config/urls";
 
 // "Saturday, 25 July 2026" — en-GB, matching the design's date sub-line.
@@ -50,7 +52,7 @@ export default function Header({ onMenuClick, isExpertPage }) {
       </div>
       <div className="header__right">
       <TrackSwitcher />
-      <MessageIcon to={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
+      <MessagesPopover theme={isSkillActive ? "skill" : "academy"} viewAllHref={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
       <NotificationBell />
       <ProfileSwitcher
         compact

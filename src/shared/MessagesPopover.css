@@ -1,0 +1,123 @@
+/* PLACEMENT: put this file in BOTH apps (identical):
+     student_dashboard/src/shared/MessagesPopover.css
+     teacher_ui/src/shared/MessagesPopover.css
+
+   The trigger button reuses each app's own .notif-bell-* classes
+   (already defined in src/styles/header.css) so it sits visually
+   consistent with the bell right next to it — only the panel itself is
+   new. .cc-* classes below (list rows, bubbles, composer) come from
+   ChatPanel.css, already loaded globally; this file only needs to size
+   the panel and provide the cc-theme-* variable scope. */
+
+.msg-pop-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - 24px); /* the clamp NotificationBell's dropdown is missing */
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--cc-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+  font-family: var(--cc-font-body);
+  color: var(--cc-ink);
+}
+
+.msg-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--cc-border);
+  flex-shrink: 0;
+}
+
+.msg-pop-title {
+  font-weight: 800;
+  font-family: var(--cc-font-head);
+  font-size: 14px;
+}
+
+.msg-pop-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.msg-pop-viewall {
+  border: none;
+  background: none;
+  color: var(--cc-accent);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.msg-pop-viewall:hover {
+  text-decoration: underline;
+}
+
+.msg-pop-close {
+  border: none;
+  background: none;
+  color: var(--cc-ink);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.msg-pop-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.msg-pop-close:focus-visible,
+.msg-pop-viewall:focus-visible {
+  outline: 2px solid var(--cc-teal);
+  outline-offset: 1px;
+}
+
+.msg-pop-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ConversationList/ConversationThread render as normal flex/block content
+   here (no .cc-root grid involved) — just make sure the list's own
+   scroll area and the thread both fill this body. */
+.msg-pop-body .cc-list {
+  width: 100%;
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+}
+.msg-pop-body .cc-thread {
+  width: 100%;
+}
+
+/* Below this width the trigger is no longer near the right edge of the
+   header (the bell + profile switcher still sit to its right), so
+   anchoring the panel to the trigger's own `right: 0` pushes it off the
+   left edge of the screen regardless of the width clamp above — measured
+   at 375px: the panel's own right edge lands under the trigger correctly,
+   but its left edge sits ~80px off-screen. Pinning to the viewport instead
+   of the trigger sidesteps that entirely. */
+@media (max-width: 480px) {
+  .msg-pop-panel {
+    position: fixed;
+    top: var(--header-h, 60px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - var(--header-h, 60px) - 12px);
+  }
+}
