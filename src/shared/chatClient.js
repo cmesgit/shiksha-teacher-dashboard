@@ -113,6 +113,8 @@ export function openChatSocket(conversationId, handlers = {}) {
   let closedByUs = false;
   let attempt = 0;
   let pingTimer = null;
+  let reconnectTimer = null;
+  let hasConnectedBefore = false; // true from the 2nd successful open onward
   const outbox = []; // messages queued while not OPEN
 
   const startPing = () => {
@@ -138,7 +140,14 @@ export function openChatSocket(conversationId, handlers = {}) {
       attempt = 0;
       startPing();
       flushOutbox();          // resend anything queued during the gap
-      handlers.onOpen?.();
+      // isReconnect lets the caller distinguish "just opened for the first
+      // time" (REST history already covers everything) from "reopened
+      // after a drop" (messages sent during the gap need to be fetched —
+      // the server's "history" frame below is always just the last 30 with
+      // no cursor, not a real resume mechanism).
+      const isReconnect = hasConnectedBefore;
+      hasConnectedBefore = true;
+      handlers.onOpen?.({ isReconnect });
     };
 
     ws.onmessage = (e) => {
@@ -159,7 +168,7 @@ export function openChatSocket(conversationId, handlers = {}) {
       if (closedByUs) return;
       attempt += 1;
       const delay = Math.min(1000 * 2 ** attempt, 15000);
-      setTimeout(connect, delay);
+      reconnectTimer = setTimeout(connect, delay);
       handlers.onDisconnect?.();
     };
 
@@ -182,6 +191,11 @@ export function openChatSocket(conversationId, handlers = {}) {
     typing: () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "typing" })); },
     read: () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "read" })); },
     isOpen: () => !!ws && ws.readyState === 1,
-    close: () => { closedByUs = true; stopPing(); ws?.close(); },
+    close: () => {
+      closedByUs = true;
+      stopPing();
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      ws?.close();
+    },
   };
 }

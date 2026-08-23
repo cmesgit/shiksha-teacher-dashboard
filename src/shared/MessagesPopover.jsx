@@ -43,13 +43,14 @@
 // the raw list — this reads straight off that singleton store and
 // inherits its refresh triggers (chat push, window focus/visibility, the
 // shiksha:messages-read event, profile switch) for free.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMessageSquare, FiX } from "react-icons/fi";
 import useMessageBadge from "./useMessageBadge";
 import ConversationList from "./comm/ConversationList";
 import ConversationThread from "./comm/ConversationThread";
 import ProfileView from "./comm/ProfileView";
+import { useDismissable } from "./comm/common";
 // ConversationList/ConversationThread render with .cc-* classes defined in
 // ChatPanel.css. Following this codebase's convention (ChatPanel.jsx itself
 // doesn't import ChatPanel.css either — its consumer page does), the CALLER
@@ -111,32 +112,12 @@ export default function MessagesPopover({ viewAllHref }) {
     setActiveConv(conversations.find((c) => c.id === conv.id) || conv);
   };
 
-  // Click-outside + Escape. Escape also returns focus to the trigger —
-  // the one thing NotificationBell's own dropdown never does.
-  useEffect(() => {
-    if (!open) return undefined;
-    const onMouseDown = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) close();
-    };
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") {
-        close();
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  // Move focus into the panel on open.
-  useEffect(() => {
-    if (open) closeBtnRef.current?.focus();
-  }, [open]);
+  // Click-outside + Escape (which also returns focus to the trigger) +
+  // focus-into-panel-on-open — see common.jsx's useDismissable, extracted
+  // from this exact effect so the other 6 modals in this hub can share it.
+  useDismissable(open, {
+    onClose: close, containerRef: wrapRef, triggerRef, initialFocusRef: closeBtnRef,
+  });
 
   return (
     <div className="notif-bell-wrap" ref={wrapRef}>

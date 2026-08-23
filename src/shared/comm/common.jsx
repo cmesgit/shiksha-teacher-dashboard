@@ -7,9 +7,50 @@
 // NotificationsView, PeopleDirectory, ProfileView, SettingsView,
 // SupportView) — kept in one file so a label or a date format only ever
 // has to change in one place.
+import { useEffect } from "react";
 import {
   FiUsers, FiUser, FiBookOpen, FiHeadphones, FiRadio, FiMessageCircle,
 } from "react-icons/fi";
+
+// Escape-to-close (+ return focus to the trigger) and focus-into-panel-on-
+// open, for any modal/popover in this hub. Extracted from the one place
+// this was already built correctly (the header's MessagesPopover) rather
+// than duplicating the same ~15-line effect at each of the 6 modals that
+// were missing it (ReportModal, the shared-files panel, the PeopleDirectory
+// picker, ProfileView, SupportView's new-ticket form, CourseHub) — none of
+// those share a component today, so this is the smallest way to give them
+// the same behavior without inventing a generic <Modal> this codebase has
+// never had.
+//
+// `containerRef` is optional: most of these modals already close on a
+// backdrop onClick, so they only need Escape + focus-in from here. Only
+// MessagesPopover (no backdrop, just an anchored panel) needs the
+// mousedown-outside-closes behavior too, via containerRef.
+export function useDismissable(open, { onClose, containerRef, triggerRef, initialFocusRef } = {}) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onMouseDown = containerRef
+      ? (e) => { if (containerRef.current && !containerRef.current.contains(e.target)) onClose?.(); }
+      : null;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose?.();
+        triggerRef?.current?.focus();
+      }
+    };
+    if (onMouseDown) document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      if (onMouseDown) document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (open) initialFocusRef?.current?.focus();
+  }, [open]);
+}
 
 export function initials(name) {
   if (!name) return "?";

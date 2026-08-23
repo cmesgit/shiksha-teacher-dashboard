@@ -5,10 +5,10 @@
 // CC-022 Academic Support. Wires the reserved SUPPORT conversation kind:
 // list my tickets, open one (message thread + reply), start a new one,
 // close it once resolved.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiPlus, FiX, FiChevronLeft, FiSend, FiCheckCircle } from "react-icons/fi";
 import { ChatAPI } from "../chatClient";
-import { EmptyState, Spinner, timeAgo } from "./common";
+import { EmptyState, Spinner, timeAgo, useDismissable } from "./common";
 import MessageBubble from "./MessageBubble";
 
 const CATEGORIES = [
@@ -111,6 +111,8 @@ export default function SupportView() {
   const [tickets, setTickets] = useState(null);
   const [active, setActive] = useState(null);
   const [creating, setCreating] = useState(false);
+  const closeBtnRef = useRef(null);
+  useDismissable(creating, { onClose: () => setCreating(false), initialFocusRef: closeBtnRef });
 
   const load = () => ChatAPI.supportTickets().then(setTickets).catch(() => setTickets([]));
   useEffect(() => { load(); }, []);
@@ -129,7 +131,7 @@ export default function SupportView() {
       {creating && (
         <div className="cc-modal-backdrop" onClick={() => setCreating(false)}>
           <div className="cc-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cc-modal-head"><span>New support ticket</span><button onClick={() => setCreating(false)}><FiX size={18} /></button></div>
+            <div className="cc-modal-head"><span>New support ticket</span><button ref={closeBtnRef} onClick={() => setCreating(false)}><FiX size={18} /></button></div>
             <NewTicketForm onCancel={() => setCreating(false)} onCreated={(t) => { setCreating(false); load(); setActive(t); }} />
           </div>
         </div>

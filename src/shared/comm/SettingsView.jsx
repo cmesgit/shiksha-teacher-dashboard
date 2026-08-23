@@ -21,9 +21,16 @@ function Toggle({ checked, onChange, label, hint }) {
         <span className="cc-toggle-label">{label}</span>
         {hint && <span className="cc-toggle-hint">{hint}</span>}
       </span>
-      <span className={"cc-toggle" + (checked ? " cc-toggle-on" : "")} onClick={() => onChange(!checked)}>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        className={"cc-toggle" + (checked ? " cc-toggle-on" : "")}
+        onClick={() => onChange(!checked)}
+      >
         <span className="cc-toggle-knob" />
-      </span>
+      </button>
     </label>
   );
 }

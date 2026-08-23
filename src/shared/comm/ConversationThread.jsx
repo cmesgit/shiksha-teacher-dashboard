@@ -12,7 +12,7 @@ import {
 } from "react-icons/fi";
 import { ChatAPI, openChatSocket } from "../chatClient";
 import MessageBubble from "./MessageBubble";
-import { Avatar, dayLabel, lastSeenLabel, rolesLabel, parseIdentity, Spinner, OfflineBanner } from "./common";
+import { Avatar, dayLabel, lastSeenLabel, rolesLabel, parseIdentity, Spinner, OfflineBanner, useDismissable } from "./common";
 
 const uid = () => Math.random().toString(36).slice(2);
 const QUICK_EMOJI = ["😀", "👍", "🎉", "❤️", "🙏", "😂"];
@@ -66,11 +66,18 @@ export default function ConversationThread({
   const [sharedFiles, setSharedFiles] = useState(null);
 
   const sockRef = useRef(null);
+  const messagesRef = useRef([]); // live mirror of `messages`, for the
+                                   // reconnect catch-up fetch below — that
+                                   // fetch happens inside a WS onOpen
+                                   // callback set up once per conv.id, so it
+                                   // can't read fresh state via a closure.
   const endRef = useRef(null);
   const scrollRef = useRef(null);
   const typingTimer = useRef(null);
+  const lastTypingSentAt = useRef(0); // throttles the OUTGOING typing() frame — see the composer's onChange below
   const toastTimer = useRef(null);
   const fileInputRef = useRef(null);
+  const filesCloseBtnRef = useRef(null);
   const seededDraft = useRef(false);
   const pendingFilesRef = useRef(new Map()); // tempId -> { file, caption, reply_to } for retry
   const ackTimers = useRef(new Map()); // client_id -> timeout; a text send that
@@ -99,6 +106,13 @@ export default function ConversationThread({
   }, []);
 
   useEffect(() => { setConv(conversation); }, [conversation]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Shared-files panel: backdrop onClick already closes it on outside-click;
+  // this adds the Escape + focus-into-panel behavior it was missing.
+  useDismissable(filesOpen, {
+    onClose: () => setFilesOpen(false), initialFocusRef: filesCloseBtnRef,
+  });
 
   const pushToast = useCallback((text, kind = "err") => {
     setToast({ text, kind });
@@ -143,7 +157,28 @@ export default function ConversationThread({
 
     sockRef.current?.close();
     const sock = openChatSocket(conv.id, {
-      onOpen: () => setOffline(false),
+      onOpen: ({ isReconnect } = {}) => {
+        setOffline(false);
+        // The WS "history" frame is always just the last 30 messages, no
+        // cursor — not a real resume mechanism. On a genuine reconnect
+        // (not the first open), fetch anything sent during the gap via
+        // REST instead and merge it in, deduping by id.
+        if (isReconnect) {
+          const latest = messagesRef.current[messagesRef.current.length - 1];
+          if (latest?.created_at) {
+            ChatAPI.messages(conv.id, { after: latest.created_at })
+              .then((fresh) => {
+                if (!fresh?.length) return;
+                setMessages((prev) => {
+                  const known = new Set(prev.map((m) => m.id));
+                  const gap = fresh.filter((m) => !known.has(m.id));
+                  return gap.length ? [...prev, ...gap] : prev;
+                });
+              })
+              .catch(() => {}); // the next reconnect (or a manual reopen) retries
+          }
+        }
+      },
       onDisconnect: () => setOffline(true),
       onHistory: (data) => { setMessages((prev) => (prev.length ? prev : data)); setLoading(false); },
       onMessage: (m) => {
@@ -185,7 +220,17 @@ export default function ConversationThread({
       },
     });
     sockRef.current = sock;
-    ChatAPI.markRead(conv.id).catch(() => {});
+    // Chained: this used to only tell the HEADER badge to refresh (the
+    // window event below) — ChatPanel's own local `conversations` array
+    // (which drives the list's unread pills and Unread/Recent sections)
+    // was never updated, so a card could keep showing "unread" after the
+    // header badge had already cleared. Reuses `conv` (already in scope
+    // here) for a full-object spread — onConversationChange replaces by
+    // id, not merges, so a partial {id, unread:0} patch would wipe every
+    // other field on the conversation in ChatPanel's state.
+    ChatAPI.markRead(conv.id)
+      .then(() => onConversationChange?.({ ...conv, unread: 0 }))
+      .catch(() => {});
     // Tell the global Messages badge (Header) to re-fetch its unread total.
     window.dispatchEvent(new Event("shiksha:messages-read"));
     return () => {
@@ -545,7 +590,20 @@ export default function ConversationThread({
               value={draft}
               placeholder={uploading ? "Sending file…" : "Type a message…"}
               disabled={uploading}
-              onChange={(e) => { setDraft(e.target.value); sockRef.current?.typing(); }}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                // Was firing a WS frame on every keystroke — throttled to
+                // at most once per ~2s of continuous typing, the same
+                // inline-ref-timer idiom this file already uses for the
+                // incoming indicator above (no shared debounce utility
+                // exists anywhere in this codebase; every instance is
+                // hand-rolled at its own call site).
+                const now = Date.now();
+                if (now - lastTypingSentAt.current > 2000) {
+                  lastTypingSentAt.current = now;
+                  sockRef.current?.typing();
+                }
+              }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             />
             <button className="cc-send-btn" onClick={send} disabled={!draft.trim() || uploading}><FiSend size={16} /></button>
@@ -565,7 +623,7 @@ export default function ConversationThread({
       {filesOpen && (
         <div className="cc-modal-backdrop" onClick={() => setFilesOpen(false)}>
           <div className="cc-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cc-modal-head"><span>Shared files</span><button onClick={() => setFilesOpen(false)}><FiX size={18} /></button></div>
+            <div className="cc-modal-head"><span>Shared files</span><button ref={filesCloseBtnRef} onClick={() => setFilesOpen(false)}><FiX size={18} /></button></div>
             <div className="cc-modal-list">
               {sharedFiles === null ? (
                 <Spinner label="Loading files…" />
@@ -589,6 +647,8 @@ export default function ConversationThread({
 function ReportModal({ onClose, onSubmit }) {
   const [reason, setReason] = useState("INAPPROPRIATE");
   const [detail, setDetail] = useState("");
+  const closeBtnRef = useRef(null);
+  useDismissable(true, { onClose, initialFocusRef: closeBtnRef });
   const REASONS = [
     ["SPAM", "Spam or scam"],
     ["HARASSMENT", "Harassment or bullying"],
@@ -598,7 +658,7 @@ function ReportModal({ onClose, onSubmit }) {
   return (
     <div className="cc-modal-backdrop" onClick={onClose}>
       <div className="cc-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="cc-modal-head"><span>Report</span><button onClick={onClose}><FiX size={18} /></button></div>
+        <div className="cc-modal-head"><span>Report</span><button ref={closeBtnRef} onClick={onClose}><FiX size={18} /></button></div>
         <div className="cc-modal-body">
           <div className="cc-field-label">Reason</div>
           <div className="cc-radio-list">

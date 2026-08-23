@@ -208,7 +208,12 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
     if (item.kind === "category") {
       setCategory(item.key);
       setView("inbox");
-      setShowThreadOnMobile(false);
+      // Announcements has no thread to select — the "pick a course" picker
+      // IS the main-pane content for this category, so on mobile it needs
+      // to be treated like a selected thread (show main, not the list) or
+      // it has nowhere to render without squeezing into the sidebar's
+      // column (see showMain below).
+      setShowThreadOnMobile(item.key === "announcements");
     } else {
       setView(item.key);
       setShowThreadOnMobile(false);
@@ -232,6 +237,16 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
 
   const showList = view === "inbox" && (!compact || !showThreadOnMobile);
   const showThreadPane = view === "inbox" && (!compact || showThreadOnMobile);
+  // <main> was always rendered as a grid child even in compact mode, but
+  // .cc-root-compact only has 2 column tracks (sidebar + one pane) — with
+  // the list also showing, <main> had nowhere to go and CSS grid
+  // auto-placement squeezed it into the 56px sidebar column. Every other
+  // "one pane visible on narrow layouts" case in this codebase (including
+  // ConversationList right above) already uses conditional JSX, not a CSS
+  // trick, for exactly this reason. Non-inbox views (settings/directory/
+  // notifications/support) render unconditionally into <main> regardless
+  // of the inbox pane state, so `view !== "inbox"` keeps those working.
+  const showMain = !compact || view !== "inbox" || showThreadPane;
 
   return (
     <div className={"cc-root" + (compact ? " cc-root-compact" : "") + (theme ? ` cc-theme-${theme}` : "")}>
@@ -275,6 +290,7 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
         />
       )}
 
+      {showMain && (
       <main className="cc-main">
         {view === "inbox" && category === "announcements" && !active && courseChips.length > 0 && (
           <div className="cc-announcements-picker">
@@ -326,6 +342,7 @@ export default function ChatPanel({ directTo, courseRoom, conversationId, initia
         {view === "settings" && <SettingsView />}
         {view === "support" && <SupportView />}
       </main>
+      )}
 
       {newChatOpen && (
         <PeopleDirectory mode="picker" onClose={() => setNewChatOpen(false)} onStart={startDirectWith} contactsNote={directoryContactsNote} />

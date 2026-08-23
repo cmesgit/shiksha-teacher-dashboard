@@ -7,10 +7,10 @@
 //                   modal the old ChatPanel had).
 //   mode="screen" — a standalone, full directory with role filter tabs and
 //                   bigger cards, each with a "Message" button — CC-018.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiX, FiSearch, FiMessageCircle } from "react-icons/fi";
 import { ChatAPI } from "../chatClient";
-import { Avatar, EmptyState, Spinner } from "./common";
+import { Avatar, EmptyState, Spinner, useDismissable } from "./common";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -23,6 +23,11 @@ export default function PeopleDirectory({ mode = "picker", onClose, onStart, con
   const [filter, setFilter] = useState("all");
   const [items, setItems] = useState(null);
   const [loading, setLoading] = useState(true);
+  // No initialFocusRef: the search input already has its own autoFocus
+  // (so you can start typing immediately), which this would otherwise
+  // override on mount. No-op entirely when mode==="screen" (a full page,
+  // not a dismissable modal).
+  useDismissable(mode === "picker", { onClose });
 
   useEffect(() => {
     let alive = true;

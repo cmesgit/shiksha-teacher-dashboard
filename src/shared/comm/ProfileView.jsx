@@ -5,14 +5,16 @@
 // CC-019 User Profile. Reachable from a DM header, Course Hub members, or
 // the Directory. Teacher profiles are rich (bio/headline/courses); learner
 // profiles are minimal by design — see chat/services.py's build_profile().
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiX, FiMessageCircle, FiBookOpen } from "react-icons/fi";
 import { ChatAPI } from "../chatClient";
-import { Avatar, Spinner, EmptyState, rolesLabel, parseIdentity } from "./common";
+import { Avatar, Spinner, EmptyState, rolesLabel, parseIdentity, useDismissable } from "./common";
 
 export default function ProfileView({ identity, onClose, onMessage }) {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(false);
+  const closeBtnRef = useRef(null);
+  useDismissable(true, { onClose, initialFocusRef: closeBtnRef });
 
   useEffect(() => {
     const ident = parseIdentity(identity);
@@ -23,7 +25,7 @@ export default function ProfileView({ identity, onClose, onMessage }) {
   return (
     <div className="cc-modal-backdrop" onClick={onClose}>
       <div className="cc-modal cc-profile-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="cc-modal-head"><span>Profile</span><button onClick={onClose}><FiX size={18} /></button></div>
+        <div className="cc-modal-head"><span>Profile</span><button ref={closeBtnRef} onClick={onClose}><FiX size={18} /></button></div>
         {error ? (
           <EmptyState title="Couldn't load this profile" />
         ) : !profile ? (

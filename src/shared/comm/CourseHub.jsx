@@ -8,7 +8,7 @@
 // new (the room's own Discussion thread, its Members, and its
 // Announcements channel) behind one set of tabs — replacing "course room =
 // a plain chat thread" with the hub the spec actually asked for.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiX, FiMessageCircle, FiFolder, FiUsers, FiClipboard, FiRadio,
   FiFileText, FiDownload, FiCalendar, FiSend,
@@ -16,7 +16,7 @@ import {
 import { ChatAPI } from "../chatClient";
 import ConversationThread from "./ConversationThread";
 import MessageBubble from "./MessageBubble";
-import { Avatar, rolesLabel, timeAgo, Spinner, EmptyState } from "./common";
+import { Avatar, rolesLabel, timeAgo, Spinner, EmptyState, useDismissable } from "./common";
 
 const TABS = [
   { key: "discussion", label: "Discussion", Icon: FiMessageCircle },
@@ -172,13 +172,15 @@ function DiscussionTab({ courseId, courseTitle, onConversationChange, onDmFromRo
 
 export default function CourseHub({ courseId, courseTitle, onClose, onConversationChange, onDmFromRoom, canPostAnnouncements, initialTab = "discussion" }) {
   const [tab, setTab] = useState(initialTab);
+  const closeBtnRef = useRef(null);
+  useDismissable(true, { onClose, initialFocusRef: closeBtnRef });
 
   return (
-    <div className="cc-coursehub-overlay">
-      <div className="cc-coursehub">
+    <div className="cc-coursehub-overlay" onClick={onClose}>
+      <div className="cc-coursehub" onClick={(e) => e.stopPropagation()}>
         <header className="cc-coursehub-head">
           <span className="cc-coursehub-title">{courseTitle || "Course Hub"}</span>
-          <button className="cc-icon-btn" onClick={onClose}><FiX size={18} /></button>
+          <button ref={closeBtnRef} className="cc-icon-btn" onClick={onClose}><FiX size={18} /></button>
         </header>
         <nav className="cc-coursehub-tabs">
           {TABS.map((t) => (
