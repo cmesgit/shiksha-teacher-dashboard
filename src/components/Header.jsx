@@ -52,7 +52,7 @@ export default function Header({ onMenuClick, isExpertPage }) {
       </div>
       <div className="header__right">
       <TrackSwitcher />
-      <MessagesPopover theme={isSkillActive ? "skill" : "academy"} viewAllHref={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
+      <MessagesPopover viewAllHref={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
       <NotificationBell />
       <ProfileSwitcher
         compact

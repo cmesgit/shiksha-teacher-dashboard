@@ -27,6 +27,17 @@
 // MessageIcon (`/chat` vs `/skill-messages`, `/teacher/chat` vs
 // `/teacher/expert/inbox`).
 //
+// Deliberately NOT re-skinned per track (unlike the full ChatPanel page,
+// which does switch cc-theme-academy/cc-theme-skill). The inbox shown here
+// is the exact same account-wide, track-neutral list either way — chat is
+// intentionally track-neutral end to end (see notifications/tracks.py's own
+// "a DM is a DM regardless of which dashboard you're looking at") — so
+// reskinning it by whichever page you happen to be standing on implied a
+// distinction that isn't real. It renders with ChatPanel.css's own base
+// :root variables (a terracotta/teal identity, no theme class applied),
+// which is that stylesheet's actual neutral default, not a third theme
+// invented for this.
+//
 // Data: no new network call. useMessageBadge() already fetches
 // GET /chat/conversations/ to sum the unread badge and now also exposes
 // the raw list — this reads straight off that singleton store and
@@ -47,7 +58,7 @@ import ProfileView from "./comm/ProfileView";
 // was previously only pulled in by the /chat and /skill-messages route
 // pages, but this popover mounts in the Header on every page.
 
-export default function MessagesPopover({ theme, viewAllHref }) {
+export default function MessagesPopover({ viewAllHref }) {
   const navigate = useNavigate();
   const { unreadCount, conversations: liveConversations, loading, refresh } = useMessageBadge();
 
@@ -146,7 +157,7 @@ export default function MessagesPopover({ theme, viewAllHref }) {
       </button>
 
       {open && (
-        <div className={"msg-pop-panel cc-theme-" + theme} role="dialog" aria-label="Messages">
+        <div className="msg-pop-panel" role="dialog" aria-label="Messages">
           <div className="msg-pop-head">
             <span className="msg-pop-title">Messages</span>
             <div className="msg-pop-head-actions">
