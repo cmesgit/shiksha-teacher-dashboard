@@ -8,6 +8,11 @@ import { useToast } from "../../contexts/ToastContext";
 export default function ControlBar({
   onLeave,
   onEndSession,
+  // Wording for the End Call confirm. Defaults to the private-session
+  // phrasing this button was originally written for; a whole-class caller
+  // passes its own so the teacher isn't told they're disconnecting "the
+  // student" from a room holding thirty of them.
+  endConfirmMessage = "End this session for the student? They'll be disconnected immediately.",
   // Optional: only the regular Live Session shell passes this. Private and
   // group sessions have their own duration rules, so the button stays hidden
   // there rather than calling a livestream-only endpoint.
@@ -401,37 +406,26 @@ export default function ControlBar({
           )}
         </div>
 
-        {/* Leave / End Call.
-            - Primary presenter, regular Live Session (no onEndSession passed):
-              a single button that plays the spec's red "End Call" role —
-              for this flow "Leave" already is the session's real end-for-
-              everyone action, so it just gets the red treatment.
-            - Presenter with onEndSession (Private Sessions): keep both —
-              plain "Leave" (soft, local-only disconnect) stays as-is, and
-              the distinct, confirmed "End Session" action takes the red
-              "End Call" treatment instead, since ending-for-everyone is
-              what it actually does.
-            - Non-presenter (e.g. substitute/assistant teacher): plain
-              "Leave" only — they can't end the call for everyone. */}
-        {isPresenter && !onEndSession ? (
-          <button className="cb-btn cb-endcall" onClick={leaveRoom} title="End call for everyone" data-tour="live-host.end-call">
-            <div className="cb-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/>
-              </svg>
-            </div>
-            <span className="cb-label">End Call</span>
-          </button>
-        ) : (
-          <button className="cb-btn" onClick={leaveRoom} title="Leave class">
-            <div className="cb-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/>
-              </svg>
-            </div>
-            <span className="cb-label">Leave</span>
-          </button>
-        )}
+        {/* Leave — always a soft, local-only disconnect, for everyone.
+            This used to render as a red "End Call" for a presenter with no
+            onEndSession, on the reasoning that "Leave already is the
+            session's real end-for-everyone action". It never was: the
+            handler is leaveRoom = room.disconnect(), which hits no endpoint,
+            so close_room() never ran. The teacher walked out, the session
+            stayed LIVE, and every student kept publishing audio and video
+            until their token TTL expired — up to two hours of billable
+            LiveKit time and an open mic in a room with no teacher in it.
+            Ending for everyone now requires a caller to pass onEndSession
+            (the separate confirmed red button below), so the red treatment
+            is only ever on a button that actually ends the class. */}
+        <button className="cb-btn" onClick={leaveRoom} title="Leave class">
+          <div className="cb-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" transform="rotate(135 12 12)"/>
+            </svg>
+          </div>
+          <span className="cb-label">Leave</span>
+        </button>
 
         {/* Extend. A class that overruns its scheduled slot used to lock out
             anyone who reconnected — the room stayed open, but a student whose
@@ -457,11 +451,12 @@ export default function ControlBar({
           <button
             className="cb-btn cb-endcall"
             onClick={() => {
-              if (window.confirm("End this session for the student? They'll be disconnected immediately.")) {
+              if (window.confirm(endConfirmMessage)) {
                 onEndSession();
               }
             }}
             title="End session for everyone"
+            data-tour="live-host.end-call"
           >
             <div className="cb-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

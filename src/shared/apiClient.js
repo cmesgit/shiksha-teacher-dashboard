@@ -1,19 +1,23 @@
 /* shared/apiClient.js  ·  UPDATED — imports from config/urls.js
  * ──────────────────────────────────────────────────────────────
- * Cookie-based auth, single-flight 401→refresh→retry.
+ * Cookie-based auth, 401→refresh→retry.
  * URL fallback now comes from config/urls.js — no more inline prod strings.
+ *
+ * The single-flight moved out of this file into shared/src/api/refreshSession.js:
+ * it was module-local, and so were the copies in api/apiClient.js and
+ * AuthContext, so all three raced the same refresh cookie against a
+ * rotate-and-blacklist backend and logged users out of valid sessions. The
+ * refresh is now shared tab-wide; read that file's header before changing any
+ * of this.
  */
 import axios from "axios";
-import { API_URL, LOGIN_URL } from "../config/urls";
+import { API_URL } from "../config/urls";
+import { refreshSession, redirectToLogin } from "../api/refreshSession";
 
 const api = axios.create({
   baseURL:         API_URL,
   withCredentials: true,
 });
-
-let isRefreshing = false;
-let queue = [];
-const flush = (err) => { queue.forEach((p) => (err ? p.reject(err) : p.resolve())); queue = []; };
 
 api.interceptors.response.use(
   (r) => r,
@@ -27,23 +31,13 @@ api.interceptors.response.use(
     ) {
       return Promise.reject(error);
     }
-    if (isRefreshing) {
-      return new Promise((resolve, reject) =>
-        queue.push({ resolve, reject })
-      ).then(() => api(original));
-    }
     original._retry = true;
-    isRefreshing    = true;
     try {
-      await api.post("/accounts/refresh/");
-      flush(null);
+      await refreshSession();
       return api(original);
     } catch (e) {
-      flush(e);
-      window.location.href = LOGIN_URL;
+      redirectToLogin();
       return Promise.reject(e);
-    } finally {
-      isRefreshing = false;
     }
   }
 );

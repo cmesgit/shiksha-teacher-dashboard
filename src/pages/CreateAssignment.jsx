@@ -21,6 +21,10 @@ export default function CreateAssignment() {
 
   const [chapters, setChapters]     = useState([]);
   const [chapterId, setChapterId]   = useState(editData?.chapter_id || editData?.chapter?.id || "");
+  // Custom-chapter escape hatch (create only — the update serializer doesn't
+  // accept it, matching how the batch picker is also create-only below).
+  const [useCustomChapter, setUseCustomChapter] = useState(false);
+  const [customChapter, setCustomChapter] = useState("");
   // Batch picker (create only): the backend requires a batch on new
   // assignments so due dates stay cohort-relative. Editing does not change
   // the batch, so the picker is hidden in edit mode.
@@ -29,6 +33,20 @@ export default function CreateAssignment() {
   const [title, setTitle]           = useState(editData?.title || "");
   const [description, setDescription] = useState(editData?.description || "");
   const [dueDate, setDueDate]       = useState(editData?.due_date?.slice(0, 10) || "");
+  // What the work is marked out of. This was never collected and never sent,
+  // on create OR edit, so every assignment ever made used the model default
+  // of 100: a teacher marking a 20-mark worksheet typed 18 meaning 18/20 and
+  // the student was shown 18%. There was no correction path short of the
+  // Django admin.
+  const [maxMarks, setMaxMarks]     = useState(
+    editData?.max_marks != null ? String(editData.max_marks) : "100");
+  // Draft gate. The backend has had `is_published` (and the False→True
+  // notification edge) all along with no control anywhere in the UI, so a
+  // teacher staging tomorrow's worksheet notified the whole class the moment
+  // they hit Save. Defaults to published — that is the model default and the
+  // behaviour every existing teacher expects.
+  const [isPublished, setIsPublished] = useState(
+    editData?.is_published != null ? Boolean(editData.is_published) : true);
 
   // New files to upload
   const [newFiles, setNewFiles]     = useState([]);
@@ -53,16 +71,30 @@ export default function CreateAssignment() {
     if (subjectId) fetchChapters();
   }, [subjectId]);
 
+  // Batches this teacher may ACTUALLY post to, not every active batch of the
+  // course. The old source (/courses/subjects/:id/batches/) filters on
+  // course_id + is_active only, and this form then auto-selected list[0] — so
+  // a teacher who only takes 9-B got 9-A preselected, filled the whole form,
+  // and hit a 400 rendered as "You are not assigned to this subject", which
+  // was both false and unactionable. Falls back to the old endpoint on a 404
+  // so the form still works against a backend that predates the new one.
   useEffect(() => {
     if (isEditing) return; // batch is fixed for an existing assignment
     let cancelled = false;
     api
-      .get(`/courses/subjects/${subjectId}/batches/`)
+      .get(`/assignments/teacher/subject/${subjectId}/batches/`)
+      .catch((err) => {
+        if (err?.response?.status !== 404) throw err;
+        return api.get(`/courses/subjects/${subjectId}/batches/`);
+      })
       .then((res) => {
         if (cancelled) return;
         const list = res.data || [];
         setBatches(list);
-        if (list.length && !batchId) setBatchId(String(list[0].id));
+        // Only auto-select when there is no choice to get wrong. With two or
+        // more, the teacher picks — a silent default is what produced the
+        // false 400 above.
+        if (list.length === 1) setBatchId(String(list[0].id));
       })
       .catch(() => {
         if (!cancelled) setBatches([]);
@@ -76,11 +108,18 @@ export default function CreateAssignment() {
   // ── Validation ──────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
-    if (!chapterId)           e.chapter     = "Chapter required";
+    if (useCustomChapter) {
+      if (!customChapter.trim()) e.chapter = "Enter the new chapter's name";
+    } else if (!chapterId) {
+      e.chapter = "Chapter required";
+    }
     if (!isEditing && !batchId) e.batch     = "Batch required";
     if (!title.trim())        e.title       = "Title required";
     if (!description.trim())  e.description = "Description required";
     if (!dueDate)             e.dueDate     = "Due date required";
+    const marks = Number(maxMarks);
+    if (!maxMarks || !Number.isInteger(marks) || marks < 1)
+      e.maxMarks = "Enter a whole number of marks (1 or more)";
     if (!isEditing && newFiles.length === 0 && existingFiles.length === 0)
       e.files = "At least one file is required";
     setErrors(e);
@@ -116,11 +155,18 @@ export default function CreateAssignment() {
 
     try {
       const formData = new FormData();
-      formData.append("chapter_id",   chapterId);
+      if (!isEditing && useCustomChapter) {
+        formData.append("custom_chapter", customChapter);
+        formData.append("subject_id", subjectId);
+      } else {
+        formData.append("chapter_id", chapterId);
+      }
       if (!isEditing) formData.append("batch_id", batchId);
       formData.append("title",        title);
       formData.append("description",  description);
       formData.append("due_date",     `${dueDate}T23:59:00`);
+      formData.append("max_marks",    String(Number(maxMarks)));
+      formData.append("is_published", isPublished ? "true" : "false");
 
       if (!isEditing) {
         // Send idempotency key so backend deduplicates double-submits
@@ -136,7 +182,11 @@ export default function CreateAssignment() {
         if (res.data?.duplicate) {
           toast("Assignment already submitted — no duplicate created.", { icon: "ℹ️" });
         } else {
-          toast.success(res?.data?.message || "Assignment created successfully");
+          toast.success(
+            isPublished
+              ? "Assignment published — the class has been notified."
+              : "Draft saved. Students won't see it until you publish."
+          );
         }
       } else {
         // Edit — send new files + file IDs to delete
@@ -207,16 +257,39 @@ export default function CreateAssignment() {
           {/* Chapter */}
           <div className="ca-field">
             <label>Chapter</label>
-            <select
-              value={chapterId}
-              onChange={(e) => setChapterId(e.target.value)}
-              className={`ca-input ${errors.chapter ? "ca-input-error" : ""}`}
-            >
-              <option value="">Select Chapter</option>
-              {chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}>{ch.title}</option>
-              ))}
-            </select>
+            {!isEditing && useCustomChapter ? (
+              <div className="ca-inline">
+                <input
+                  type="text"
+                  placeholder="Enter new chapter"
+                  value={customChapter}
+                  onChange={(e) => setCustomChapter(e.target.value)}
+                  className={`ca-input ${errors.chapter ? "ca-input-error" : ""}`}
+                />
+                <button type="button" className="ca-link-btn" onClick={() => setUseCustomChapter(false)}>
+                  Use existing
+                </button>
+              </div>
+            ) : (
+              <div className="ca-inline">
+                <select
+                  value={chapterId}
+                  onChange={(e) => setChapterId(e.target.value)}
+                  className={`ca-input ${errors.chapter ? "ca-input-error" : ""}`}
+                >
+                  <option value="">Select Chapter</option>
+                  {chapters.map((ch) => (
+                    <option key={ch.id} value={ch.id}>{ch.title}</option>
+                  ))}
+                </select>
+                {/* Not offered in edit mode — the update endpoint only accepts an existing chapter_id. */}
+                {!isEditing && (
+                  <button type="button" className="ca-link-btn" onClick={() => setUseCustomChapter(true)}>
+                    Custom
+                  </button>
+                )}
+              </div>
+            )}
             {errors.chapter && <span className="ca-error">{errors.chapter}</span>}
           </div>
 

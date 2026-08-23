@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
+import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import ClassroomUI from "../components/live/ClassroomUI";
 import ReconnectingBanner from "../components/live/ReconnectingBanner";
@@ -62,6 +63,7 @@ export default function TeacherLiveSession() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showReview, setShowReview] = useState(false);
+  const [ending, setEnding] = useState(false);
   const joiningRef = useRef(false);
 
   useEffect(() => {
@@ -104,6 +106,45 @@ export default function TeacherLiveSession() {
   // submitted or skipped (spec section 10: live/private sessions show a
   // review modal on leave, group sessions never do).
   const handleControlBarLeave = () => setShowReview(true);
+
+  // End the class for everyone. Deliberately fires BEFORE the review modal,
+  // unlike the private-session flow which ends on the modal's onDone: a
+  // private session holds one student, a class holds the whole batch, and
+  // every second the teacher spends rating the lesson is a second of thirty
+  // students sitting in a live room with open mics. End first, rate after.
+  const handleEndSession = async () => {
+    if (ending) return;
+    setEnding(true);
+    try {
+      await api.post(`/livestream/sessions/${id}/end/`);
+    } catch (err) {
+      // 400 is the terminal-state pair ("already completed" / "is
+      // cancelled") — somebody else ended it first, via the list-page
+      // overflow menu, an admin, or LiveKit's room_finished webhook. The
+      // class is over either way, so fall through to the review. Anything
+      // else (403 not-assigned, network) leaves the teacher in the room
+      // with a visible error rather than silently walking them out of a
+      // class that is still running.
+      if (err?.response?.status !== 400) {
+        // ClassroomUI puts the room into NATIVE fullscreen
+        // (el.requestFullscreen), and <Toaster> is mounted up in App.jsx as
+        // a sibling of the routed tree — outside the fullscreen element,
+        // therefore not rendered at all while it is active. Dropping out of
+        // fullscreen first is the difference between the teacher seeing
+        // "couldn't end the class" and seeing nothing happen, which is the
+        // exact failure mode this whole button is being fixed for.
+        if (document.fullscreenElement) {
+          try { await document.exitFullscreen(); } catch { /* not fatal */ }
+        }
+        toast.error(
+          err?.response?.data?.detail || "Could not end the class. Please try again."
+        );
+        setEnding(false);
+        return;
+      }
+    }
+    setShowReview(true);
+  };
 
   if (loading) {
     return (
@@ -161,6 +202,7 @@ export default function TeacherLiveSession() {
           sessionId={id}
           sessionMeta={sessionData}
           onLeave={handleControlBarLeave}
+          onEndSession={handleEndSession}
         />
         <RoomAudioRenderer />
       </LiveKitRoom>

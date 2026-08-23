@@ -83,6 +83,16 @@ export default function QuizBuilder() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Batch + chapter (create only — like Assignments, these are ignored by
+  // the update endpoint once the quiz exists, so they're fetched and shown
+  // only until the first save creates the Quiz row).
+  const [batches, setBatches] = useState([]);
+  const [batchId, setBatchId] = useState("");
+  const [chapters, setChapters] = useState([]);
+  const [chapterId, setChapterId] = useState("");
+  const [useCustomChapter, setUseCustomChapter] = useState(false);
+  const [customChapter, setCustomChapter] = useState("");
+
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
 
@@ -133,6 +143,33 @@ export default function QuizBuilder() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizIdParam]);
+
+  // Batch + chapter pickers — same rationale as CreateAssignment.jsx's
+  // teacher-scoped batch endpoint, with the same 404 fallback for a backend
+  // that predates it.
+  useEffect(() => {
+    if (quizIdParam || !subjectId) return; // editing an existing quiz — skip
+    let cancelled = false;
+    api
+      .get(`/assignments/teacher/subject/${subjectId}/batches/`)
+      .catch((err) => {
+        if (err?.response?.status !== 404) throw err;
+        return api.get(`/courses/subjects/${subjectId}/batches/`);
+      })
+      .then((res) => {
+        if (cancelled) return;
+        const list = res.data || [];
+        setBatches(list);
+        if (list.length === 1) setBatchId(String(list[0].id));
+      })
+      .catch(() => { if (!cancelled) setBatches([]); });
+
+    api.get(`/courses/subjects/${subjectId}/chapters/`)
+      .then((res) => { if (!cancelled) setChapters(res.data || []); })
+      .catch(() => { if (!cancelled) toast.error("Failed to load chapters."); });
+
+    return () => { cancelled = true; };
+  }, [subjectId, quizIdParam]);
 
   const selected = useMemo(
     () => questions.find((q) => q._id === selectedId) || questions[0],
@@ -263,6 +300,20 @@ export default function QuizBuilder() {
       setError("Missing subject — please go back and start again.");
       return;
     }
+    if (!quizId) {
+      if (!batchId) {
+        setError("Pick a batch before saving.");
+        return;
+      }
+      if (!useCustomChapter && !chapterId) {
+        setError("Pick a chapter, or enter a new chapter name, before saving.");
+        return;
+      }
+      if (useCustomChapter && !customChapter.trim()) {
+        setError("Enter the new chapter's name before saving.");
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
     try {
@@ -274,6 +325,10 @@ export default function QuizBuilder() {
           description: "",
           quiz_type: quizType,
           time_limit_minutes: quizType === "mock" ? Number(timeLimit) : null,
+          batch_id: batchId,
+          ...(useCustomChapter
+            ? { custom_chapter: customChapter }
+            : { chapter_id: chapterId }),
         });
         id = res.data.id;
         setQuizId(id);
@@ -342,6 +397,46 @@ export default function QuizBuilder() {
         )}
         <span className="qb-counts">{questions.length} Qs · {totalMarks} marks</span>
       </div>
+
+      {/* Batch + chapter — create only; once the quiz exists these are fixed. */}
+      {!quizId && (
+        <div className="qb-toolbar">
+          <select className="qb-select" value={batchId} onChange={(e) => setBatchId(e.target.value)}>
+            <option value="">Select batch</option>
+            {batches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name} ({b.code}){b.year ? ` — ${b.year}` : ""}
+              </option>
+            ))}
+          </select>
+
+          {useCustomChapter ? (
+            <div className="qb-inline">
+              <input
+                className="qb-title-input qb-chapter-input"
+                placeholder="Enter new chapter"
+                value={customChapter}
+                onChange={(e) => setCustomChapter(e.target.value)}
+              />
+              <button type="button" className="qb-link-btn" onClick={() => setUseCustomChapter(false)}>
+                Use existing
+              </button>
+            </div>
+          ) : (
+            <div className="qb-inline">
+              <select className="qb-select" value={chapterId} onChange={(e) => setChapterId(e.target.value)}>
+                <option value="">Select chapter</option>
+                {chapters.map((ch) => (
+                  <option key={ch.id} value={ch.id}>{ch.title}</option>
+                ))}
+              </select>
+              <button type="button" className="qb-link-btn" onClick={() => setUseCustomChapter(true)}>
+                Custom
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="qb-actions">
         <button className="tk-btn" onClick={addQuestion} data-tour="quiz-builder.add-question">+ Add question</button>

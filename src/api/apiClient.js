@@ -4,22 +4,26 @@
  * Cookie-based axios client — replaces the old localStorage bearer-token version.
  * Handles 401 → refresh → retry automatically. Same cookie domain as the
  * marketplace and teacher dashboard so all three apps share one session.
+ *
+ * The refresh itself is NOT owned here any more. It used to be: this module
+ * kept its own `isRefreshing` flag and `failedQueue`, as did shared/apiClient.js
+ * and AuthContext, so three "single"-flights raced each other against a backend
+ * that rotates AND blacklists the refresh token — the losers were logged out of
+ * a valid session. See shared/src/api/refreshSession.js for the full write-up.
+ *
+ * Retiring the local queue also fixes a second bug it had: requests released
+ * from `failedQueue` were retried WITHOUT `_retry` set, so a token rejected
+ * again immediately after a refresh could kick off a whole second refresh
+ * round. Every retry below now carries the flag.
  */
 import axios from "axios";
-import { API_URL, LOGIN_URL } from "../config/urls";
+import { API_URL } from "../config/urls";
+import { refreshSession, redirectToLogin } from "./refreshSession";
 
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
 });
-
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error) => {
-  failedQueue.forEach((prom) => { error ? prom.reject(error) : prom.resolve(); });
-  failedQueue = [];
-};
 
 api.interceptors.response.use(
   (response) => response,
@@ -33,25 +37,13 @@ api.interceptors.response.use(
     ) {
       return Promise.reject(error);
     }
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => { failedQueue.push({ resolve, reject }); })
-        .then(() => api(originalRequest));
-    }
     originalRequest._retry = true;
-    isRefreshing = true;
     try {
-      await axios.post(
-        `${API_URL}/accounts/refresh/`,
-        {}, { withCredentials: true }
-      );
-      processQueue(null);
+      await refreshSession();
       return api(originalRequest);
     } catch (refreshError) {
-      processQueue(refreshError);
-      window.location.href = LOGIN_URL;
+      redirectToLogin();
       return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
     }
   }
 );

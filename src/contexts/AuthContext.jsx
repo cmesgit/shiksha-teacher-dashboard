@@ -22,13 +22,15 @@
  *
  * Imports ../config/urls (present in all three apps). The two interceptor bug
  * fixes below prevent the historic infinite reload loop on /login:
- *   FIX 1: never intercept /me/ or /notifications/ — bootstrap handles its own
- *          /me/ 401 with a manual refresh + retry.
- *   FIX 2: only redirect to LOGIN_URL when NOT already on an auth page.
+ *   FIX 1: never intercept /me/ — bootstrap handles its own 401 with a manual
+ *          refresh + retry.
+ *   FIX 2: only redirect to LOGIN_URL when NOT already on an auth page (now
+ *          lives in redirectToLogin(), shared with both apiClients).
  */
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { API_URL, LOGIN_URL } from "../config/urls";
+import { refreshSession, redirectToLogin } from "../api/refreshSession";
 
 // ── Axios client ──────────────────────────────────────────────────────────────
 const api = axios.create({
@@ -36,13 +38,12 @@ const api = axios.create({
   withCredentials: true,
 });
 
-let _isRefreshing = false;
-let _queue        = [];
-const _flush = (err) => {
-  _queue.forEach((p) => (err ? p.reject(err) : p.resolve()));
-  _queue = [];
-};
-
+// This instance used to run its OWN `_isRefreshing` + `_queue` single-flight,
+// as did api/apiClient.js and shared/apiClient.js. Three private flights
+// against a backend that rotates AND blacklists the refresh token meant a
+// cold load that 401s in several places at once got one winner and two
+// "Token is blacklisted" losers, each of which redirected to login. The
+// flight now lives in api/refreshSession.js and is shared tab-wide.
 api.interceptors.response.use(
   (r) => r,
   async (error) => {
@@ -50,16 +51,22 @@ api.interceptors.response.use(
     const st   = error.response?.status;
     const url  = orig?.url || "";
 
-    // FIX 1: never intercept /me/ or /notifications/ — bootstrap handles /me/ 401
-    // itself; intercepting it causes an infinite reload on the /login page.
-    // Public auth endpoints are surfaced to their callers as-is (no refresh).
+    // FIX 1: never intercept /me/ — bootstrap handles its 401 itself (a public
+    // page such as the marketing home calls /me/ while logged OUT, and letting
+    // the interceptor redirect on that would bounce every anonymous visitor to
+    // /login). Public auth endpoints are surfaced to their callers as-is.
+    //
+    // `/notifications/` used to be excluded here too, for no reason anyone
+    // recorded — it is an ordinary authenticated endpoint. The effect was that
+    // the Settings modal's notification-preference toggles were the ONE section
+    // that could not recover from an expired 60-minute access token: every
+    // other section refreshed and retried, these just failed.
     const isMeCall           = url.includes("/me/");
-    const isNotificationCall = url.includes("/notifications/");
     const isPublicEndpoint   = url.includes("/accounts/signup/") ||
                                url.includes("/accounts/email/check/") ||
                                url.includes("/accounts/verify-email/") ||
                                url.includes("/accounts/resend-verification/");
-    if (isMeCall || isNotificationCall || isPublicEndpoint) {
+    if (isMeCall || isPublicEndpoint) {
       return Promise.reject(error);
     }
 
@@ -72,36 +79,16 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (_isRefreshing) {
-      return new Promise((res, rej) =>
-        _queue.push({ resolve: res, reject: rej })
-      ).then(() => api(orig));
-    }
-
-    orig._retry   = true;
-    _isRefreshing = true;
+    orig._retry = true;
     try {
-      await api.post("/accounts/refresh/");
-      _flush(null);
+      await refreshSession();
       return api(orig);
     } catch (e) {
-      _flush(e);
-      // FIX 2: only redirect if we are NOT already on an auth page.
-      // Without this guard, arriving at /login triggers another redirect
-      // to /login, which triggers another, forever.
-      const p = window.location.pathname;
-      const onAuthPage =
-        p === "/login" ||
-        p === "/signup" ||
-        p.startsWith("/verify-email") ||
-        p.startsWith("/forgot-password") ||
-        p.startsWith("/email-verified");
-      if (!onAuthPage) {
-        window.location.href = LOGIN_URL;
-      }
+      // FIX 2 now lives in redirectToLogin(): only redirect when we are NOT
+      // already on an auth page, or arriving at /login redirects to /login,
+      // forever.
+      redirectToLogin();
       return Promise.reject(e);
-    } finally {
-      _isRefreshing = false;
     }
   }
 );
@@ -163,9 +150,11 @@ export function AuthProvider({ children }) {
         return apply(res.data);
       } catch (err) {
         if (!err?.response) return null;
-        // /me/ failed — try refreshing the token once
+        // /me/ failed — try refreshing the token once. Via refreshSession() so
+        // this joins whatever refresh the page's other 401s already started
+        // instead of firing a fourth one at a rotate-and-blacklist endpoint.
         try {
-          await api.post("/accounts/refresh/");
+          await refreshSession();
         } catch (refreshErr) {
           if (!refreshErr?.response) return null;
           // Refresh also failed — user is not logged in

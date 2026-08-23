@@ -18,6 +18,10 @@ export default function ClassroomUI({
   // course_name and batch_name so the room can say which class this is.
   sessionMeta,
   onLeave,
+  // Ends the class for everyone — hits /livestream/sessions/:id/end/ so the
+  // backend runs close_room(). Without it the control bar only offers the
+  // soft Leave, which leaves the room open and the session LIVE.
+  onEndSession,
 }) {
   const isPresenter = role === "PRESENTER";
 
@@ -653,6 +657,8 @@ export default function ClassroomUI({
       {/* CONTROL BAR — full width, beneath the video+sidebar row */}
       <ControlBar
         onLeave={onLeave}
+        onEndSession={role === "PRESENTER" ? onEndSession : null}
+        endConfirmMessage="End this class for everyone? All students will be disconnected immediately and the class will be marked completed."
         onExtendSession={role === "PRESENTER" ? extendSession : null}
         role={role}
         sessionId={sessionId}

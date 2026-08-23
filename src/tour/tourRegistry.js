@@ -200,7 +200,7 @@ export const tourRegistry = [
         target: '[data-tour="live-host.end-call"]',
         placement: "top",
         title: "Wrapping up",
-        body: "This ends the session for everyone — there's no separate close step.",
+        body: "End Call closes the class for everyone and marks it completed. Use Leave instead if you're only stepping out and the class should carry on.",
       },
     ],
   },

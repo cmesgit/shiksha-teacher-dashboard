@@ -33,6 +33,17 @@
 .qb-time-field input { width: 34px; border: none; font: 600 12px var(--font-body); text-align: center; }
 .qb-counts { font: 600 12px var(--font-body); color: var(--ink-3); }
 
+.qb-inline { display: flex; align-items: center; gap: 8px; }
+.qb-chapter-input {
+  border: 1px solid var(--card-border); border-radius: var(--radius-btn); padding: 7px 12px;
+  min-width: 200px;
+}
+.qb-link-btn {
+  flex-shrink: 0; border: none; background: none; cursor: pointer;
+  color: var(--primary, #1D9E75); font: 700 11.5px var(--font-body); white-space: nowrap;
+}
+.qb-link-btn:hover { text-decoration: underline; }
+
 .qb-actions { display: flex; gap: 8px; margin-bottom: var(--gap); flex-wrap: wrap; align-items: center; }
 .qb-actions-right { margin-left: auto; display: flex; gap: 8px; }
 .qb-ai-btn {

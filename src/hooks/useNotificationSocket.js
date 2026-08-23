@@ -49,15 +49,22 @@
 //    peek. Live WS pushes are filtered with the same rule, so the realtime
 //    path can't leak what the REST scope excluded.
 //
-// Public API: { notifications, unreadCount, crossTrackUnread, loading,
+// Public API: { notifications, unreadCount, crossTrackUnread, loading, error,
 //               markAllRead, markOneRead, clearNotifications,
 //               onEvent }
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../api/apiClient";
+import { refreshSession } from "../api/refreshSession";
 import { useAuth } from "../contexts/AuthContext";
+import { WS_HOST } from "../config/urls";
 
-const WS_HOST = import.meta.env.VITE_WS_HOST || "api.shikshacom.com";
+// WS_HOST is IMPORTED, not re-declared. It used to be
+// `import.meta.env.VITE_WS_HOST || "api.shikshacom.com"` right here, which
+// skipped config/urls.js's hostname-based dev detection: on
+// app.dev.shikshacom.com, where no VITE_WS_HOST is set in the deployed env,
+// REST went to api.dev while this socket connected to PRODUCTION. A
+// cross-environment connection that silently never delivered dev pushes.
 const MAX_NOTIFICATIONS = 50;
 const BASE_RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_DELAY = 30000;
@@ -111,7 +118,11 @@ function belongsToScope(row, scope) {
 
 // ── module-level singleton store ────────────────────────────────────
 const store = {
-  state: { notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true },
+  // `error` is a human-readable string when the LAST feed fetch failed, else
+  // null. Without it, offline / a 500 / the 409 `profile_required` you get in
+  // account context all rendered as a confident "No notifications" — a wrong
+  // answer stated with certainty, which is worse than an error.
+  state: { notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true, error: null },
   // The track this shared feed is currently scoped to. One store per tab
   // means one scope per tab: whichever consumer passes an explicit
   // `track` owns it (in practice the bell, which is the only component
@@ -179,9 +190,22 @@ async function fetchFeed() {
       unreadCount: items.filter((x) => !x.is_read).length,
       crossTrackUnread: res.data?.cross_track_unread ?? 0,
       loading: false,
+      error: null,
     });
-  } catch {
-    setState({ loading: false }); // WS may still deliver
+  } catch (err) {
+    if (store.track !== scope) return;   // same stale-response rule as above
+    // WS may still deliver, so this is not fatal — but the list is now
+    // EMPTY-BECAUSE-IT-FAILED, not empty-because-there-is-nothing, and the
+    // caller has to be able to tell those apart.
+    const code = err?.response?.data?.code;
+    setState({
+      loading: false,
+      error: code === "profile_required"
+        ? "Pick a profile to see its notifications."
+        : err?.response
+          ? "Couldn't load notifications."
+          : "You appear to be offline.",
+    });
   }
 }
 
@@ -192,7 +216,7 @@ function setFeedTrack(track) {
   if (store.track === next) return;
   store.track = next;
   if (!store.started) return;   // start() will fetch with the new scope
-  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true });
+  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true, error: null });
   fetchFeed();
 }
 
@@ -213,8 +237,34 @@ function startPing(ws) {
   }, PING_MS);
 }
 
+function clearReconnect() {
+  if (store.reconnectTimer) {
+    clearTimeout(store.reconnectTimer);
+    store.reconnectTimer = null;
+  }
+}
+
+// Detach EVERY handler before closing. A socket closed with its `onclose`
+// still attached runs the reconnect branch below on its way out, so the
+// previous socket schedules a reconnect on top of the one that replaced it.
+// stop() had the same hole (a post-stop `onclose` set a timer nothing
+// tracked), which is how route churn left orphan sockets reconnecting into
+// a store that no longer had any consumers.
+function discard(ws) {
+  if (!ws) return;
+  ws.onopen = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+  ws.onerror = null;
+  try { ws.close(); } catch { /* already closing */ }
+}
+
 function connect() {
   if (store.consumers === 0) return; // nobody mounted — stay closed
+
+  clearReconnect();
+  discard(store.ws);   // never leave the socket we are replacing running
+  store.ws = null;
 
   const token =
     localStorage.getItem("access") ||
@@ -232,10 +282,7 @@ function connect() {
     store.reconnectDelay = BASE_RECONNECT_DELAY;
     store.refreshTried = false;
     startPing(ws);
-    if (store.reconnectTimer) {
-      clearTimeout(store.reconnectTimer);
-      store.reconnectTimer = null;
-    }
+    clearReconnect();
   };
 
   ws.onmessage = (e) => {
@@ -254,13 +301,20 @@ function connect() {
 
   ws.onclose = async (event) => {
     stopPing();
-    if (store.consumers === 0) return;
+    // Only the CURRENT socket may drive reconnection. discard() nulls this
+    // handler, so reaching here on a replaced socket should be impossible —
+    // the identity check makes that explicit rather than implicit.
+    if (store.ws !== ws) return;
+    if (store.consumers === 0 || !store.started) return;
 
     // 4401 = expired/absent token. Refresh once, reconnect immediately.
+    // Through the shared single-flight (api/refreshSession.js): this used to
+    // be a raw POST, i.e. a fifth racer against a backend that blacklists the
+    // refresh token it just rotated.
     if (event.code === 4401 && !store.refreshTried) {
       store.refreshTried = true;
       try {
-        await api.post("/accounts/refresh/");
+        await refreshSession();
         if (store.consumers > 0) connect();
         return;
       } catch { /* fall through to backoff */ }
@@ -290,14 +344,9 @@ function start() {
 function stop() {
   store.started = false;
   stopPing();
-  if (store.reconnectTimer) {
-    clearTimeout(store.reconnectTimer);
-    store.reconnectTimer = null;
-  }
-  if (store.ws) {
-    try { store.ws.close(); } catch { /* */ }
-    store.ws = null;
-  }
+  clearReconnect();
+  discard(store.ws);
+  store.ws = null;
 }
 
 // ── actions (shared by every consumer) ──────────────────────────────
@@ -326,17 +375,43 @@ async function markOneRead(id) {
   try { await api.patch(`/activity/feed/${id}/read/`); } catch { /* */ }
 }
 
-function clearNotifications() {
-  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0 });
+// The bell's "Clear" button. It used to make NO API call and additionally
+// zero `crossTrackUnread` — a SERVER-supplied count of unread rows in the
+// OTHER track, which this bell never displayed and has no business
+// dismissing. Net effect: the list emptied, both badges went dark, and a
+// reload brought everything back exactly as it was.
+//
+// /activity/feed/ has no delete endpoint, so "clear" can only mean "mark this
+// track's rows read" — which is at least persistent, and is what the empty
+// badge was already claiming. The rows themselves come back on reload; that
+// is what a feed does, and read rows render quietly.
+async function clearNotifications() {
+  setState({ notifications: [], unreadCount: 0 });
+  try {
+    await api.post("/activity/feed/read-all/",
+                   store.track ? { track: store.track } : {});
+  } catch { /* local clear already applied; the reload will show the truth */ }
 }
 
 // Identity switched (profile / context). The feed + unread count are
 // per-identity, so drop the previous profile's items and refetch the new
-// one's. The WS group is per-ACCOUNT, so the socket itself stays valid — only
-// the feed needs to be reloaded.
+// one's.
+//
+// The socket has to be REOPENED, not reused. Its previous comment ("the WS
+// group is per-ACCOUNT, so the socket itself stays valid") predates
+// accounts/consumers.py's identity gate: `self.ctx`, `self.profile_id` and
+// `self.identity_key` are captured once in connect() from the token on the
+// handshake and never refreshed. A parent switching child A → child B kept a
+// socket still authenticated as A, so `_wanted()` DROPPED B's pushes and
+// DELIVERED A's into B's bell. Only a full page reload used to fix it.
 function resetForIdentity() {
-  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true });
+  setState({ notifications: [], unreadCount: 0, crossTrackUnread: 0, loading: true, error: null });
   fetchFeed();
+  if (store.started) {
+    store.refreshTried = false;
+    store.reconnectDelay = BASE_RECONNECT_DELAY;
+    connect();   // closes the stale-identity socket first — see discard()
+  }
 }
 
 // ── the hook ────────────────────────────────────────────────────────
@@ -405,6 +480,10 @@ export default function useNotificationSocket({ track } = {}) {
     // Unread rows sitting in the OTHER track — 0 when unscoped.
     crossTrackUnread: state.crossTrackUnread,
     loading: state.loading,
+    // Non-null when the last feed fetch failed. Render it instead of the
+    // "No notifications" empty state — an empty list after a 500 is not the
+    // same fact as an empty list after a 200.
+    error: state.error,
     markAllRead,
     markOneRead,
     clearNotifications,
