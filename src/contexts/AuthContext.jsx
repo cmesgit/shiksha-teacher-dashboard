@@ -113,12 +113,21 @@ function extractError(err) {
 // ── Context ───────────────────────────────────────────────────────────────────
 const AuthContext = createContext(null);
 
+// design_handoff_quiz_system Phase 0 — default shape for `featureFlags` so a
+// backend that predates this field (or a response that omits it) never
+// crashes a consumer reading e.g. `featureFlags.quiz_v2_enabled`.
+const DEFAULT_FEATURE_FLAGS = {
+  quiz_v2_enabled: false,
+  ai_question_drafting_enabled: false,
+};
+
 export function AuthProvider({ children }) {
-  const [user,        setUser]        = useState(null);
-  const [profiles,    setProfiles]    = useState([]);
-  const [teacherInfo, setTeacherInfo] = useState(null);
-  const [context,     setContext]     = useState(null);
-  const [loading,     setLoading]     = useState(true);
+  const [user,         setUser]        = useState(null);
+  const [profiles,     setProfiles]    = useState([]);
+  const [teacherInfo,  setTeacherInfo] = useState(null);
+  const [context,      setContext]     = useState(null);
+  const [featureFlags, setFeatureFlags] = useState(DEFAULT_FEATURE_FLAGS);
+  const [loading,      setLoading]     = useState(true);
 
   const isAuthenticated       = !!user;
   const needsProfileSelection = isAuthenticated && context === "account";
@@ -142,6 +151,9 @@ export function AuthProvider({ children }) {
       setContext(data.context || "account");
       setProfiles(Array.isArray(data.profiles) ? data.profiles : []);
       setTeacherInfo(data.teacher || null);
+      // Older backends won't send this key at all — fall back to both OFF
+      // rather than leaving stale flags from a previous bootstrap in place.
+      setFeatureFlags({ ...DEFAULT_FEATURE_FLAGS, ...(data.feature_flags || {}) });
       return data;
     };
     const run = async () => {
@@ -339,6 +351,7 @@ export function AuthProvider({ children }) {
     setProfiles([]);
     setTeacherInfo(null);
     setContext(null);
+    setFeatureFlags(DEFAULT_FEATURE_FLAGS);
     if (redirect) window.location.href = LOGIN_URL;
   };
 
@@ -366,7 +379,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user, profiles, teacherInfo, context, activeProfile,
+        user, profiles, teacherInfo, context, activeProfile, featureFlags,
         isAuthenticated, needsProfileSelection, isTeacherContext, isLearnerContext,
         loading, api,
         login, selectProfile, switchProfile,
@@ -388,7 +401,8 @@ export function useAuth() {
     console.warn("useAuth was called outside AuthProvider.");
     return {
       user: null, profiles: [], teacherInfo: null, context: null,
-      activeProfile: null, isAuthenticated: false, needsProfileSelection: false,
+      activeProfile: null, featureFlags: DEFAULT_FEATURE_FLAGS,
+      isAuthenticated: false, needsProfileSelection: false,
       isTeacherContext: false, isLearnerContext: false, loading: false, api,
       login: async () => null, selectProfile: async () => null, switchProfile: async () => null,
       enterTeacherMode: async () => ({ ok: false }), switchTrack: async () => ({ ok: false }),
