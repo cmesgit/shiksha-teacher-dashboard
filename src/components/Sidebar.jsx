@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import { FiHome } from "react-icons/fi";
+import api from "../api/apiClient";
 import { useAuth } from "../contexts/AuthContext";
 import NavIcon from "./NavIcon";
 import { NAV, activeNavTo } from "../utils/academyNav";
@@ -120,6 +121,21 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   // item answer "am I a prefix of this?" independently — which lit "Classes"
   // on every per-class drill-down and could light two items at once.
   const activeTo = activeNavTo(location.pathname);
+  // Phase 6 item 4: the "My Question Bank" pill counts what needs the
+  // TEACHER's attention — questions awaiting curation plus ones an admin sent
+  // back. Not the whole bank, which would be a number that never moves.
+  const [badges, setBadges] = useState({ bank: 0 });
+  useEffect(() => {
+    let alive = true;
+    api.get("/teacher/question-bank/summary/")
+      .then(({ data }) => {
+        if (!alive) return;
+        setBadges({ bank: (data.suggested || 0) + (data.changes_requested || 0) });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   const isActive = (to) => to === activeTo;
 
   const go = (to) => { navigate(to); setSidebarOpen(false); };
@@ -211,6 +227,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
             >
               <NavIcon name={item.i} size={14} />
               {item.l}
+              {item.badgeKey && badges[item.badgeKey] > 0 && (
+                <span className="acad-side__pill">{badges[item.badgeKey]}</span>
+              )}
             </button>
           );
         })}

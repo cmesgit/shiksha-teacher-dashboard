@@ -274,3 +274,18 @@
   .acad-side--open { transform: translateX(0); }
   .acad-side__close { display: block; }
 }
+
+/* Live count pill on a sidebar item (Phase 6 item 4 — "My Question Bank").
+   Pushed right so it reads as a count on the row, not part of the label. */
+.acad-side__pill {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--action);
+  color: var(--surface);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}

@@ -15,7 +15,11 @@ export const NAV = [
   { l: "Batch Progress", i: "chart", to: "/teacher/batch-progress" },
   { section: "CONTENT" },
   { l: "Assignments", i: "file", to: "/teacher/assignments" },
-  { l: "Quizzes", i: "help", to: "/teacher/quizzes" },
+  { l: "Tests & Quizzes", i: "help", to: "/teacher/quizzes" },
+  // Phase 6 item 4. `badgeKey` binds the live pill resolved by the sidebar —
+  // it counts what needs the TEACHER's attention (suggested + changes
+  // requested), not the whole bank, which would be a number that never moves.
+  { l: "My Question Bank", i: "clip", to: "/teacher/quiz-bank", badgeKey: "bank" },
   { l: "Study Materials", i: "clip", to: "/teacher/study-materials" },
   { section: "LIVE" },
   { l: "Live Sessions", i: "video", to: "/teacher/live-sessions" },
@@ -34,7 +38,7 @@ const EXTRA_TITLES = [
   { to: "/teacher/profile", l: "Profile" },
   { to: "/teacher/change-password", l: "Change Password" },
   { to: "/teacher/settings", l: "Settings" },
-  { to: "/teacher/quiz-bank", l: "Question Bank" },
+  { to: "/teacher/bank-status", l: "ShikshaCom Bank Status" },
 ];
 
 // `to` maps each per-class drill-down back to the sidebar item that owns it.
@@ -43,7 +47,7 @@ const EXTRA_TITLES = [
 // with /teacher/classes and never with /teacher/assignments.
 const CLASS_SUBSCREENS = [
   { seg: "assignments", l: "Assignments", to: "/teacher/assignments" },
-  { seg: "quizzes", l: "Quizzes", to: "/teacher/quizzes" },
+  { seg: "quizzes", l: "Tests & Quizzes", to: "/teacher/quizzes" },
   { seg: "study-materials", l: "Study Materials", to: "/teacher/study-materials" },
   { seg: "session-recordings", l: "Recordings", to: "/teacher/recordings" },
   { seg: "students", l: "Students", to: "/teacher/students" },
