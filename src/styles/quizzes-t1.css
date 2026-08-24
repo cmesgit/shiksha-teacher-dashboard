@@ -12,16 +12,31 @@
 
 /* ── Stat strip ──────────────────────────────────────────────────────── */
 
+/* Grid, not flex-wrap: with four cards and `flex: 1 1 170px` the fourth one
+ * wrapped onto its own line and stretched to full width, which read as a
+ * separate section rather than the last of a set. auto-fit keeps every column
+ * equal, so it degrades 4 → 2×2 → 1 without ever orphaning one. */
 .qt-strip {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 14px;
 }
 
+/* Explicit breakpoints rather than auto-fit: with the 232px sidebar eating
+ * the viewport, `minmax(170px, 1fr)` fitted exactly three columns and dropped
+ * the fourth card onto a row of its own, which read as a separate section
+ * instead of the last of a set. 4 → 2×2 → 1 never orphans one. */
+@media (max-width: 1180px) {
+  .qt-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .qt-strip { grid-template-columns: 1fr; }
+}
+
 .qt-stat {
-  flex: 1 1 170px;
-  min-width: 170px;             /* spec */
+  min-width: 0;                 /* spec's 170px floor is the grid minmax above */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;          /* spec: r12 */

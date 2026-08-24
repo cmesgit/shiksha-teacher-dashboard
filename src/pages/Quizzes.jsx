@@ -18,16 +18,20 @@
 // The old per-subject fan-out survives as a 404-only fallback for backends
 // that predate that endpoint — see api/batchedList.js for why only a 404.
 //
-// Layout: the design's 3-up card grid (.ac-cardGrid / .ac-card), matching
-// dc.html line 847 exactly — chip + status chip on top, title + meta, then a
-// footer with one status line and ONE action.
+// Layout: T1 (design_handoff_quiz_system §T1, Phase 6) — a stat strip, a
+// segmented type filter, and ROWS. It was a 3-up card grid until Phase 6.
 //
-// That single footer button is the constraint worth knowing about: this screen
-// has up to four actions (view / submit for review / view results / delete).
-// The button therefore shows whichever one this quiz's state actually calls
-// for — results when published, submit when draft or rejected, preview
-// otherwise — and the remainder sit behind an overflow menu beside it, reusing
-// the Manage▾ pattern the design already uses on the Study Materials row.
+// Why rows: a card had room for one status chip, so it showed review_status —
+// which conflated two independent things. A teacher's own quiz, live for
+// their own class, read "Pending review" because its QUESTIONS were queued
+// for the shared ShikshaCom bank. Phase 1 removed the admin from the
+// teacher's own classroom; this screen was still saying otherwise. Rows carry
+// both states side by side, in the same shape, because neither outranks the
+// other.
+//
+// Actions: Results / Edit inline, the rest behind the ⋯ overflow, reusing the
+// Manage▾ pattern the design already uses on the Study Materials row. There is
+// deliberately no "Submit for review" — assigning happens in the builder now.
 // ──────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -49,6 +53,21 @@ const fmtDate = (d) =>
 
 const num = (v) => (typeof v === "number" ? v.toFixed(1) : "—");
 const pct = (v) => (typeof v === "number" ? `${v.toFixed(0)}%` : "—");
+
+/** average_score is RAW MARKS, not a percentage — `total_marks` is its
+ *  denominator, which is exactly why the serializer exposes it. Passing the
+ *  mark straight through a percent formatter is the bug the serializer's own
+ *  comment warns about: a 3-mark quiz averaging 8 rendered as "8%" instead of
+ *  a (nonsensical, but honest) ratio. Falls back to "—" rather than guessing
+ *  when the denominator is missing or zero. */
+function scorePct(score, totalMarks) {
+  if (typeof score !== "number" || !totalMarks) return "—";
+  // Clamped at 100, matching QuizDashboardSerializer.get_best_score and the
+  // student result views. A stored score can exceed the current total when
+  // marks were edited after an attempt was sat; showing "283%" would be
+  // technically faithful and completely useless to a teacher.
+  return `${Math.round(Math.min(100, (score / totalMarks) * 100))}%`;
+}
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** The site-bank chip. Reported in priority order, not as a sum: a quiz with
@@ -57,7 +76,8 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
  *  already-accepted. "Not suggested" only when nothing was ever offered. */
 function bankChipFor(q) {
   if (q.bank_changes_requested) {
-    return { label: `${q.bank_changes_requested} need changes`, tone: "danger" };
+    const n = q.bank_changes_requested;
+    return { label: `${n} ${n === 1 ? "needs" : "need"} changes`, tone: "danger" };
   }
   if (q.bank_suggested) {
     return { label: `${q.bank_suggested} awaiting curation`, tone: "warning" };
@@ -588,7 +608,9 @@ export default function Quizzes() {
 
                 <div className="qt-row__score">
                   <div className="qt-row__scoreVal">
-                    {quiz.total_attempts > 0 ? pct(quiz.average_score) : "—"}
+                    {quiz.total_attempts > 0
+                      ? scorePct(quiz.average_score, quiz.total_marks)
+                      : "—"}
                   </div>
                   <div className="qt-row__scoreLbl">avg score</div>
                 </div>
