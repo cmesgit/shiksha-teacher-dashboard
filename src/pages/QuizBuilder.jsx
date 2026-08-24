@@ -11,7 +11,9 @@ import {
   IoTimeOutline, IoClipboardOutline, IoFolderOutline, IoSparklesOutline,
   IoCloseOutline, IoCheckmarkOutline,
   IoHelpCircleOutline, IoRepeatOutline, IoRemoveCircleOutline, IoEyeOutline,
+  IoSend, IoCheckmarkCircle,
 } from "react-icons/io5";
+import { useAuth } from "../contexts/AuthContext";
 
 // ── T2 type cards (design_handoff_quiz_system/README.md §T2) ──────────────
 // Copy is the spec's, verbatim: the two cards are the only place a teacher is
@@ -56,7 +58,15 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 //   POST  /teacher/quizzes/                       create draft (existing)
 //   PATCH /teacher/quizzes/:id/                   update meta (new)
 //   PUT   /teacher/quizzes/:id/questions/bulk/     replace full question set (new)
-//   PATCH /teacher/quizzes/:id/publish/            submit for admin review (existing)
+//   PATCH /teacher/quizzes/:id/assign/             make it live for the
+//                                                  teacher's own batches
+//                                                  (Phase 1 — replaces the
+//                                                  publish/submit-for-review
+//                                                  call this screen used to
+//                                                  make; that endpoint still
+//                                                  exists and still only asks
+//                                                  an admin to look at the
+//                                                  questions)
 //   GET   /teacher/question-bank/?scope=mine|school&subject=
 //   POST  /teacher/quizzes/generate-ai/            { topic, difficulty, count }
 
@@ -100,6 +110,11 @@ export default function QuizBuilder() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { subjectId: subjectIdParam, quizId: quizIdParam } = useParams();
+
+  // Phase 0 put both quiz-v2 flags on the auth context, defaulted false, so a
+  // backend that omits `feature_flags` reads as OFF rather than crashing here.
+  const { featureFlags } = useAuth();
+  const aiEnabled = !!featureFlags?.ai_question_drafting_enabled;
 
   const [quizId, setQuizId] = useState(quizIdParam || null);
   const [subjectId, setSubjectId] = useState(subjectIdParam || null);
@@ -309,7 +324,7 @@ export default function QuizBuilder() {
         source: "ai",
       }));
       setQuestions((prev) => [...prev, ...drafted]);
-      setAiNote(`${drafted.length} question${drafted.length === 1 ? "" : "s"} drafted by AI from "${aiTopic || title}" — review before publishing.`);
+      setAiNote(`${drafted.length} question${drafted.length === 1 ? "" : "s"} drafted by AI from "${aiTopic || title}" — review before you assign it.`);
       setShowAiModal(false);
     } catch (err) {
       setError(err.response?.data?.detail || "AI generation failed. Try again or add questions manually.");
@@ -328,7 +343,7 @@ export default function QuizBuilder() {
     );
   }
 
-  async function persist({ publish }) {
+  async function persist({ assign }) {
     const valid = validQuestions();
     if (!valid.length) {
       setError("Add at least one complete question (text, 2+ choices, one marked correct, and an explanation) before saving.");
@@ -398,11 +413,20 @@ export default function QuizBuilder() {
           choices: q.choices.filter((c) => c.text.trim()),
         })),
       });
-      if (publish) await api.patch(`/teacher/quizzes/${id}/publish/`);
-      if (publish) {
+      if (assign) {
+        // Phase 1 replaced submit-for-review with this: the teacher makes
+        // their own quiz live for their own batches, no admin in the loop.
+        // `batch_ids` is sent ONLY on create. The endpoint treats an absent
+        // key as "leave the scope alone" (an empty list means "all batches"),
+        // so on edit — where the batch picker is hidden and batchId is "" —
+        // omitting it is what preserves the batches already assigned.
+        await api.patch(`/teacher/quizzes/${id}/assign/`, {
+          assign: true,
+          ...(batchId ? { batch_ids: [batchId] } : {}),
+        });
         toast.success(
-          "Submitted for admin review — an admin will verify it before it goes live for students.",
-          { duration: 6000 }
+          "Assigned — it's live for your batches now.",
+          { duration: 5000 }
         );
       } else {
         toast.success("Draft saved");
@@ -537,16 +561,52 @@ export default function QuizBuilder() {
         <button className="tk-btn" onClick={addQuestion} data-tour="quiz-builder.add-question">+ Add question</button>
         <button className="tk-btn tk-btn--ghost" onClick={() => setShowImport(true)}><IoClipboardOutline /> Bulk paste / import</button>
         <button className="tk-btn tk-btn--ghost" onClick={openBank} data-tour="quiz-builder.question-bank"><IoFolderOutline /> Question bank</button>
-        <button className="qb-ai-btn" onClick={() => { setAiTopic(title); setShowAiModal(true); }} data-tour="quiz-builder.ai-generate"><IoSparklesOutline /> Generate with AI</button>
+        {/* The AI entry point is admin-controlled and ships OFF. Gated, never
+            removed (non-negotiable #7): when the flag is on, this is the
+            existing modal untouched; when off, the slot below says who can
+            turn it on rather than leaving a dead button or a silent gap. */}
+        {aiEnabled ? (
+          <button className="qb-ai-btn" onClick={() => { setAiTopic(title); setShowAiModal(true); }} data-tour="quiz-builder.ai-generate"><IoSparklesOutline /> Generate with AI</button>
+        ) : (
+          <span className="qb2-aislot">
+            <span className="qb2-aislot__text">AI drafting is off</span>
+            <span className="qb2-aislot__switch" aria-hidden="true" />
+            <span className="qb2-aislot__hint">admin-controlled</span>
+          </span>
+        )}
         <div className="qb-actions-right">
-          <button className="tk-btn tk-btn--ghost" disabled={saving} onClick={() => persist({ publish: false })}>
+          <button className="tk-btn tk-btn--ghost" disabled={saving} onClick={() => persist({ assign: false })}>
             {saving ? "Saving…" : "Save draft"}
           </button>
-          <button className="qb-publish-btn" disabled={saving} onClick={() => persist({ publish: true })} data-tour="quiz-builder.submit-review">
-            Submit for review
+          <button
+            className="qb2-assign-btn"
+            disabled={saving}
+            onClick={() => persist({ assign: true })}
+            data-tour="quiz-builder.submit-review"
+          >
+            <IoSend /> Assign to my batches
           </button>
         </div>
       </div>
+
+      {/* Reassurance banner — the point of Phase 1 in one sentence. Teachers
+          used to wait on an admin before a quiz reached their own class; they
+          no longer do, and the screen has to say so or the old habit stands. */}
+      <p className="qb2-reassure">
+        <IoCheckmarkCircle className="qb2-reassure__icon" />
+        <span>
+          Goes live for your batches the moment you assign it — no admin
+          approval. Your questions are also suggested to the ShikshaCom bank,
+          where an admin curates them.
+        </span>
+        <button
+          type="button"
+          className="qb2-reassure__btn"
+          onClick={() => navigate("/teacher/quiz-bank")}
+        >
+          Bank settings
+        </button>
+      </p>
 
       {aiNote && <div className="qb-ai-note"><IoSparklesOutline /> {aiNote}</div>}
 
@@ -720,7 +780,7 @@ export default function QuizBuilder() {
               <span className="qb-ai-badge"><IoSparklesOutline /> AI</span>
             </div>
             <p className="qb-modal-desc">
-              Drafts land as unpublished — review and edit every question before publishing.
+              Drafts are not live — review and edit every question before you assign it.
             </p>
             <label className="qb-field-label">Chapter / topic</label>
             <input className="qb-select" style={{ width: "100%" }} value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} placeholder="e.g. Definite Integrals" />
