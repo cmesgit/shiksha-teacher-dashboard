@@ -32,7 +32,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiMoreHorizontal } from "react-icons/fi";
+import { FiMoreHorizontal, FiClock, FiHelpCircle } from "react-icons/fi";
 import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import { fetchBatchedOrFanOut } from "../api/batchedList";
@@ -42,14 +42,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { subjectChipSlot } from "../utils/subjectChips";
 import "../styles/academyScreens.css";
 import "../styles/quizzes.css";
-
-// Admin verification status → label + the shared .ac-tag--* tone.
-const STATUS_META = {
-  draft:    { label: "Draft",             tone: "neutral" },
-  pending:  { label: "Pending review",    tone: "warning" },
-  approved: { label: "✓ Published",       tone: "success" },
-  rejected: { label: "Changes requested", tone: "danger"  },
-};
+import "../styles/quizzes-t1.css";
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
@@ -57,6 +50,34 @@ const fmtDate = (d) =>
 const num = (v) => (typeof v === "number" ? v.toFixed(1) : "—");
 const pct = (v) => (typeof v === "number" ? `${v.toFixed(0)}%` : "—");
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** The site-bank chip. Reported in priority order, not as a sum: a quiz with
+ *  questions in several states shows the one that needs the teacher's
+ *  attention first — changes requested outranks awaiting, which outranks
+ *  already-accepted. "Not suggested" only when nothing was ever offered. */
+function bankChipFor(q) {
+  if (q.bank_changes_requested) {
+    return { label: `${q.bank_changes_requested} need changes`, tone: "danger" };
+  }
+  if (q.bank_suggested) {
+    return { label: `${q.bank_suggested} awaiting curation`, tone: "warning" };
+  }
+  if (q.bank_accepted) {
+    return { label: `${q.bank_accepted} in site bank`, tone: "success" };
+  }
+  return { label: "Not suggested", tone: "neutral" };
+}
+
+/** The meta line's timing clause — what this type actually enforces. */
+function timingRule(q) {
+  if ((q.quiz_type || "practice") === "mock") {
+    const parts = [];
+    if (q.time_limit_minutes) parts.push(`${q.time_limit_minutes} min`);
+    parts.push(q.max_attempts === 1 ? "one attempt" : `${q.max_attempts} attempts`);
+    return parts.join(", ");
+  }
+  return "unlimited retries";
+}
 
 export default function Quizzes() {
   const navigate = useNavigate();
@@ -71,7 +92,6 @@ export default function Quizzes() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [publishingId, setPublishingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -84,6 +104,12 @@ export default function Quizzes() {
 
   // "" = all subjects. Seeded from the route so a deep link preselects.
   const [subjectFilter, setSubjectFilter] = useState(subjectId ? String(subjectId) : "");
+  // T1 (Phase 6). Null until the strip's two side requests land; the cards
+  // render "—" rather than 0 in the meantime, so a slow response never reads
+  // as "you have no questions in the bank".
+  const [attemptStats, setAttemptStats] = useState(null);
+  const [bankSummary, setBankSummary] = useState(null);
+  const [typeFilter, setTypeFilter] = useState("all"); // all | practice | mock
 
   const createRef = useRef(null);
 
@@ -147,6 +173,18 @@ export default function Quizzes() {
         );
         if (cancelled) return;
         setQuizzes(rows);
+
+        // T1's stat strip. Deliberately NOT awaited with the list above: the
+        // strip is decoration on top of the list, so a failure here must
+        // degrade the cards to "—" rather than blank the whole screen.
+        Promise.allSettled([
+          api.get("/teacher/quizzes/stats/"),
+          api.get("/teacher/question-bank/summary/"),
+        ]).then(([s, b]) => {
+          if (cancelled) return;
+          if (s.status === "fulfilled") setAttemptStats(s.value.data);
+          if (b.status === "fulfilled") setBankSummary(b.value.data);
+        });
       } catch (err) {
         if (cancelled) return;
         console.error("Failed to load quizzes", err);
@@ -185,32 +223,6 @@ export default function Quizzes() {
   }, [openMenu]);
 
   // ── Actions ────────────────────────────────────────────────────────────
-  const handlePublish = async (quiz) => {
-    setPublishingId(quiz.id);
-    try {
-      await api.patch(`/teacher/quizzes/${quiz.id}/publish/`);
-      // Re-read only the subject that changed (1 request, not another fan-out).
-      const subject =
-        subjects.find((s) => String(s.subjectId) === String(quiz.subjectId)) || {
-          subjectId: quiz.subjectId,
-          subjectName: quiz.subjectName,
-        };
-      const fresh = await fetchForSubject(subject);
-      setQuizzes((prev) => [
-        ...prev.filter((q) => String(q.subjectId) !== String(quiz.subjectId)),
-        ...fresh,
-      ]);
-      // Publishing here only submits for admin review — it doesn't go live
-      // on its own, so the toast says so rather than implying it's now
-      // visible to students.
-      toast.success("Submitted for review — an admin will verify it before it goes live.");
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to publish quiz.");
-    } finally {
-      setPublishingId(null);
-    }
-  };
-
   const doDelete = async (quiz, force) => {
     setDeletingId(quiz.id);
     try {
@@ -319,6 +331,27 @@ export default function Quizzes() {
           plural(questions, "question"),
         ].filter(Boolean).join(" · "),
         stateLabel: q.created_at ? `Created ${fmtDate(q.created_at)}` : "",
+        // ── T1's two chips ─────────────────────────────────────────────
+        // The whole point of this screen: assignment state and site-bank
+        // state are INDEPENDENT, and the old single "Pending review" chip
+        // conflated them — a teacher's own live quiz looked like it was
+        // waiting on an admin when only its questions were.
+        assignChip: q.is_assigned
+          ? {
+              label: q.batch_count
+                ? `Live for ${plural(q.batch_count, "batch").replace("batchs", "batches")}`
+                : "Live for all batches",
+              tone: "success",
+            }
+          : { label: "Draft — not assigned", tone: "neutral" },
+        bankChip: bankChipFor(q),
+        t1Meta: [
+          q.course_title || null,
+          plural(questions, "question"),
+          timingRule(q),
+          ...(q.chapter_tags || []).map((t) => t.label).filter(Boolean),
+          q.no_specific_chapter ? "No specific chapter" : null,
+        ].filter(Boolean).join(" · "),
         perf:
           q.total_attempts > 0
             ? `Avg ${num(q.average_score)} (range ${num(q.lowest_score)}–${num(q.highest_score)}) · ` +
@@ -338,9 +371,53 @@ export default function Quizzes() {
     () =>
       decorated
         .filter((q) => !subjectFilter || String(q.subjectId) === subjectFilter)
+        .filter((q) => typeFilter === "all" || (q.quiz_type || "practice") === typeFilter)
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
-    [decorated, subjectFilter]
+    [decorated, subjectFilter, typeFilter]
   );
+
+  /* ── T1 stat strip (Phase 6) ────────────────────────────────────────────
+   * "Live for my batches" is counted here rather than fetched: the quiz list
+   * is unpaginated, so this count is complete and costs no extra request.
+   * The other three come from the two side calls; each renders "—" until its
+   * response lands. */
+  const stats = useMemo(() => {
+    const live = decorated.filter((q) => q.is_assigned).length;
+    const d = attemptStats?.attempts_delta;
+    return [
+      {
+        key: "live",
+        label: "Live for my batches",
+        value: live,
+        note: "no approval needed",
+        tone: "success",
+      },
+      {
+        key: "attempts",
+        label: "Attempts this week",
+        value: attemptStats?.attempts_this_week,
+        note:
+          d == null ? "vs last week"
+            : d === 0 ? "same as last week"
+              : `${d > 0 ? "+" : ""}${d} vs last week`,
+        tone: d == null ? "muted" : d < 0 ? "warning" : "success",
+      },
+      {
+        key: "inbank",
+        label: "In the ShikshaCom bank",
+        value: bankSummary?.accepted,
+        note: bankSummary ? `of ${bankSummary.total} you wrote` : "of your questions",
+        tone: "muted",
+      },
+      {
+        key: "awaiting",
+        label: "Awaiting curation",
+        value: bankSummary?.suggested,
+        note: "admin reviews these",
+        tone: bankSummary?.suggested ? "warning" : "muted",
+      },
+    ];
+  }, [decorated, attemptStats, bankSummary]);
 
   // ── States ─────────────────────────────────────────────────────────────
   if (classesLoading || loading) {
@@ -369,17 +446,18 @@ export default function Quizzes() {
     );
   }
 
-  const headSub = decorated.length
-    ? `${plural(decorated.length, "quiz").replace("quizs", "quizzes")} across ${plural(
-        subjectsWithQuizzes.length, "class").replace("classs", "classes")}.`
-    : "Create a quiz and it will show up here.";
-
   return (
     <div className="ac-screen">
       <div className="ac-head">
         <div>
-          <h1 className="ac-head__title">Quizzes</h1>
-          <p className="ac-head__sub">{headSub}</p>
+          <h1 className="ac-head__title">Tests &amp; quizzes</h1>
+          {/* The sub is the screen's whole argument: Phase 1 removed the
+              admin from the teacher's own classroom, and this line is where
+              a teacher who remembers the old flow finds that out. */}
+          <p className="ac-head__sub">
+            Yours to run. Nothing here waits on an admin — approval only
+            matters for the shared ShikshaCom bank.
+          </p>
         </div>
         <div className="ac-head__actions">
           <div className="ac-menuWrap" ref={createRef}>
@@ -412,7 +490,35 @@ export default function Quizzes() {
         </div>
       </div>
 
+      <div className="qt-strip">
+        {stats.map((s) => (
+          <div className="qt-stat" key={s.key}>
+            <div className="qt-stat__label">{s.label}</div>
+            <div className="qt-stat__value">{s.value ?? "—"}</div>
+            <div className={`qt-stat__note qt-stat__note--${s.tone}`}>{s.note}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="ac-filterBar">
+        <div className="qt-seg" role="tablist" aria-label="Test type">
+          {[
+            { id: "all", label: "All" },
+            { id: "practice", label: "Practice quizzes" },
+            { id: "mock", label: "Mock tests" },
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === t.id}
+              className={`qt-seg__btn${typeFilter === t.id ? " is-active" : ""}`}
+              onClick={() => setTypeFilter(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="ac-pills">
           <button
             type="button"
@@ -444,148 +550,115 @@ export default function Quizzes() {
           />
         </section>
       ) : (
-        // The design renders quizzes as a 3-up card grid (dc.html line 847),
-        // not rows: chip + status on top, title + meta, then a footer with one
-        // status line and one action.
-        <div className="ac-cardGrid">
+        // T1 (Phase 6) replaces the card grid with rows. A card could show one
+        // status; this screen has to show two independent ones — live for my
+        // batches, and site-bank state — which is the entire point of it.
+        <section className="ac-listCard">
           {rows.map((quiz) => {
-            const meta = STATUS_META[quiz.review_status] || STATUS_META.draft;
-            const canPublish =
+            const canEdit =
               quiz.review_status === "draft" || quiz.review_status === "rejected";
-            const noQuestions = (quiz.questions_count ?? 0) === 0;
-
-            // The design's card footer has exactly ONE button, so the primary
-            // action is whatever this quiz's state actually calls for. The rest
-            // move into the overflow menu beside it — the same Manage pattern
-            // the design uses on the Study Materials row.
-            const primary = quiz.is_published
-              ? {
-                  label: "View results",
-                  onClick: () => navigate(`/teacher/quizzes/${quiz.id}/submissions`),
-                }
-              : canPublish
-                ? {
-                    label:
-                      publishingId === quiz.id
-                        ? "Submitting…"
-                        : quiz.review_status === "rejected"
-                          ? "Resubmit"
-                          : "Submit for review",
-                    onClick: () => handlePublish(quiz),
-                    disabled: publishingId === quiz.id || noQuestions,
-                    title: noQuestions
-                      ? "Add at least one question before submitting"
-                      : "Send to admin for verification",
-                  }
-                : { label: "Preview", onClick: () => handleView(quiz) };
+            const isMock = (quiz.quiz_type || "practice") === "mock";
 
             return (
-              <div key={quiz.id} className="ac-card">
-                <div className="ac-card__top">
-                  <span className={`subj-chip subj-chip--${subjectChipSlot(quiz.subjectName)}`}>
-                    {quiz.subjectName || "Subject"}
-                  </span>
-                  <span
-                    className={`ac-tag ac-tag--${meta.tone}`}
-                    title={quiz.review_note || ""}
+              <div key={quiz.id} className="ac-row ac-row--flush qt-row">
+                <span className={`qt-kind qt-kind--${isMock ? "mock" : "practice"}`}>
+                  {isMock ? <FiClock size={17} /> : <FiHelpCircle size={17} />}
+                </span>
+
+                <div className="qt-row__body">
+                  <div className="qt-row__titleLine">
+                    <span className="qt-row__title">{quiz.title}</span>
+                    <span className={`subj-chip subj-chip--${subjectChipSlot(quiz.subjectName)} qt-kindChip`}>
+                      {isMock ? "Mock test" : "Practice"}
+                    </span>
+                  </div>
+                  <div className="qt-row__meta" title={quiz.perf || ""}>{quiz.t1Meta}</div>
+                  <div className="qt-row__chips">
+                    <span className={`qt-chip qt-chip--${quiz.assignChip.tone}`}>
+                      {quiz.assignChip.label}
+                    </span>
+                    <span
+                      className={`qt-chip qt-chip--${quiz.bankChip.tone}`}
+                      title="Site-bank status — independent of whether this test is live for your class"
+                    >
+                      {quiz.bankChip.label}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="qt-row__score">
+                  <div className="qt-row__scoreVal">
+                    {quiz.total_attempts > 0 ? pct(quiz.average_score) : "—"}
+                  </div>
+                  <div className="qt-row__scoreLbl">avg score</div>
+                </div>
+
+                <div className="qt-row__actions">
+                  <button
+                    type="button"
+                    className="ac-btn"
+                    onClick={() => navigate(`/teacher/quizzes/${quiz.id}/submissions`)}
                   >
-                    {meta.label}
-                  </span>
-                </div>
-
-                <div>
-                  <div className="ac-card__title">{quiz.title}</div>
-                  <div className="ac-card__meta" title={quiz.perf || ""}>{quiz.meta}</div>
-                  {quiz.review_status === "rejected" && quiz.review_note && (
-                    <div className="ac-card__meta qz-note">“{quiz.review_note}”</div>
-                  )}
-                </div>
-
-                <div className="ac-card__foot">
-                  {/* Design's footer text is just the due/held date
-                      (dc.html's q.footText) — the fuller performance
-                      breakdown lives in the subtitle's hover title instead
-                      of crowding this single line. */}
-                  <span className="ac-card__footText">{quiz.stateLabel}</span>
-                  <div className="ac-card__actions">
-                    <div className="ac-menuWrap">
-                      <button
-                        type="button"
-                        className="ac-cardBtn ac-cardBtn--icon"
-                        aria-label="More actions"
-                        aria-haspopup="menu"
-                        aria-expanded={openMenu === quiz.id}
-                        onClick={() => setOpenMenu(openMenu === quiz.id ? null : quiz.id)}
-                      >
-                        <FiMoreHorizontal size={13} />
-                      </button>
-                      {openMenu === quiz.id && (
-                        <div className="ac-menu" role="menu">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="ac-menu__item"
-                            onClick={() => { setOpenMenu(null); handleView(quiz); }}
-                          >
-                            {quiz.is_published ? "View quiz" : "Preview quiz"}
-                          </button>
-                          {canPublish && (
-                            <button
-                              type="button"
-                              role="menuitem"
-                              className="ac-menu__item"
-                              onClick={() => { setOpenMenu(null); navigate(`/teacher/quizzes/${quiz.id}/edit`); }}
-                            >
-                              Edit quiz
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="ac-menu__item"
-                            onClick={() => { setOpenMenu(null); handleDuplicate(quiz); }}
-                            disabled={duplicatingId === quiz.id}
-                          >
-                            {duplicatingId === quiz.id ? "Duplicating…" : "Duplicate quiz"}
-                          </button>
-                          {quiz.is_published && (
-                            <button
-                              type="button"
-                              role="menuitem"
-                              className="ac-menu__item"
-                              onClick={() => { setOpenMenu(null); navigate(`/teacher/quizzes/${quiz.id}/analytics`); }}
-                            >
-                              Analytics
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="ac-menu__item ac-menu__item--danger"
-                            onClick={() => { setOpenMenu(null); handleDelete(quiz); }}
-                            disabled={deletingId === quiz.id}
-                          >
-                            {deletingId === quiz.id ? "Deleting…" : "Delete quiz"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    Results
+                  </button>
+                  {canEdit && (
                     <button
                       type="button"
-                      className="ac-cardBtn ac-cardBtn--primary"
-                      onClick={primary.onClick}
-                      disabled={primary.disabled}
-                      title={primary.title}
+                      className="ac-btn"
+                      onClick={() => navigate(`/teacher/quizzes/${quiz.id}/edit`)}
                     >
-                      {primary.label}
+                      Edit
                     </button>
+                  )}
+                  <div className="ac-menuWrap">
+                    <button
+                      type="button"
+                      className="ac-cardBtn ac-cardBtn--icon"
+                      aria-label={`More actions for ${quiz.title}`}
+                      aria-haspopup="menu"
+                      aria-expanded={openMenu === quiz.id}
+                      onClick={() => setOpenMenu(openMenu === quiz.id ? null : quiz.id)}
+                    >
+                      <FiMoreHorizontal size={13} />
+                    </button>
+                    {openMenu === quiz.id && (
+                      <div className="ac-menu" role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="ac-menu__item"
+                          onClick={() => { setOpenMenu(null); handleView(quiz); }}
+                        >
+                          {quiz.is_assigned ? "View quiz" : "Preview quiz"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="ac-menu__item"
+                          onClick={() => { setOpenMenu(null); handleDuplicate(quiz); }}
+                          disabled={duplicatingId === quiz.id}
+                        >
+                          {duplicatingId === quiz.id ? "Duplicating…" : "Duplicate quiz"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="ac-menu__item ac-menu__item--danger"
+                          onClick={() => { setOpenMenu(null); handleDelete(quiz); }}
+                          disabled={deletingId === quiz.id}
+                        >
+                          {deletingId === quiz.id ? "Deleting…" : "Delete quiz"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
-        </div>
+        </section>
       )}
+
       <ConfirmDialog
         dialog={confirmDlg && { ...confirmDlg, busy: deletingId != null }}
         onClose={() => setConfirmDlg(null)}

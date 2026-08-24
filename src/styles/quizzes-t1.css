@@ -1,0 +1,238 @@
+/* T1 · Tests & quizzes — design_handoff_quiz_system/README.md §T1.
+ *
+ * Own stylesheet for the same reason as the T2 header and the T5 rail: the
+ * per-page files here predate the token rule, so new work stays out of them
+ * and this one verifies token-pure on its own. Imported after quizzes.css so
+ * it wins specificity ties on the shared .ac-* classes.
+ *
+ * Reuses the existing .ac-row / .ac-listCard / .ac-btn / .subj-chip
+ * vocabulary rather than inventing a parallel one — only the pieces T1 adds
+ * (stat strip, segmented control, kind tile, dual chips) live here.
+ */
+
+/* ── Stat strip ──────────────────────────────────────────────────────── */
+
+.qt-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.qt-stat {
+  flex: 1 1 170px;
+  min-width: 170px;             /* spec */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;          /* spec: r12 */
+  box-shadow: var(--sh-card);
+  padding: 14px 16px;           /* spec */
+}
+
+.qt-stat__label {
+  font-size: 10.5px;            /* spec: 10.5px 700 .5px uppercase --ink-faint */
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.qt-stat__value {
+  font-family: Montserrat, system-ui, sans-serif;
+  font-weight: 800;             /* spec: Montserrat 800 20px --ink */
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.qt-stat__note {
+  font-size: 11px;              /* spec */
+  line-height: 1.4;
+}
+
+.qt-stat__note--success { color: var(--success); }
+.qt-stat__note--warning { color: var(--warning); }
+.qt-stat__note--muted   { color: var(--ink-muted); }
+
+/* ── Segmented type filter ───────────────────────────────────────────── */
+
+.qt-seg {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  gap: 2px;
+}
+
+.qt-seg__btn {
+  border: none;
+  background: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.qt-seg__btn.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--sh-card);
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────── */
+
+.qt-row {
+  padding: 14px 16px;           /* spec: 14px 16px, gap 16 */
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* Kind tile — the type is the first thing scanned, so it reads as colour
+ * before it reads as a word. */
+.qt-kind {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;                 /* spec: 44px r11 */
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+}
+
+.qt-kind--practice {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.qt-kind--mock {
+  background: var(--maroon-soft);
+  color: var(--maroon);
+}
+
+.qt-row__body {
+  flex: 1 1 auto;
+  min-width: 0;                 /* let long titles ellipsise instead of pushing the score off */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qt-row__titleLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.qt-row__title {
+  font-family: Montserrat, system-ui, sans-serif;
+  font-weight: 700;             /* spec: Montserrat 700 13.5px */
+  font-size: 13.5px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.qt-kindChip {
+  font-size: 9px;               /* spec: 9px 700 .4px uppercase, 3px 8px */
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+}
+
+.qt-row__meta {
+  font-size: 11.5px;            /* spec */
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+.qt-row__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* Two chips, deliberately the same shape: neither state outranks the other,
+ * and making one look primary is what created the original confusion. */
+.qt-chip {
+  font-size: 10.5px;            /* spec: 10.5px r999 3px 9px */
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.qt-chip--success {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success-border);
+}
+
+.qt-chip--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.qt-chip--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.qt-chip--neutral {
+  background: var(--surface-muted);
+  color: var(--ink-muted);
+  border-color: var(--border);
+}
+
+.qt-row__score {
+  flex: 0 0 auto;
+  text-align: right;
+  min-width: 62px;
+}
+
+.qt-row__scoreVal {
+  font-family: Montserrat, system-ui, sans-serif;
+  font-weight: 800;             /* spec: Montserrat 800 17px */
+  font-size: 17px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.qt-row__scoreLbl {
+  font-size: 10.5px;            /* spec */
+  color: var(--ink-faint);
+}
+
+.qt-row__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .qt-row {
+    flex-wrap: wrap;
+  }
+
+  /* The score stops being a right-hand column and joins the chip line, so the
+   * actions don't get squeezed into a two-character-wide strip. */
+  .qt-row__score {
+    text-align: left;
+    min-width: 0;
+    order: 3;
+  }
+
+  .qt-row__actions {
+    order: 4;
+    margin-left: auto;
+  }
+}
