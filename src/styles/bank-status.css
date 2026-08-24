@@ -1,0 +1,224 @@
+/* T4 · ShikshaCom bank status — design_handoff_quiz_system §T4.
+ * Token-pure; reuses .ac-screen / .ac-head / .ac-listCard / .ac-row / .ac-btn.
+ */
+
+.bs-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.bs-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bs-rail {
+  flex: 0 0 340px;              /* spec: right rail 340px */
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Below the builder's own 1240px collapse point the rail stacks, matching
+ * every other rail in this refactor. */
+@media (max-width: 1240px) {
+  .bs-layout { flex-direction: column; }
+  .bs-rail { flex-basis: auto; width: 100%; }
+}
+
+/* ── Auto-suggest row ────────────────────────────────────────────────── */
+
+.bs-auto {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--sh-card);
+}
+
+.bs-auto__tile {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;                 /* spec: 36px r9 --success-soft tile */
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.bs-auto__text { flex: 1 1 auto; min-width: 0; }
+
+.bs-auto__title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bs-auto__sub {
+  font-size: 0.76rem;
+  color: var(--ink-muted);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+.bs-switch {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 22px;                 /* spec: 38×22 switch */
+  border: none;
+  border-radius: 999px;
+  background: var(--border-strong);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition: background .15s ease;
+}
+
+.bs-switch--on { background: var(--success); }
+
+.bs-switch:disabled { opacity: .6; cursor: default; }
+
+.bs-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--surface);
+  transition: transform .15s ease;
+}
+
+.bs-switch--on .bs-switch__knob { transform: translateX(16px); }
+
+/* ── State rows ──────────────────────────────────────────────────────── */
+
+.bs-row {
+  gap: 12px;
+  align-items: center;
+}
+
+.bs-row__tile {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;                 /* spec: 38px r10 tinted tile */
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.bs-row__tile--green { background: var(--success-soft); color: var(--success); }
+.bs-row__tile--amber { background: var(--warning-soft); color: var(--warning); }
+.bs-row__tile--red   { background: var(--danger-soft);  color: var(--danger); }
+.bs-row__tile--grey  { background: var(--surface-muted); color: var(--ink-muted); }
+
+.bs-row__body { flex: 1 1 auto; min-width: 0; }
+
+.bs-row__title {
+  font-size: 12.5px;            /* spec: title 12.5px 600 */
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bs-row__sub {
+  font-size: 11px;              /* spec */
+  color: var(--ink-muted);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+.bs-row__count {
+  flex: 0 0 auto;
+  font-family: Montserrat, system-ui, sans-serif;
+  font-weight: 800;             /* spec: Montserrat 800 19px in the state colour */
+  font-size: 19px;
+  min-width: 34px;
+  text-align: right;
+}
+
+.bs-row__count--green { color: var(--success); }
+.bs-row__count--amber { color: var(--warning); }
+.bs-row__count--red   { color: var(--danger); }
+.bs-row__count--grey  { color: var(--ink-muted); }
+
+/* ── Rail cards ──────────────────────────────────────────────────────── */
+
+.bs-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--sh-card);
+  padding: 14px 16px;
+}
+
+.bs-card__title {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.bs-card__empty {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.bs-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.bs-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.bs-step__num {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;                 /* spec: 22px r7 numbered tiles */
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--page-bg);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bs-note__q {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.bs-note {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.bs-note__btn { margin-top: 10px; }

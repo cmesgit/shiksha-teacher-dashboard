@@ -28,6 +28,7 @@ import Quizzes from "../pages/Quizzes";
 import QuizBuilder from "../pages/QuizBuilder";
 import QuizAnalytics from "../pages/QuizAnalytics";
 import QuizBank from "../pages/QuizBank";
+import BankStatus from "../pages/BankStatus";
 import QuizView from "../pages/QuizView";
 import QuizDraftPreview from "../pages/QuizDraftPreview";
 import QuizSubmissionView from "../pages/QuizSubmissionView";
@@ -236,6 +237,8 @@ export default function TeacherRoutes() {
             real quiz list was only reachable via Classes. It now points at
             /teacher/quizzes; the bank stays routable. */}
         <Route path="quiz-bank" element={<QuizBank />} />
+        {/* T4 · ShikshaCom bank status (Phase 6). */}
+        <Route path="bank-status" element={<BankStatus />} />
         <Route path="classes/:subjectId/quizzes" element={<Quizzes />} />
 
         {/* A quiz's own child screens — flat, matching the list's root. Create
