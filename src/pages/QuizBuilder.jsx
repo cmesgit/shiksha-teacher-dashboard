@@ -34,6 +34,10 @@ const QUIZ_TYPES = [
 // Matches the backend's validated set for Quiz.negative_marks_per_wrong.
 const NEGATIVE_OPTIONS = ["0", "0.25", "0.33", "0.5", "1"];
 
+/** "1 question" / "4 questions" — the counts row reads as prose, and a fresh
+ *  quiz starts at exactly one of each, so the singular is the common case. */
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
 // Redesigned quiz builder — replaces CreateQuiz.jsx. Single-page split-pane
 // editor: question list (left) + editor (right), plus bulk paste import,
 // question bank (mine/school, subject-scoped), and OpenAI-backed generation.
@@ -437,6 +441,10 @@ export default function QuizBuilder() {
                 aria-checked={on}
                 className={`qb2-type${on ? " qb2-type--on" : ""}`}
                 onClick={() => setQuizType(id)}
+                // The visible title lives in nested spans, which left the
+                // radio with no computed accessible name — a screen reader
+                // announced two unlabelled radios.
+                aria-label={cardTitle}
               >
                 <span className="qb2-type__tile"><Icon /></span>
                 <span className="qb2-type__body">
@@ -494,7 +502,7 @@ export default function QuizBuilder() {
             </>
           )}
           <span className="qb2-counts">
-            {questions.length} questions · {totalMarks} marks
+            {plural(questions.length, "question")} · {plural(totalMarks, "mark")}
           </span>
         </div>
       </div>
