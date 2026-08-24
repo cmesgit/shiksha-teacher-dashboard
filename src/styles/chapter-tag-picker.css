@@ -1,0 +1,156 @@
+/* styles/chapter-tag-picker.css — the shared chapter picker.
+   Every value resolves through shared/tokens.css. No literal hex here. */
+
+.ctp { font-family: var(--font-body); color: var(--ink); }
+
+/* ── Head (compact) ───────────────────────────────────────────────────── */
+.ctp__head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.ctp__headIcon { color: var(--action); flex-shrink: 0; }
+.ctp__headTitle { font: 600 var(--fs-meta) var(--font-body); color: var(--ink-2); }
+.ctp__headHint { font: 400 var(--fs-meta) var(--font-body); color: var(--ink-faint); }
+
+/* ── Head (full) ──────────────────────────────────────────────────────── */
+.ctp--full {
+  background: var(--surface);
+  border: 1.5px solid var(--acc-border, var(--border-strong));
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-card);
+  padding: 18px;
+}
+.ctp__fullHead { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+.ctp__fullIcon {
+  width: 32px; height: 32px; border-radius: var(--r-sm); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--maroon-soft); color: var(--action);
+}
+.ctp__fullTitle { font: 700 var(--fs-card-title) var(--font-display); color: var(--ink); }
+.ctp__fullSub { font: 400 var(--fs-meta)/1.5 var(--font-body); color: var(--ink-muted); margin-top: 2px; }
+
+/* ── Search ───────────────────────────────────────────────────────────── */
+.ctp__search {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); background: var(--surface-muted);
+  border-radius: var(--r-md); padding: 9px 12px; margin-bottom: 10px;
+}
+.ctp__search svg { color: var(--ink-faint); flex-shrink: 0; }
+.ctp__search input {
+  flex: 1; border: none; outline: none; background: none;
+  font: 400 var(--fs-body) var(--font-body); color: var(--ink);
+}
+
+/* ── Syllabus list ────────────────────────────────────────────────────── */
+.ctp__list { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 12px; }
+.ctp__listHead {
+  font: 700 9.5px var(--font-body); letter-spacing: .7px; text-transform: uppercase;
+  color: var(--ink-faint); padding: 9px 13px;
+  background: var(--surface-muted); border-bottom: 1px solid var(--divider);
+}
+.ctp__listEmpty { padding: 14px 13px; font: 400 var(--fs-meta) var(--font-body); color: var(--ink-faint); }
+.ctp__row {
+  display: flex; align-items: center; gap: 11px; padding: 10px 13px;
+  border-bottom: 1px solid var(--divider); cursor: pointer;
+  min-height: 40px; background: var(--surface);
+}
+.ctp__row:last-child { border-bottom: none; }
+.ctp__row:hover { background: var(--surface-hover); }
+/* Spec calls for a literal #f9f4f4 selected-row fill — expressed as a token
+   blend (55% --maroon-soft over --surface) instead of a hardcoded hex, per
+   house rule: no literal colour values outside tokens.css. */
+.ctp__row--on { background: color-mix(in srgb, var(--maroon-soft) 55%, var(--surface)); }
+/* The real checkbox stays in the DOM for keyboard + a11y; the box below is the
+   painted control. */
+.ctp__row input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.ctp__rowBox {
+  width: 17px; height: 17px; border-radius: 5px; flex-shrink: 0;
+  border: 1.5px solid var(--border-strong); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--surface); font-size: 11px;
+}
+.ctp__row--on .ctp__rowBox { border-color: var(--action); background: var(--action); }
+.ctp__row input:focus-visible + .ctp__rowBox { outline: none; box-shadow: var(--focus-ring); }
+.ctp__rowName { flex: 1; min-width: 0; font: 500 var(--fs-body) var(--font-body); color: var(--ink); }
+.ctp__row--on .ctp__rowName { font-weight: 600; }
+.ctp__rowMeta { font: 400 var(--fs-small) var(--font-body); color: var(--ink-faint); flex-shrink: 0; }
+
+/* ── Chips (compact + custom block) ───────────────────────────────────── */
+.ctp__chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.ctp__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-muted);
+  border-radius: var(--r-pill); padding: 6px 13px;
+  font: 600 var(--fs-meta) var(--font-body); cursor: pointer;
+}
+.ctp__chip:hover { border-color: var(--border-strong); }
+.ctp__chip--on { background: var(--maroon-soft); border-color: var(--acc-border, var(--border-strong)); color: var(--action); }
+.ctp__chip--custom.ctp__chip--on { background: var(--warning-soft); border-color: var(--skill-border); color: var(--warning); }
+.ctp__chip--add { border-style: dashed; background: var(--surface-muted); color: var(--primary); }
+.ctp__chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ctp__chipX {
+  width: 17px; height: 17px; border: none; border-radius: 50%; cursor: pointer; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--skill-border); color: var(--warning-hover); font-size: 10px;
+}
+.ctp__chipX:hover { filter: brightness(.95); }
+.ctp__chipX:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── Custom block (full) ──────────────────────────────────────────────── */
+.ctp__custom {
+  border: 1px dashed var(--skill-border); background: var(--skill-soft);
+  border-radius: var(--r-lg); padding: 13px; margin-bottom: 12px;
+}
+.ctp__customHead {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font: 700 var(--fs-meta) var(--font-body); color: var(--warning);
+}
+
+/* ── Add row ──────────────────────────────────────────────────────────── */
+.ctp__addRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.ctp__input {
+  flex: 1; min-width: 200px; box-sizing: border-box;
+  border: 1px solid var(--skill-border); border-radius: var(--r-sm);
+  padding: 9px 12px; font: 400 var(--fs-body) var(--font-body);
+  background: var(--surface); color: var(--ink);
+}
+.ctp__input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ctp__addBtn {
+  border: none; background: var(--warning); color: var(--surface);
+  border-radius: var(--r-sm); padding: 9px 15px;
+  font: 700 var(--fs-body) var(--font-body); cursor: pointer; min-height: 36px;
+}
+.ctp__addBtn:disabled { background: var(--ink-faint); cursor: not-allowed; }
+.ctp__addBtn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ctp__error { font: 500 var(--fs-meta) var(--font-body); color: var(--danger); margin-top: 8px; }
+
+/* ── Checkbox rows ────────────────────────────────────────────────────── */
+.ctp__check {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 11px;
+  font: 400 var(--fs-meta) var(--font-body); color: var(--ink-2); cursor: pointer;
+}
+.ctp__check input { width: 16px; height: 16px; accent-color: var(--warning); }
+.ctp__check input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.ctp__noSpecific {
+  display: flex; align-items: flex-start; gap: 10px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 12px 13px; margin-bottom: 14px; cursor: pointer;
+}
+.ctp__noSpecific--on { border-color: var(--action); background: var(--maroon-soft); }
+.ctp__noSpecific input { width: 17px; height: 17px; margin-top: 1px; accent-color: var(--action); }
+.ctp__noSpecific input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ctp__noSpecific strong { display: block; font: 600 var(--fs-body) var(--font-body); color: var(--ink); }
+.ctp__noSpecific em {
+  display: block; font-style: normal; margin-top: 2px;
+  font: 400 var(--fs-meta) var(--font-body); color: var(--ink-muted);
+}
+
+/* ── Note ─────────────────────────────────────────────────────────────── */
+.ctp__noteField { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.ctp__noteLabel { font: 600 var(--fs-meta) var(--font-body); color: var(--ink-2); }
+.ctp__noteLabel em { font-style: normal; font-weight: 400; color: var(--ink-faint); }
+.ctp__note {
+  width: 100%; box-sizing: border-box; min-height: 66px; resize: vertical;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 11px 13px; font: 400 var(--fs-body)/1.55 var(--font-body);
+  background: var(--surface-muted); color: var(--ink);
+}
+.ctp__note:focus-visible { outline: none; box-shadow: var(--focus-ring); }
