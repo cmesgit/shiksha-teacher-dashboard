@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 // No external dep — crypto.randomUUID() is built into all modern browsers
 import api from "../api/apiClient";
 import TourHeaderButton from "../tour/TourHeaderButton";
+import ChapterTagPicker from "../components/ChapterTagPicker";
+import { EMPTY_CHAPTER_VALUE, toChapterPayload, fromChapterPayload } from "../utils/chapterTagPicker";
 import "../styles/create-assignment.css";
 
 export default function CreateAssignment() {
@@ -19,12 +21,22 @@ export default function CreateAssignment() {
   // so double-clicking Submit sends the same key and the backend deduplicates.
   const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
 
-  const [chapters, setChapters]     = useState([]);
-  const [chapterId, setChapterId]   = useState(editData?.chapter_id || editData?.chapter?.id || "");
-  // Custom-chapter escape hatch (create only — the update serializer doesn't
-  // accept it, matching how the batch picker is also create-only below).
-  const [useCustomChapter, setUseCustomChapter] = useState(false);
-  const [customChapter, setCustomChapter] = useState("");
+  // Shared chapter picker (design_handoff_quiz_system/README.md §"The shared
+  // chapter picker"). Replaces the old required single-select chapter
+  // dropdown + free-text custom-chapter field: chapters are now optional and
+  // multiple, and a teacher can type their own without it being a dead end.
+  // Prefers the Phase-3 `chapter_tags` shape when the backend already sent
+  // one (edit mode against an up-to-date serializer); falls back to the
+  // legacy single `chapter_id` for an assignment fetched before that landed.
+  const [chapterValue, setChapterValue] = useState(() => {
+    if (!editData) return EMPTY_CHAPTER_VALUE;
+    if (editData.chapter_tags || editData.no_specific_chapter || editData.chapter_note) {
+      return fromChapterPayload(editData);
+    }
+    const legacyId = editData.chapter_id || editData.chapter?.id;
+    return legacyId ? { ...EMPTY_CHAPTER_VALUE, chapterIds: [legacyId] } : EMPTY_CHAPTER_VALUE;
+  });
+  const chapterPickerRef = useRef(null);
   // Batch picker (create only): the backend requires a batch on new
   // assignments so due dates stay cohort-relative. Editing does not change
   // the batch, so the picker is hidden in edit mode.
@@ -58,18 +70,6 @@ export default function CreateAssignment() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors]         = useState({});
   const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    async function fetchChapters() {
-      try {
-        const res = await api.get(`/courses/subject/${subjectId}/`);
-        setChapters(res.data?.chapters || []);
-      } catch {
-        toast.error("Failed to load chapters.");
-      }
-    }
-    if (subjectId) fetchChapters();
-  }, [subjectId]);
 
   // Batches this teacher may ACTUALLY post to, not every active batch of the
   // course. The old source (/courses/subjects/:id/batches/) filters on
@@ -108,11 +108,8 @@ export default function CreateAssignment() {
   // ── Validation ──────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
-    if (useCustomChapter) {
-      if (!customChapter.trim()) e.chapter = "Enter the new chapter's name";
-    } else if (!chapterId) {
-      e.chapter = "Chapter required";
-    }
+    // Chapter tagging is optional and multiple now (ChapterTagPicker) — zero
+    // chapters is a valid, submittable state. Do not gate submit on it.
     if (!isEditing && !batchId) e.batch     = "Batch required";
     if (!title.trim())        e.title       = "Title required";
     if (!description.trim())  e.description = "Description required";
@@ -154,13 +151,23 @@ export default function CreateAssignment() {
     setSubmitting(true);
 
     try {
+      // Custom labels the teacher ticked "save to the course" for get
+      // promoted to real courses.Chapter rows here (POST once per label);
+      // resolveForSubmit folds their new ids back into chapterIds so they go
+      // out as chapters, not throwaway text.
+      const resolvedChapterValue = (await chapterPickerRef.current?.resolveForSubmit()) || chapterValue;
+      const chapterPayload = toChapterPayload(resolvedChapterValue);
+
       const formData = new FormData();
-      if (!isEditing && useCustomChapter) {
-        formData.append("custom_chapter", customChapter);
-        formData.append("subject_id", subjectId);
-      } else {
-        formData.append("chapter_id", chapterId);
-      }
+      // This request is multipart (file uploads), so `chapter_tags` cannot
+      // travel as a real JSON array — multipart repeats of the same field
+      // name collapse to a list of scalars, so appending once per tag would
+      // silently drop all but the last one. The backend decodes this exact
+      // shape: a single field holding the JSON-encoded string.
+      formData.append("chapter_tags", JSON.stringify(chapterPayload.chapter_tags));
+      formData.append("no_specific_chapter", chapterPayload.no_specific_chapter ? "true" : "false");
+      formData.append("chapter_note", chapterPayload.chapter_note || "");
+
       if (!isEditing) formData.append("batch_id", batchId);
       formData.append("title",        title);
       formData.append("description",  description);
@@ -254,44 +261,18 @@ export default function CreateAssignment() {
             </div>
           )}
 
-          {/* Chapter */}
-          <div className="ca-field">
-            <label>Chapter</label>
-            {!isEditing && useCustomChapter ? (
-              <div className="ca-inline">
-                <input
-                  type="text"
-                  placeholder="Enter new chapter"
-                  value={customChapter}
-                  onChange={(e) => setCustomChapter(e.target.value)}
-                  className={`ca-input ${errors.chapter ? "ca-input-error" : ""}`}
-                />
-                <button type="button" className="ca-link-btn" onClick={() => setUseCustomChapter(false)}>
-                  Use existing
-                </button>
-              </div>
-            ) : (
-              <div className="ca-inline">
-                <select
-                  value={chapterId}
-                  onChange={(e) => setChapterId(e.target.value)}
-                  className={`ca-input ${errors.chapter ? "ca-input-error" : ""}`}
-                >
-                  <option value="">Select Chapter</option>
-                  {chapters.map((ch) => (
-                    <option key={ch.id} value={ch.id}>{ch.title}</option>
-                  ))}
-                </select>
-                {/* Not offered in edit mode — the update endpoint only accepts an existing chapter_id. */}
-                {!isEditing && (
-                  <button type="button" className="ca-link-btn" onClick={() => setUseCustomChapter(true)}>
-                    Custom
-                  </button>
-                )}
-              </div>
-            )}
-            {errors.chapter && <span className="ca-error">{errors.chapter}</span>}
-          </div>
+          {/* Chapter tagging — the shared picker (full variant). Optional and
+              multiple: zero, several, syllabus and/or custom chapters, or an
+              explicit "no specific chapter" are all valid here. */}
+          <ChapterTagPicker
+            ref={chapterPickerRef}
+            subjectId={subjectId}
+            value={chapterValue}
+            onChange={setChapterValue}
+            variant="full"
+            noteLabel="Note for students"
+            notePlaceholder="What this assignment covers, what to revise first…"
+          />
 
           {/* Title */}
           <div className="ca-field">
@@ -341,7 +322,7 @@ export default function CreateAssignment() {
                 </p>
                 {existingFiles.map((f) => (
                   <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <FaRegFile style={{ fontSize: 13, color: "#D85A30" }} />
+                    <FaRegFile style={{ fontSize: 13, color: "var(--warning)" }} />
                     <a
                       href={f.url}
                       target="_blank"
@@ -353,7 +334,7 @@ export default function CreateAssignment() {
                     <button
                       type="button"
                       onClick={() => markDeleteExisting(f.id)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger-hover)" }}
                       title="Remove this file"
                     >
                       <FaTrash style={{ fontSize: 12 }} />
@@ -371,12 +352,12 @@ export default function CreateAssignment() {
                 </p>
                 {newFiles.map((f, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <FaRegFile style={{ fontSize: 13, color: "#1D9E75" }} />
+                    <FaRegFile style={{ fontSize: 13, color: "var(--success)" }} />
                     <span style={{ fontSize: 13, flex: 1 }}>{f.name}</span>
                     <button
                       type="button"
                       onClick={() => removeNewFile(i)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger-hover)" }}
                     >
                       <FaTrash style={{ fontSize: 12 }} />
                     </button>
