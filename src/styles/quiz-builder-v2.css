@@ -1,0 +1,197 @@
+/* T2 builder header — design_handoff_quiz_system/README.md §T2.
+ *
+ * Separate from quiz-builder.css for the same reason the T5 rail has its own
+ * sheet: that file predates the token rule and still carries ~20 literal hex
+ * colours, so new work stays out of it and this one verifies token-pure on its
+ * own. Imported after quiz-builder.css, so it wins specificity ties.
+ *
+ * Everything here resolves through src/shared/tokens.css. Sizes, radii and
+ * weights are the spec's exact numbers, not approximations.
+ */
+
+.qb2-head {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;          /* spec: r14 */
+  padding: 16px;                /* spec: padding 16 */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Type cards ──────────────────────────────────────────────────────── */
+
+.qb2-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.qb2-type {
+  flex: 1;
+  min-width: 250px;             /* spec: flex:1 min-width:250px */
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 15px;           /* spec */
+  border: 1.5px solid var(--border);
+  border-radius: 12px;          /* spec: r12 */
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.qb2-type:hover {
+  border-color: var(--border-strong);
+}
+
+.qb2-type--on {
+  border-color: var(--action);
+  background: var(--maroon-soft);
+}
+
+.qb2-type__tile {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;                 /* spec: 34px r9 icon tile */
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--page-bg);
+  color: var(--ink-muted);
+  font-size: 1.05rem;
+}
+
+.qb2-type--on .qb2-type__tile {
+  background: var(--action);
+  color: var(--surface);
+}
+
+.qb2-type__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;                 /* let the sub text wrap instead of stretching the card */
+}
+
+.qb2-type__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.qb2-type--on .qb2-type__title {
+  color: var(--action);
+}
+
+.qb2-type__sub {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.qb2-type__radio {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  color: transparent;
+}
+
+.qb2-type--on .qb2-type__radio {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--surface);
+}
+
+/* ── Title ───────────────────────────────────────────────────────────── */
+
+.qb2-title {
+  border: none;
+  background: none;
+  padding: 0;
+  width: 100%;
+  font-family: Montserrat, system-ui, sans-serif;
+  font-weight: 800;             /* spec: Montserrat 800 19px, ls -.3px */
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+}
+
+.qb2-title:focus {
+  outline: none;
+}
+
+.qb2-title::placeholder {
+  color: var(--ink-faint);
+}
+
+/* ── Mode row ────────────────────────────────────────────────────────── */
+
+.qb2-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.qb2-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;            /* spec: r10, 1px --border, 8px 12px */
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* The two editable numbers sit inline in their pill so the row still reads as
+ * a sentence rather than a form. */
+.qb2-pill__num {
+  width: 3.2em;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+}
+
+.qb2-pill__num:focus,
+.qb2-pill__select:focus {
+  outline: none;
+  text-decoration: underline;
+}
+
+.qb2-pill__select {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.qb2-counts {
+  margin-left: auto;
+  font-size: 12px;              /* spec: counts 12px 600 --ink-muted */
+  font-weight: 600;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .qb2-counts {
+    margin-left: 0;
+  }
+}

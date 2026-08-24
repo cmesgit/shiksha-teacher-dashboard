@@ -1,13 +1,38 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import TourHeaderButton from "../tour/TourHeaderButton";
+import ChapterTagPicker from "../components/ChapterTagPicker";
+import { EMPTY_CHAPTER_VALUE, toChapterPayload, fromChapterPayload } from "../utils/chapterTagPicker";
 import "../styles/quiz-builder.css";
+import "../styles/quiz-builder-v2.css";
 import {
   IoTimeOutline, IoClipboardOutline, IoFolderOutline, IoSparklesOutline,
   IoCloseOutline, IoCheckmarkOutline,
+  IoHelpCircleOutline, IoRepeatOutline, IoRemoveCircleOutline, IoEyeOutline,
 } from "react-icons/io5";
+
+// ── T2 type cards (design_handoff_quiz_system/README.md §T2) ──────────────
+// Copy is the spec's, verbatim: the two cards are the only place a teacher is
+// told what the fork actually costs them, so paraphrasing it loses the point.
+const QUIZ_TYPES = [
+  {
+    id: "practice",
+    title: "Practice quiz",
+    sub: "Retry as often as they like, answer shown after each question. No timer.",
+    Icon: IoHelpCircleOutline,
+  },
+  {
+    id: "mock",
+    title: "Mock test",
+    sub: "Exam conditions: sections, one attempt, strict timer, negative marking.",
+    Icon: IoTimeOutline,
+  },
+];
+
+// Matches the backend's validated set for Quiz.negative_marks_per_wrong.
+const NEGATIVE_OPTIONS = ["0", "0.25", "0.33", "0.5", "1"];
 
 // Redesigned quiz builder — replaces CreateQuiz.jsx. Single-page split-pane
 // editor: question list (left) + editor (right), plus bulk paste import,
@@ -88,10 +113,15 @@ export default function QuizBuilder() {
   // only until the first save creates the Quiz row).
   const [batches, setBatches] = useState([]);
   const [batchId, setBatchId] = useState("");
-  const [chapters, setChapters] = useState([]);
-  const [chapterId, setChapterId] = useState("");
-  const [useCustomChapter, setUseCustomChapter] = useState(false);
-  const [customChapter, setCustomChapter] = useState("");
+  // Phase 5a: the old single-select chapter + "Custom" free-text pair is
+  // replaced by the shared picker, which owns its own chapter fetch — hence no
+  // `chapters` state here any more. Chapters are optional and multiple now, so
+  // the save-time "pick a chapter" guard below goes with them.
+  const [chapterValue, setChapterValue] = useState(EMPTY_CHAPTER_VALUE);
+  const chapterPickerRef = useRef(null);
+  // Mock-only, per Quiz.negative_marks_per_wrong (Phase 4). Practice quizzes
+  // never subtract, so this is not sent for them.
+  const [negativeMarks, setNegativeMarks] = useState("0.25");
 
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
@@ -121,6 +151,11 @@ export default function QuizBuilder() {
         setQuizType(res.data.quiz_type || "practice");
         setTimeLimit(res.data.time_limit_minutes || 45);
         setSubjectId(res.data.subject_id);
+        setNegativeMarks(String(res.data.negative_marks_per_wrong ?? "0.25"));
+        // Reads chapter_tags/no_specific_chapter/chapter_note off the draft.
+        // Pre-Phase-3 drafts carry none of those and resolve to the empty
+        // value, which is now a legitimate state rather than a broken form.
+        setChapterValue(fromChapterPayload(res.data));
         const qs = (res.data.questions || []).map((q) => ({
           _id: String(q.id),
           serverId: q.id,
@@ -164,9 +199,8 @@ export default function QuizBuilder() {
       })
       .catch(() => { if (!cancelled) setBatches([]); });
 
-    api.get(`/courses/subjects/${subjectId}/chapters/`)
-      .then((res) => { if (!cancelled) setChapters(res.data || []); })
-      .catch(() => { if (!cancelled) toast.error("Failed to load chapters."); });
+    // The chapter fetch that used to live here is gone: ChapterTagPicker owns
+    // it now, and duplicating it would fire the same request twice per load.
 
     return () => { cancelled = true; };
   }, [subjectId, quizIdParam]);
@@ -305,18 +339,18 @@ export default function QuizBuilder() {
         setError("Pick a batch before saving.");
         return;
       }
-      if (!useCustomChapter && !chapterId) {
-        setError("Pick a chapter, or enter a new chapter name, before saving.");
-        return;
-      }
-      if (useCustomChapter && !customChapter.trim()) {
-        setError("Enter the new chapter's name before saving.");
-        return;
-      }
+      // No chapter guard any more — Phase 3 made chapters optional and
+      // multiple, and "no specific chapter" is an explicit, valid answer.
     }
     setSaving(true);
     setError(null);
     try {
+      // Promote any chapters the teacher typed into real syllabus rows first,
+      // so the tags can point at ids. Returns the unchanged value (and toasts)
+      // if the promote call fails, so a save is never blocked by it.
+      const resolvedChapters =
+        (await chapterPickerRef.current?.resolveForSubmit()) ?? chapterValue;
+
       let id = quizId;
       if (!id) {
         const res = await api.post("/teacher/quizzes/", {
@@ -326,9 +360,13 @@ export default function QuizBuilder() {
           quiz_type: quizType,
           time_limit_minutes: quizType === "mock" ? Number(timeLimit) : null,
           batch_id: batchId,
-          ...(useCustomChapter
-            ? { custom_chapter: customChapter }
-            : { chapter_id: chapterId }),
+          // Practice quizzes never subtract, so the field is mock-only —
+          // sending 0.25 on a practice quiz would persist a rule the type
+          // ignores and then surface it if the teacher ever switched type.
+          ...(quizType === "mock"
+            ? { negative_marks_per_wrong: Number(negativeMarks) }
+            : {}),
+          ...toChapterPayload(resolvedChapters),
         });
         id = res.data.id;
         setQuizId(id);
@@ -337,6 +375,10 @@ export default function QuizBuilder() {
           title: title.trim(),
           quiz_type: quizType,
           time_limit_minutes: quizType === "mock" ? Number(timeLimit) : null,
+          ...(quizType === "mock"
+            ? { negative_marks_per_wrong: Number(negativeMarks) }
+            : {}),
+          ...toChapterPayload(resolvedChapters),
         });
       }
       await api.put(`/teacher/quizzes/${id}/questions/bulk/`, {
@@ -382,23 +424,94 @@ export default function QuizBuilder() {
 
       {error && <div className="qb-error">{error}</div>}
 
-      <div className="qb-toolbar">
-        <input className="qb-title-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Quiz title" />
-        <select className="qb-select" value={quizType} onChange={(e) => setQuizType(e.target.value)}>
-          <option value="practice">Practice — instant feedback</option>
-          <option value="mock">Mock test — timed</option>
-        </select>
-        {quizType === "mock" && (
-          <div className="qb-time-field">
-            <span><IoTimeOutline /></span>
-            <input type="number" min={5} max={180} value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} />
-            <span>min</span>
-          </div>
-        )}
-        <span className="qb-counts">{questions.length} Qs · {totalMarks} marks</span>
+      {/* ── T2 header: type fork, title, mode row ─────────────────────── */}
+      <div className="qb2-head">
+        <div className="qb2-types" role="radiogroup" aria-label="Test type">
+          {QUIZ_TYPES.map(({ id, title: cardTitle, sub, Icon }) => {
+            const on = quizType === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className={`qb2-type${on ? " qb2-type--on" : ""}`}
+                onClick={() => setQuizType(id)}
+              >
+                <span className="qb2-type__tile"><Icon /></span>
+                <span className="qb2-type__body">
+                  <span className="qb2-type__title">{cardTitle}</span>
+                  <span className="qb2-type__sub">{sub}</span>
+                </span>
+                <span className="qb2-type__radio">{on && <IoCheckmarkOutline />}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <input
+          className="qb2-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Untitled test"
+          aria-label="Test title"
+        />
+
+        {/* Mode row. These are the rules the type already implies — shown so a
+            teacher can see what "mock" actually means without saving first.
+            Only the two mock numbers are editable; the rest state facts. */}
+        <div className="qb2-modes">
+          {quizType === "mock" ? (
+            <>
+              <span className="qb2-pill">
+                <IoTimeOutline />
+                Timer
+                <input
+                  type="number" min={5} max={180} value={timeLimit}
+                  onChange={(e) => setTimeLimit(e.target.value)}
+                  className="qb2-pill__num" aria-label="Time limit in minutes"
+                />
+                min
+              </span>
+              <span className="qb2-pill">
+                <IoRemoveCircleOutline />
+                Negative marking
+                <select
+                  className="qb2-pill__select" value={negativeMarks}
+                  onChange={(e) => setNegativeMarks(e.target.value)}
+                  aria-label="Negative marks per wrong answer"
+                >
+                  {NEGATIVE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+                per wrong
+              </span>
+              <span className="qb2-pill"><IoCheckmarkOutline /> One attempt only</span>
+            </>
+          ) : (
+            <>
+              <span className="qb2-pill"><IoRepeatOutline /> Unlimited retries</span>
+              <span className="qb2-pill"><IoEyeOutline /> Show answer after each question</span>
+            </>
+          )}
+          <span className="qb2-counts">
+            {questions.length} questions · {totalMarks} marks
+          </span>
+        </div>
       </div>
 
-      {/* Batch + chapter — create only; once the quiz exists these are fixed. */}
+      {/* Compact picker — chapters are optional and multiple (Phase 3). */}
+      <ChapterTagPicker
+        ref={chapterPickerRef}
+        subjectId={subjectId}
+        value={chapterValue}
+        onChange={setChapterValue}
+        variant="compact"
+        noteLabel="Note for students"
+        notePlaceholder="What this test covers, what to revise first…"
+      />
+
+      {/* Batch — create only; once the quiz exists it is fixed. The chapter
+          controls that used to sit beside it are now the picker above. */}
       {!quizId && (
         <div className="qb-toolbar">
           <select className="qb-select" value={batchId} onChange={(e) => setBatchId(e.target.value)}>
@@ -409,32 +522,6 @@ export default function QuizBuilder() {
               </option>
             ))}
           </select>
-
-          {useCustomChapter ? (
-            <div className="qb-inline">
-              <input
-                className="qb-title-input qb-chapter-input"
-                placeholder="Enter new chapter"
-                value={customChapter}
-                onChange={(e) => setCustomChapter(e.target.value)}
-              />
-              <button type="button" className="qb-link-btn" onClick={() => setUseCustomChapter(false)}>
-                Use existing
-              </button>
-            </div>
-          ) : (
-            <div className="qb-inline">
-              <select className="qb-select" value={chapterId} onChange={(e) => setChapterId(e.target.value)}>
-                <option value="">Select chapter</option>
-                {chapters.map((ch) => (
-                  <option key={ch.id} value={ch.id}>{ch.title}</option>
-                ))}
-              </select>
-              <button type="button" className="qb-link-btn" onClick={() => setUseCustomChapter(true)}>
-                Custom
-              </button>
-            </div>
-          )}
         </div>
       )}
 
