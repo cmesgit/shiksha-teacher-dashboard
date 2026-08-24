@@ -102,15 +102,26 @@ export function resolveCustomInput(chapters, value, rawLabel) {
   };
 }
 
-/** Shape the API expects, from this component's value. */
+/** Shape the API expects, from this component's value.
+ *
+ * The wire keys are `chapter_id` and `label` — NOT `chapter`/`custom_label`.
+ * `courses.chapter_tags.resolve_tags()` reads exactly those two, and because
+ * `chapter_tags` is validated as a bare list of dicts, any other key is
+ * accepted and then silently resolves to nothing: the request 201s having
+ * saved zero chapters. That is precisely the bug this comment exists to
+ * prevent a second time — it cost an end-to-end run to find, because both
+ * sides' unit tests passed independently. `label` is also what the read side
+ * (`serialize_tags`) emits, so the two directions are symmetric; keep them
+ * that way.
+ */
 export function toChapterPayload(value) {
   const { chapterIds = [], customLabels = [], noSpecific = false, note = "" } = value || {};
   return {
     chapter_tags: [
-      ...chapterIds.map((id, i) => ({ chapter: id, order: i })),
+      ...chapterIds.map((id, i) => ({ chapter_id: id, order: i })),
       ...customLabels.map((label, i) => ({
-        chapter: null,
-        custom_label: label,
+        chapter_id: null,
+        label,
         order: chapterIds.length + i,
       })),
     ],
@@ -122,9 +133,12 @@ export function toChapterPayload(value) {
 /** Inverse of `toChapterPayload`, for populating the picker in edit mode. */
 export function fromChapterPayload(data) {
   const tags = data?.chapter_tags || [];
+  // `serialize_tags` emits { chapter_id, label, is_custom, order }. A tag with
+  // chapter_id === null is a free-text label the teacher never promoted into
+  // the syllabus; everything else is a real chapter.
   return {
-    chapterIds: tags.filter((t) => t.chapter_id ?? t.chapter).map((t) => t.chapter_id ?? t.chapter),
-    customLabels: tags.filter((t) => !(t.chapter_id ?? t.chapter)).map((t) => t.custom_label),
+    chapterIds: tags.filter((t) => t.chapter_id).map((t) => t.chapter_id),
+    customLabels: tags.filter((t) => !t.chapter_id).map((t) => t.label).filter(Boolean),
     noSpecific: !!data?.no_specific_chapter,
     note: data?.chapter_note || "",
   };
