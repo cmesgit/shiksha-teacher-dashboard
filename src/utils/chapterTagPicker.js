@@ -26,11 +26,17 @@ export function normalizeLabel(s) {
   return (s || "").trim().toLowerCase();
 }
 
-/** Find a syllabus chapter whose name matches `label` case-insensitively. */
+/** Find a syllabus chapter whose title matches `label` case-insensitively.
+ *
+ * The field is `title`, not `name` — `courses.ChapterSerializer` exposes
+ * `title` and nothing else. Matching on `c.name` read undefined for every
+ * chapter, so this never found anything and the dedupe silently degraded into
+ * "always create a duplicate". Deliberately no `?? c.name` fallback: tolerating
+ * a second spelling is what let the mismatch hide in the first place. */
 export function findMatchingChapter(chapters, label) {
   const key = normalizeLabel(label);
   if (!key) return undefined;
-  return (chapters || []).find((c) => normalizeLabel(c.name) === key);
+  return (chapters || []).find((c) => normalizeLabel(c.title) === key);
 }
 
 /** Does `customLabels` already contain `label`, case-insensitively? */

@@ -20,7 +20,9 @@
  *
  * Endpoints:
  *   GET  /courses/subjects/:subjectId/chapters/     syllabus + this teacher's custom
- *   POST /courses/subjects/:subjectId/chapters/     { name, is_custom: true }
+ *   POST /courses/subjects/:subjectId/chapters/     { title, is_custom: true }
+ * The chapter field is `title` on both sides — `courses.ChapterSerializer`
+ * exposes no `name` at all. Keep every read and write on that one spelling.
  * The POST only happens on SAVE, via the imperative `resolveForSubmit()`
  * handle below — never while typing, so a half-filled form doesn't litter the
  * syllabus with chapters the teacher never finished creating.
@@ -43,8 +45,12 @@ import "../styles/chapter-tag-picker.css";
  *  the same order as `labels`. */
 async function promoteCustomLabels(subjectId, labels) {
   const created = await Promise.all(
-    labels.map((name) =>
-      api.post(`/courses/subjects/${subjectId}/chapters/`, { name, is_custom: true }).then((r) => r.data)
+    // `title`, not `name`: SubjectChaptersView.post() reads request.data["title"]
+    // and 400s "Chapter name is required." on anything else — so this call had
+    // never once succeeded, and every attempt to promote a teacher-typed
+    // chapter fell into the catch below and silently downgraded to free text.
+    labels.map((title) =>
+      api.post(`/courses/subjects/${subjectId}/chapters/`, { title, is_custom: true }).then((r) => r.data)
     )
   );
   return created.map((c) => c.id);
@@ -60,6 +66,11 @@ const ChapterTagPicker = forwardRef(function ChapterTagPicker(
     noteLabel = "Your note",
     noteHint = "optional, shown with this to students",
     notePlaceholder = "What this covers, what to revise first…",
+    // Called with the fetched chapter list. `value` carries ids only, so a
+    // parent that needs to *display* the selection (T5's preview rail renders
+    // real chapter chips) has no way to turn an id into a name on its own.
+    // Handing the list up costs nothing and avoids a second identical request.
+    onChaptersLoaded,
   },
   ref
 ) {
@@ -73,18 +84,30 @@ const ChapterTagPicker = forwardRef(function ChapterTagPicker(
   const [error, setError] = useState("");
   const draftRef = useRef(null);
 
+  // Held in a ref so an inline arrow from the parent can't retrigger the
+  // fetch — this effect keys on subjectId alone and must stay that way.
+  const onChaptersLoadedRef = useRef(onChaptersLoaded);
+  useEffect(() => {
+    onChaptersLoadedRef.current = onChaptersLoaded;
+  });
+
   useEffect(() => {
     if (!subjectId) return;
     let cancelled = false;
     api
       .get(`/courses/subjects/${subjectId}/chapters/`)
       .then((res) => {
-        if (!cancelled) setChapters(res.data?.chapters || res.data || []);
+        if (cancelled) return;
+        const list = res.data?.chapters || res.data || [];
+        setChapters(list);
+        onChaptersLoadedRef.current?.(list);
       })
       .catch(() => {
         // A failed chapter list must not block the form — the teacher can
         // still type their own label and save.
-        if (!cancelled) setChapters([]);
+        if (cancelled) return;
+        setChapters([]);
+        onChaptersLoadedRef.current?.([]);
       });
     return () => {
       cancelled = true;
@@ -118,7 +141,7 @@ const ChapterTagPicker = forwardRef(function ChapterTagPicker(
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return chapters;
-    return chapters.filter((c) => (c.name || "").toLowerCase().includes(q));
+    return chapters.filter((c) => (c.title || "").toLowerCase().includes(q));
   }, [chapters, query]);
 
   const toggleChapter = (id) => set(toggleChapterSelection(current, id));
@@ -167,7 +190,7 @@ const ChapterTagPicker = forwardRef(function ChapterTagPicker(
             >
               {chapterIds.includes(c.id) && <IoCheckmark />}
               {c.is_custom && <IoPencil />}
-              {c.name}
+              {c.title}
             </button>
           ))}
 
@@ -270,7 +293,7 @@ const ChapterTagPicker = forwardRef(function ChapterTagPicker(
                 <span className="ctp__rowBox" aria-hidden="true">
                   {on && <IoCheckmark />}
                 </span>
-                <span className="ctp__rowName">{c.name}</span>
+                <span className="ctp__rowName">{c.title}</span>
                 {c.material_count != null && <span className="ctp__rowMeta">{c.material_count} materials</span>}
               </label>
             );
