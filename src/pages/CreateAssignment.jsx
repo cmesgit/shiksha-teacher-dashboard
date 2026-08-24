@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import TourHeaderButton from "../tour/TourHeaderButton";
 import ChapterTagPicker from "../components/ChapterTagPicker";
+import AssignmentPreviewRail from "../components/AssignmentPreviewRail";
 import { EMPTY_CHAPTER_VALUE, toChapterPayload, fromChapterPayload } from "../utils/chapterTagPicker";
 import "../styles/create-assignment.css";
 
@@ -37,6 +38,9 @@ export default function CreateAssignment() {
     return legacyId ? { ...EMPTY_CHAPTER_VALUE, chapterIds: [legacyId] } : EMPTY_CHAPTER_VALUE;
   });
   const chapterPickerRef = useRef(null);
+  // The picker owns the fetch; it hands the list up so the preview rail can
+  // turn the tagged ids in `chapterValue` into real chapter names.
+  const [chapterList, setChapterList] = useState([]);
   // Batch picker (create only): the backend requires a batch on new
   // assignments so due dates stay cohort-relative. Editing does not change
   // the batch, so the picker is hidden in edit mode.
@@ -233,7 +237,7 @@ export default function CreateAssignment() {
         <TourHeaderButton pathname={pathname} />
       </div>
 
-      <div className="ca-form-container">
+      <div className={`ca-form-container${isEditing ? "" : " ca-form-container--with-rail"}`}>
         <div className="ca-form">
 
           {/* Batch (create only) */}
@@ -272,6 +276,7 @@ export default function CreateAssignment() {
             variant="full"
             noteLabel="Note for students"
             notePlaceholder="What this assignment covers, what to revise first…"
+            onChaptersLoaded={setChapterList}
           />
 
           {/* Title */}
@@ -399,6 +404,19 @@ export default function CreateAssignment() {
           </div>
 
         </div>
+
+        {/* T5's rail. Create only: in edit mode the students already have the
+            assignment, so "what your students see" is a claim about the past
+            rather than a preview. */}
+        {!isEditing && (
+          <AssignmentPreviewRail
+            title={title}
+            dueDate={dueDate}
+            maxMarks={maxMarks}
+            chapterValue={chapterValue}
+            chapters={chapterList}
+          />
+        )}
       </div>
     </div>
   );

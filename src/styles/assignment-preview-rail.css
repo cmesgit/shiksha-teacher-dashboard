@@ -1,0 +1,131 @@
+/* T5's "What your students see" rail — design_handoff_quiz_system §T5.
+ *
+ * Deliberately a separate stylesheet from create-assignment.css. That file
+ * predates the token rule and still carries ~36 literal hex colours; keeping
+ * the new work out of it means this file can be verified token-pure on its
+ * own (`grep "#[0-9a-fA-F]\{6\}"` returns nothing here) instead of the check
+ * drowning in pre-existing violations. Imported after create-assignment.css,
+ * so it wins specificity ties on the shared container class.
+ */
+
+/* Two columns only when the rail is actually rendered — the same container
+ * is used in edit mode, where there is no preview. */
+.ca-form-container--with-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.ca-form-container--with-rail .ca-form {
+  flex: 1 1 auto;
+}
+
+.apr-rail {
+  flex: 0 0 320px;      /* spec: 320px rail */
+  width: 320px;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.apr-rail__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* The student card preview. */
+.apr-card {
+  background: var(--page-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.apr-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* No chips yet is still a valid state — don't collapse the row and make the
+   * card jump the moment the teacher ticks the first chapter. */
+  min-height: 22px;
+}
+
+.apr-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--info-soft);
+  color: var(--info);
+  border: 1px solid var(--info-border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.apr-chip--muted {
+  background: var(--surface);
+  color: var(--ink-muted);
+  border-color: var(--border-strong);
+}
+
+.apr-card__topic {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.apr-card__due {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+/* Spec: the teacher's note as a quote block, 3px solid --action. */
+.apr-note {
+  margin: 2px 0 0;
+  padding: 2px 0 2px 10px;
+  border-left: 3px solid var(--action);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Spec: info note, --info-soft on the hairline the spec names literally,
+ * tokenised as --info-border in tokens.css. */
+.apr-info {
+  margin: 0;
+  background: var(--info-soft);
+  border: 1px solid var(--info-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* Spec §Responsive: "the T5 preview rail drops below the form" under 1240px. */
+@media (max-width: 1240px) {
+  .ca-form-container--with-rail {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .apr-rail {
+    flex-basis: auto;
+    width: 100%;
+    max-width: 520px;   /* line up with .ca-form rather than running full-bleed */
+    position: static;
+  }
+}

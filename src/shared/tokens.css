@@ -77,6 +77,7 @@
   --success-soft:  #ecf8ee;
   --info:          #1d4ed8;
   --info-soft:     #e8edfb;
+  --info-border:   #c9d4f5;   /* info-note hairline (quiz handoff T5 rail) */
   --warning:       #c2701c;
   --warning-soft:  #fef3ec;
   --warning-hover: #a85f15;
