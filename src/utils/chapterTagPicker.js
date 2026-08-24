@@ -2,12 +2,14 @@
  * src/utils/chapterTagPicker.js
  *
  * Pure state-transition + payload-shaping helpers for `ChapterTagPicker`
- * (src/components/ChapterTagPicker.jsx). Pulled out of the component on
- * purpose: this repo has no test runner configured yet (no vitest/jest, no
- * `test` script — see the Phase 4 handoff notes), so the one thing we CAN do
- * today is keep the logic BUILD_GUIDE.md calls out for unit tests — dedupe
- * and mutual exclusion — as plain functions with no React/DOM dependency,
- * ready to import into a test file the moment test infra exists.
+ * (src/components/ChapterTagPicker.jsx). Pulled out of the component so the
+ * logic BUILD_GUIDE.md calls out for unit tests — dedupe and mutual
+ * exclusion — has no React/DOM dependency and can be tested directly.
+ *
+ * Covered by ./chapterTagPicker.test.js (`npm test`). Read that file's header
+ * before changing any key name here: two separate silent-no-op bugs shipped
+ * from this module by disagreeing with the Django API about a key, and the
+ * tests deliberately assert literal wire spellings to stop a third.
  *
  * Contract (design_handoff_quiz_system/README.md § The shared chapter picker):
  *   value = { chapterIds: number[], customLabels: string[],
