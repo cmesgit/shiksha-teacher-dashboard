@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import api from "../api/apiClient";
 import TourHeaderButton from "../tour/TourHeaderButton";
 import ChapterTagPicker from "../components/ChapterTagPicker";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { EMPTY_CHAPTER_VALUE, toChapterPayload, fromChapterPayload } from "../utils/chapterTagPicker";
 import "../styles/quiz-builder.css";
 import "../styles/quiz-builder-v2.css";
@@ -11,7 +12,7 @@ import {
   IoTimeOutline, IoClipboardOutline, IoFolderOutline, IoSparklesOutline,
   IoCloseOutline, IoCheckmarkOutline,
   IoHelpCircleOutline, IoRepeatOutline, IoRemoveCircleOutline, IoEyeOutline,
-  IoSend, IoCheckmarkCircle,
+  IoSend, IoCheckmarkCircle, IoLibraryOutline,
 } from "react-icons/io5";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -80,6 +81,12 @@ const blankQuestion = () => ({
   explanation: "",
   choices: [blankChoice(), blankChoice(), blankChoice(), blankChoice()],
   source: "manual",
+  sectionId: null,
+  // Phase 5d: the spec's switch ships ON — a teacher's questions are
+  // suggested to the ShikshaCom bank unless they opt out. Nothing goes live
+  // in the shared bank without an admin accepting it either way.
+  suggestToBank: true,
+  bankState: "suggested",
 });
 
 function parseBulkImport(text) {
@@ -138,9 +145,17 @@ export default function QuizBuilder() {
   // the save-time "pick a chapter" guard below goes with them.
   const [chapterValue, setChapterValue] = useState(EMPTY_CHAPTER_VALUE);
   const chapterPickerRef = useRef(null);
+  // Handed up by the picker so the per-question chip (5d) can turn a tagged
+  // chapter id into its name without a second request.
+  const [chapterList, setChapterList] = useState([]);
   // Mock-only, per Quiz.negative_marks_per_wrong (Phase 4). Practice quizzes
   // never subtract, so this is not sent for them.
   const [negativeMarks, setNegativeMarks] = useState("0.25");
+  // Phase 5c. Local `_id` is what questions point at; `serverId` is filled in
+  // after the sections PUT, because a brand-new section has no uuid until the
+  // server mints one and the questions PUT has to reference the real id.
+  const [sections, setSections] = useState([]);
+  const [confirmFlatten, setConfirmFlatten] = useState(false);
 
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
@@ -175,6 +190,13 @@ export default function QuizBuilder() {
         // Pre-Phase-3 drafts carry none of those and resolve to the empty
         // value, which is now a legitimate state rather than a broken form.
         setChapterValue(fromChapterPayload(res.data));
+        // Sections keep their server uuid as the local `_id`, so questions
+        // loaded with `section: <uuid>` line up without a translation table.
+        setSections((res.data.sections || []).map((s) => ({
+          _id: String(s.id),
+          serverId: s.id,
+          name: s.name,
+        })));
         const qs = (res.data.questions || []).map((q) => ({
           _id: String(q.id),
           serverId: q.id,
@@ -185,6 +207,12 @@ export default function QuizBuilder() {
           explanation: q.explanation || "",
           choices: q.choices?.length ? q.choices : [blankChoice(), blankChoice(), blankChoice(), blankChoice()],
           source: q.source || "manual",
+          sectionId: q.section ? String(q.section) : null,
+          // Read from the server, never assumed: defaulting this to true would
+          // re-suggest every question the teacher had kept private the next
+          // time they saved.
+          suggestToBank: q.suggest_to_bank !== false,
+          bankState: q.bank_state || "suggested",
         }));
         setQuestions(qs.length ? qs : [blankQuestion()]);
         setSelectedId((qs[0] || questions[0])._id);
@@ -229,6 +257,59 @@ export default function QuizBuilder() {
     [questions, selectedId]
   );
   const totalMarks = useMemo(() => questions.reduce((s, q) => s + Number(q.marks || 0), 0), [questions]);
+  const isMock = quizType === "mock";
+
+  /** What the per-question chapter chip shows. Question carries no chapter of
+   *  its own, so this is the quiz's first tag — a real chapter's name if one
+   *  is picked, else a free-text label. Null when nothing is tagged, so the
+   *  chip disappears rather than rendering an empty pill. */
+  const questionChapterLabel = useMemo(() => {
+    if (chapterValue.noSpecific) return "No specific chapter";
+    const first = chapterValue.chapterIds?.[0];
+    if (first) return chapterList.find((c) => String(c.id) === String(first))?.title || null;
+    return chapterValue.customLabels?.[0] || null;
+  }, [chapterValue, chapterList]);
+
+  /** Left-pane grouping. Each item carries the question's index in the FULL
+   *  paper so the visible numbering stays continuous across sections — that
+   *  is the number the student sees. A practice paper is one flat group; a
+   *  mock is one group per section plus an "Ungrouped" bucket, which only
+   *  appears when it actually holds something. */
+  const groups = useMemo(() => {
+    let buckets;
+    if (!isMock) {
+      buckets = [{ key: "flat", section: null, items: questions }];
+    } else {
+      buckets = sections.map((section) => ({
+        key: section._id,
+        section,
+        items: questions.filter((q) => q.sectionId === section._id),
+      }));
+      const loose = questions.filter(
+        (q) => !q.sectionId || !sections.some((s) => s._id === q.sectionId)
+      );
+      if (loose.length || !sections.length) {
+        buckets.push({ key: "ungrouped", section: null, items: loose });
+      }
+    }
+
+    // Number AFTER grouping, walking the buckets in the order they render.
+    // For a mock the section order IS the paper order, so numbering has to
+    // follow it — otherwise Section 1 sits at the top of the list holding
+    // "Question 2" while the ungrouped bucket below it holds "Question 1".
+    let n = 0;
+    return buckets.map((b) => ({
+      ...b,
+      items: b.items.map((q) => ({ q, index: n++ })),
+    }));
+  }, [questions, sections, isMock]);
+
+  /** The paper in the order the teacher sees it — what `order` must be saved
+   *  as, so the student's numbering matches the builder's. */
+  const orderedQuestions = useMemo(
+    () => groups.flatMap((g) => g.items.map(({ q }) => q)),
+    [groups]
+  );
 
   function updateSelected(patch) {
     setQuestions((prev) => prev.map((q) => (q._id === selectedId ? { ...q, ...patch } : q)));
@@ -241,10 +322,62 @@ export default function QuizBuilder() {
   function setCorrect(ci) {
     updateSelected({ choices: selected.choices.map((c, i) => ({ ...c, is_correct: i === ci })) });
   }
-  function addQuestion() {
-    const q = blankQuestion();
+  function addQuestion(sectionId = null) {
+    const q = { ...blankQuestion(), sectionId };
     setQuestions((prev) => [...prev, q]);
     setSelectedId(q._id);
+  }
+
+  /* ── Sections (Phase 5c) ────────────────────────────────────────────── */
+
+  function addSection() {
+    setSections((prev) => [
+      ...prev,
+      { _id: crypto.randomUUID(), serverId: null, name: `Section ${prev.length + 1}` },
+    ]);
+  }
+
+  function renameSection(id, name) {
+    setSections((prev) => prev.map((s) => (s._id === id ? { ...s, name } : s)));
+  }
+
+  function moveSection(id, delta) {
+    setSections((prev) => {
+      const i = prev.findIndex((s) => s._id === id);
+      const j = i + delta;
+      if (i < 0 || j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+
+  /** Deleting a section keeps its questions — they fall back to the ungrouped
+   *  list, mirroring the server's SET_NULL. "Merge this section into the main
+   *  list" is the same gesture, and a mis-click can never destroy content. */
+  function deleteSection(id) {
+    setSections((prev) => prev.filter((s) => s._id !== id));
+    setQuestions((prev) =>
+      prev.map((q) => (q.sectionId === id ? { ...q, sectionId: null } : q))
+    );
+  }
+
+  /** Leaving mock discards the grouping, so confirm before it happens rather
+   *  than after. Practice papers have no sections by design. */
+  function requestType(next) {
+    if (next === quizType) return;
+    if (quizType === "mock" && next === "practice" && sections.length > 0) {
+      setConfirmFlatten(true);
+      return;
+    }
+    setQuizType(next);
+  }
+
+  function flattenToPractice() {
+    setQuizType("practice");
+    setSections([]);
+    setQuestions((prev) => prev.map((q) => ({ ...q, sectionId: null })));
+    setConfirmFlatten(false);
   }
   function deleteQuestion(id) {
     setQuestions((prev) => {
@@ -334,7 +467,10 @@ export default function QuizBuilder() {
   }
 
   function validQuestions() {
-    return questions.filter(
+    // Walks `orderedQuestions`, not `questions`, so the `order` saved below
+    // matches the grouped order on screen. Sending the raw state order would
+    // renumber a sectioned mock the moment the student opened it.
+    return orderedQuestions.filter(
       (q) =>
         q.text.trim() &&
         q.explanation.trim() &&
@@ -400,6 +536,34 @@ export default function QuizBuilder() {
           ...toChapterPayload(resolvedChapters),
         });
       }
+      // Sections FIRST: a new section has no server id until this returns,
+      // and the questions PUT below rejects a section id it doesn't know.
+      // The endpoint matches by id, so a rename is a rename — never a
+      // delete-and-recreate, which would NULL every question's section.
+      let sectionIdMap = new Map();
+      if (quizType === "mock" && sections.length) {
+        const res = await api.put(`/teacher/quizzes/${id}/sections/`, {
+          sections: sections.map((s, i) => ({
+            ...(s.serverId ? { id: s.serverId } : {}),
+            name: s.name.trim() || `Section ${i + 1}`,
+            order: i,
+          })),
+        });
+        const saved = res.data?.sections || res.data || [];
+        // Returned in the order we sent, so position is the join key for the
+        // ones that had no id to match on.
+        sections.forEach((s, i) => {
+          if (saved[i]?.id) sectionIdMap.set(s._id, String(saved[i].id));
+        });
+        setSections((prev) =>
+          prev.map((s, i) => ({ ...s, serverId: saved[i]?.id ?? s.serverId }))
+        );
+      } else if (quizType === "practice") {
+        // Practice papers are flat. Clear any grouping left over from a
+        // type switch so the server doesn't keep orphaned sections around.
+        await api.put(`/teacher/quizzes/${id}/sections/`, { sections: [] });
+      }
+
       await api.put(`/teacher/quizzes/${id}/questions/bulk/`, {
         questions: valid.map((q, i) => ({
           id: q.serverId,
@@ -410,6 +574,12 @@ export default function QuizBuilder() {
           order: i,
           explanation: q.explanation.trim(),
           source: q.source,
+          // Always sent now, so ungrouping a question actually sticks — the
+          // endpoint reads an absent key as "leave it alone".
+          section: quizType === "mock"
+            ? (sectionIdMap.get(q.sectionId) ?? q.sectionId ?? null)
+            : null,
+          suggest_to_bank: q.suggestToBank !== false,
           choices: q.choices.filter((c) => c.text.trim()),
         })),
       });
@@ -464,7 +634,7 @@ export default function QuizBuilder() {
                 role="radio"
                 aria-checked={on}
                 className={`qb2-type${on ? " qb2-type--on" : ""}`}
-                onClick={() => setQuizType(id)}
+                onClick={() => requestType(id)}
                 // The visible title lives in nested spans, which left the
                 // radio with no computed accessible name — a screen reader
                 // announced two unlabelled radios.
@@ -540,6 +710,7 @@ export default function QuizBuilder() {
         variant="compact"
         noteLabel="Note for students"
         notePlaceholder="What this test covers, what to revise first…"
+        onChaptersLoaded={setChapterList}
       />
 
       {/* Batch — create only; once the quiz exists it is fixed. The chapter
@@ -612,30 +783,81 @@ export default function QuizBuilder() {
 
       <div className="qb-split">
         <div className="qb-list">
-          {questions.map((q, i) => (
-            <div
-              key={q._id}
-              className={`qb-list-row ${q._id === selectedId ? "qb-list-row--active" : ""}`}
-              onClick={() => setSelectedId(q._id)}
-            >
-              <span className="qb-list-num">{i + 1}</span>
-              <span className="qb-list-text">{q.text || "Untitled question"}</span>
-              {q.source === "ai" && <span className="qb-ai-tag" title="AI-drafted"><IoSparklesOutline /></span>}
-              <span
-                className="qb-list-del"
-                onClick={(e) => { e.stopPropagation(); deleteQuestion(q._id); }}
-              >
-                <IoCloseOutline />
-              </span>
+          {/* Numbering runs across the whole paper, not per group — a student
+              sees "Question 7", not "Section B question 2". */}
+          {groups.map((group) => (
+            <div className="qb2-group" key={group.key}>
+              <div className="qb2-group__head">
+                {group.section ? (
+                  <input
+                    className="qb2-group__name"
+                    value={group.section.name}
+                    onChange={(e) => renameSection(group.section._id, e.target.value)}
+                    aria-label={`Section name: ${group.section.name}`}
+                  />
+                ) : (
+                  <span className="qb2-group__name qb2-group__name--static">
+                    {isMock ? "Ungrouped" : "Questions"}
+                  </span>
+                )}
+                <span className="qb2-group__count">{group.items.length}</span>
+                {group.section && (
+                  <span className="qb2-group__ops">
+                    <button type="button" onClick={() => moveSection(group.section._id, -1)} aria-label="Move section up" title="Move up">↑</button>
+                    <button type="button" onClick={() => moveSection(group.section._id, 1)} aria-label="Move section down" title="Move down">↓</button>
+                    <button type="button" onClick={() => deleteSection(group.section._id)} aria-label="Delete section (keeps its questions)" title="Delete section — its questions move to Ungrouped">×</button>
+                  </span>
+                )}
+              </div>
+
+              {group.items.map(({ q, index }) => (
+                <div
+                  key={q._id}
+                  className={`qb-list-row ${q._id === selectedId ? "qb-list-row--active" : ""}`}
+                  onClick={() => setSelectedId(q._id)}
+                >
+                  <span className="qb-list-num">{index + 1}</span>
+                  <span className="qb-list-text">{q.text || "Untitled question"}</span>
+                  {q.source === "bank" && <span className="qb2-bank-tag" title="From a question bank"><IoLibraryOutline /></span>}
+                  {q.source === "ai" && <span className="qb-ai-tag" title="AI-drafted"><IoSparklesOutline /></span>}
+                  <span
+                    className="qb-list-del"
+                    onClick={(e) => { e.stopPropagation(); deleteQuestion(q._id); }}
+                  >
+                    <IoCloseOutline />
+                  </span>
+                </div>
+              ))}
+
+              {isMock && group.section && (
+                <button type="button" className="qb2-group__add" onClick={() => addQuestion(group.section._id)}>
+                  + Question in this section
+                </button>
+              )}
             </div>
           ))}
+
+          {isMock && (
+            <button type="button" className="qb2-addsection" onClick={addSection}>
+              + Add a section
+            </button>
+          )}
         </div>
 
         <div className="qb-editor">
           {selected && (
             <>
               <div className="qb-editor-head">
-                <span className="qb-editor-qnum">Question {questions.findIndex((q) => q._id === selectedId) + 1}</span>
+                <span className="qb-editor-qnum">Question {orderedQuestions.findIndex((q) => q._id === selectedId) + 1}</span>
+                {/* The chapter this question is filed under. Question has no
+                    chapter of its own in the data model — Phase 3 put chapter
+                    tagging on the quiz — so this shows the quiz's, which is
+                    what actually drives the student's weak-area report. */}
+                {questionChapterLabel && (
+                  <span className="qb2-qchip" title="From this test's chapter tags">
+                    {questionChapterLabel}
+                  </span>
+                )}
                 <input
                   className="qb-select-sm"
                   style={{ minWidth: 140 }}
@@ -690,10 +912,57 @@ export default function QuizBuilder() {
                 value={selected.explanation}
                 onChange={(e) => updateSelected({ explanation: e.target.value })}
               />
+
+              {/* Per-question bank opt-in. Defaults ON; turning it off is how
+                  a teacher keeps a question that only makes sense to their own
+                  class out of the shared library. The test runs either way. */}
+              <div className="qb2-bankrow">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={selected.suggestToBank !== false}
+                  aria-label="Suggest this question to the ShikshaCom bank"
+                  className={`qb2-switch${selected.suggestToBank !== false ? " qb2-switch--on" : ""}`}
+                  onClick={() => updateSelected({ suggestToBank: !(selected.suggestToBank !== false) })}
+                >
+                  <span className="qb2-switch__knob" />
+                </button>
+                <span className="qb2-bankrow__body">
+                  <span className="qb2-bankrow__label">
+                    Suggest this question to the ShikshaCom bank
+                  </span>
+                  <span className="qb2-bankrow__hint">
+                    Turn off for questions specific to your class
+                  </span>
+                </span>
+                {selected.bankState === "accepted" && (
+                  <span className="qb2-bankrow__state">In the site bank</span>
+                )}
+                {selected.bankState === "changes_requested" && (
+                  <span className="qb2-bankrow__state qb2-bankrow__state--warn">
+                    Admin asked for changes
+                  </span>
+                )}
+              </div>
             </>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        dialog={confirmFlatten ? {
+          title: "Switch to a practice quiz?",
+          message:
+            `A practice quiz has no sections. Your ${plural(sections.length, "section")} ` +
+            "will be removed and every question moved into one flat list. " +
+            "The questions themselves are kept.",
+          confirmLabel: "Switch and flatten",
+          cancelLabel: "Keep it a mock test",
+          danger: true,
+          onConfirm: flattenToPractice,
+        } : null}
+        onClose={() => setConfirmFlatten(false)}
+      />
 
       {showImport && (
         <div className="qb-modal-overlay" onClick={() => setShowImport(false)}>

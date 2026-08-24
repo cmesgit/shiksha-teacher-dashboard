@@ -319,3 +319,191 @@
     margin-left: 0;
   }
 }
+
+/* ── Sections in the left pane (Phase 5c) ────────────────────────────── */
+
+.qb2-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.qb2-group__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.qb2-group__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 2px 0;
+  font-size: 9.5px;             /* spec: 9.5px 700 .7px uppercase --ink-faint */
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.qb2-group__name:focus {
+  outline: none;
+  color: var(--ink);
+}
+
+.qb2-group__count {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+
+.qb2-group__ops {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.qb2-group__ops button {
+  border: none;
+  background: none;
+  padding: 1px 4px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.qb2-group__ops button:hover {
+  background: var(--page-bg);
+  color: var(--ink);
+}
+
+.qb2-group__add,
+.qb2-addsection {
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: none;
+  padding: 6px 8px;
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.qb2-group__add:hover,
+.qb2-addsection:hover {
+  border-color: var(--academy);
+  color: var(--academy);
+}
+
+.qb2-addsection {
+  width: 100%;
+  margin-top: 4px;
+  text-align: center;
+}
+
+/* Marks a question pulled from a bank, so a teacher can tell their own
+ * writing from borrowed material at a glance. */
+.qb2-bank-tag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+}
+
+/* ── Per-question chapter chip + bank switch (Phase 5d) ──────────────── */
+
+.qb2-qchip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--academy-soft);
+  color: var(--academy);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.qb2-bankrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.qb2-switch {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 19px;                 /* spec: 32×19 switch */
+  border: none;
+  border-radius: 999px;
+  background: var(--border-strong);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition: background .15s ease;
+}
+
+.qb2-switch--on {
+  background: var(--success);
+}
+
+.qb2-switch__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--surface);
+  transition: transform .15s ease;
+}
+
+.qb2-switch--on .qb2-switch__knob {
+  transform: translateX(13px);
+}
+
+.qb2-bankrow__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.qb2-bankrow__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.qb2-bankrow__hint {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+
+.qb2-bankrow__state {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.qb2-bankrow__state--warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: var(--warning);
+}
