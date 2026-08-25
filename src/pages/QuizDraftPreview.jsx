@@ -99,7 +99,9 @@ export default function QuizDraftPreview() {
   };
 
   const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
-  const reviewStatus = quiz.review_status || (quiz.is_published ? "approved" : "draft");
+  // Falls back to is_assigned, not the retiring is_published mirror — see
+  // Quizzes.jsx's handleDelete. Only reached when review_status is absent.
+  const reviewStatus = quiz.review_status || (quiz.is_assigned ? "approved" : "draft");
   const canSubmit = quiz.is_editable !== false && (reviewStatus === "draft" || reviewStatus === "rejected");
 
   const BANNER_COPY = {

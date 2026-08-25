@@ -258,7 +258,12 @@ export default function Quizzes() {
   };
 
   const handleDelete = async (quiz) => {
-    if (!quiz.is_published) {
+    // is_assigned, NOT is_published. Phase 1 moved student visibility onto
+    // is_assigned and left is_published as a back-compat mirror that Phase 10
+    // retires; when the field goes, `quiz.is_published` becomes undefined —
+    // falsy — and this would silently stop warning before deleting a quiz
+    // students can already see.
+    if (!quiz.is_assigned) {
       setConfirmDlg({
         title: "Delete this quiz?",
         message: `“${quiz.title}” will be permanently removed.`,
@@ -311,8 +316,10 @@ export default function Quizzes() {
   };
 
   const handleView = (quiz) => {
+    // Same reason as handleDelete: on is_published this would route every
+    // quiz to the draft preview once the mirror is retired.
     navigate(
-      quiz.is_published
+      quiz.is_assigned
         ? `/teacher/quizzes/${quiz.id}`
         : `/teacher/quizzes/${quiz.id}/draft`
     );
