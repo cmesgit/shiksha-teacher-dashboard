@@ -42,7 +42,8 @@
 .notif-bell-empty { padding:24px; text-align:center; color:var(--ink-faint); font-size:13px; }
 .notif-bell-item { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; border-bottom:1px solid var(--divider); cursor:pointer; transition:background .15s; }
 .notif-bell-item:hover { background:var(--surface-hover); }
-.notif-bell-icon { font-size:var(--icon-sm); flex-shrink:0; margin-top:2px; }
+/* react-icons glyph (was a literal emoji) — flex keeps the SVG off the baseline. */
+.notif-bell-icon { display:flex; align-items:center; font-size:var(--icon-sm); flex-shrink:0; margin-top:2px; }
 .notif-bell-title { font-size:13px; color:var(--ink); margin:0 0 4px; line-height:1.4; }
 .notif-bell-time { font-size:11px; color:var(--ink-faint); margin:0; }
 @media (max-width:1239px){

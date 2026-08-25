@@ -82,7 +82,7 @@
   padding: 9px 4px; border-radius: 11px; border: 1.5px solid #e9edee; background: #fff;
   color: #5b6570; cursor: pointer; font-family: inherit;
 }
-.ps-pill__emoji { font-size: 16px; }
+.ps-pill__icon { display: flex; align-items: center; font-size: 15px; }
 .ps-pill__lbl { font-size: 10.5px; font-weight: 700; }
 
 .ps-prof-sec {
@@ -125,7 +125,15 @@
   margin: 2px 14px 10px; padding: 16px 14px; border: 1.5px dashed #d8e0e2;
   border-radius: 13px; background: #fafcfc; text-align: center;
 }
-.ps-empty-tracks__emoji { font-size: 24px; line-height: 1; }
+/* Muted to match .ps-empty-tracks__body below. Restated rather than
+   inherited: .ps-empty-tracks sets no colour, so an SVG here would pick up
+   the card's dark ink (#1a2c33) and read as a heavy glyph inside a soft
+   dashed empty state. A literal, because this file is shared with
+   shiksha-frontend, which has no token stylesheet to reference. */
+.ps-empty-tracks__icon {
+  display: flex; justify-content: center; font-size: 24px; line-height: 1;
+  color: #8a949b;
+}
 .ps-empty-tracks__title { font-size: 13px; font-weight: 700; color: #2b343a; margin-top: 7px; }
 .ps-empty-tracks__body { font-size: 11px; color: #8a949b; margin: 4px 0 12px; line-height: 1.5; }
 .ps-empty-tracks__cta {
@@ -161,7 +169,8 @@
   font-weight: 800; color: #015865; background: #eef4f5; overflow: hidden;
 }
 .ps-av--img { object-fit: cover; }
-.ps-av--emoji { background: #f0f4ff; }
+.ps-av--emoji,
+.ps-av--icon { background: #f0f4ff; }
 .ps-av--initials { background: rgba(19,137,155,.13); color: #13899b; }
 
 /* ── Modals (PIN + password) — preserved ── */
@@ -228,4 +237,5 @@
 .ps-pw-eye {
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
   background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 15px;
+  display: flex; align-items: center;
 }

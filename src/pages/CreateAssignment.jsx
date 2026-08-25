@@ -172,7 +172,16 @@ export default function CreateAssignment() {
       formData.append("no_specific_chapter", chapterPayload.no_specific_chapter ? "true" : "false");
       formData.append("chapter_note", chapterPayload.chapter_note || "");
 
-      if (!isEditing) formData.append("batch_id", batchId);
+      if (!isEditing) {
+        formData.append("batch_id", batchId);
+        // Subject is the backend's NOT NULL column and its authorization
+        // anchor. It used to be inferred from the required single-select
+        // `chapter_id` this screen sent; the ChapterTagPicker replaced that
+        // with `chapter_tags`, which resolve only AFTER the row is written and
+        // so cannot imply a subject at validate() time. Send it explicitly
+        // from the route param, the same contract UploadMaterial.jsx honours.
+        formData.append("subject_id", subjectId);
+      }
       formData.append("title",        title);
       formData.append("description",  description);
       formData.append("due_date",     `${dueDate}T23:59:00`);

@@ -12,6 +12,16 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoNotificationsOutline, IoNotificationsSharp } from "react-icons/io5";
+import {
+  FiBell,
+  FiBookOpen,
+  FiCalendar,
+  FiCheckSquare,
+  FiFileText,
+  FiInbox,
+  FiLock,
+  FiVideo,
+} from "react-icons/fi";
 import useNotificationSocket from "../hooks/useNotificationSocket";
 import useNotificationNavigator from "../shared/useNotificationNavigator";
 
@@ -29,14 +39,16 @@ const TRACK_LABEL = {
 };
 
 const TYPE_ICONS = {
-  ASSIGNMENT:      "📝",
-  QUIZ:            "📊",
-  SESSION:         "🎥",
-  SUBMISSION:      "📬",
-  PRIVATE_SESSION: "🔒",
-  MATERIAL:        "📚",
+  ASSIGNMENT:      FiFileText,
+  QUIZ:            FiCheckSquare,
+  SESSION:         FiVideo,
+  SUBMISSION:      FiInbox,
+  PRIVATE_SESSION: FiLock,
+  MATERIAL:        FiBookOpen,
 };
 
+/* Left-border + icon tint per notification type. */
+const FALLBACK_COLOR = "#6b7280";
 const TYPE_COLORS = {
   ASSIGNMENT:      "#f59e0b",
   QUIZ:            "#8b5cf6",
@@ -191,8 +203,8 @@ export default function NotificationBell() {
 
   // Skill-Dev bookings are calendar events, not a live video call — reserve
   // 🎥 for actual join-now live/group sessions so the icon matches the event.
-  const iconFor = (notif) =>
-    notif.is_skill_session ? "📅" : (TYPE_ICONS[getDisplayType(notif)] || "🔔");
+  const IconFor = (notif) =>
+    notif.is_skill_session ? FiCalendar : (TYPE_ICONS[getDisplayType(notif)] || FiBell);
 
   return (
     <div className="notif-bell-wrap" ref={ref}>
@@ -236,18 +248,22 @@ export default function NotificationBell() {
             ) : (
               notifications.map((notif, i) => {
                 const displayType = getDisplayType(notif);
+                const Icon = IconFor(notif);
                 return (
                   <div
                     key={notif.id || i}
                     className={`notif-bell-item ${!notif.is_read ? "notif-bell-item--unread" : ""}`}
                     onClick={() => handleNotifClick(notif)}
                     style={{
-                      borderLeft: `3px solid ${TYPE_COLORS[displayType] || "#6b7280"}`,
+                      borderLeft: `3px solid ${TYPE_COLORS[displayType] || FALLBACK_COLOR}`,
                       cursor: "pointer",
                     }}
                   >
-                    <span className="notif-bell-icon" style={{ fontSize: 16 }}>
-                      {iconFor(notif)}
+                    <span
+                      className="notif-bell-icon"
+                      style={{ color: TYPE_COLORS[displayType] || FALLBACK_COLOR }}
+                    >
+                      <Icon aria-hidden="true" />
                     </span>
                     <div className="notif-bell-content">
                       <p className="notif-bell-title">{notif.title}</p>

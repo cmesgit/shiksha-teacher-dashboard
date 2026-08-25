@@ -40,12 +40,17 @@ import {
   RiGroupLine, RiLogoutBoxRLine, RiCheckLine, RiLockLine, RiSettings3Line,
   RiArrowDownSLine, RiAddLine, RiQuestionLine,
 } from "react-icons/ri";
+import { FiBookOpen, FiEye, FiEyeOff, FiZap } from "react-icons/fi";
+import { PiGraduationCap } from "react-icons/pi";
 import { useAuth } from "../contexts/AuthContext";
 import "./ProfileSwitcher.css";
 import SettingsModal, { settingsSectionFromUrl } from "./SettingsModal";
 import { useTour } from "../tour/useTour";
 
-const DEFAULT_EMOJI = "📚";
+/* Fallback glyph when a profile has neither an avatar nor a usable name.
+   Was a literal 📚; an icon keeps the switcher consistent with the rest of
+   the chrome and renders identically across platforms. */
+const DefaultAvatarIcon = FiBookOpen;
 const initials = (name) =>
   (name || "?").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
@@ -55,8 +60,8 @@ const initials = (name) =>
  * landing path within the teacher app after the switch. `accent`/`tint` give
  * each track its own identity color in pills, badges and icon tiles. */
 const TRACKS = [
-  { key: "academy", label: "Academy Teacher",   role: "Faculty", emoji: "🎓", dest: "/teacher/dashboard",       accent: "#425f7f", tint: "rgba(66,95,127,.14)" },
-  { key: "skill",   label: "Skill-Dev Teacher", role: "Expert",  emoji: "⚡", dest: "/teacher/expert/profile", accent: "#b45309", tint: "rgba(180,83,9,.12)" },
+  { key: "academy", label: "Academy Teacher",   role: "Faculty", Icon: PiGraduationCap, dest: "/teacher/dashboard",       accent: "#425f7f", tint: "rgba(66,95,127,.14)" },
+  { key: "skill",   label: "Skill-Dev Teacher", role: "Expert",  Icon: FiZap,           dest: "/teacher/expert/profile", accent: "#b45309", tint: "rgba(180,83,9,.12)" },
 ];
 const trackByKey = (key) => TRACKS.find((t) => t.key === key);
 const trackLabel = (key) => trackByKey(key)?.label || "Teaching";
@@ -73,7 +78,11 @@ function Avatar({ profile, size = 36, fallback }) {
   if (profile?.avatar_type === "emoji" && profile.avatar) {
     return <span className="ps-av ps-av--emoji" style={style}>{profile.avatar}</span>;
   }
-  return <span className="ps-av ps-av--initials" style={style}>{fallback || initials(profile?.display_name) || DEFAULT_EMOJI}</span>;
+  return (
+    <span className="ps-av ps-av--initials" style={style}>
+      {fallback || initials(profile?.display_name) || <DefaultAvatarIcon aria-hidden="true" />}
+    </span>
+  );
 }
 
 /* ── PIN modal (with account-password "forgot PIN" escape hatch) ── */
@@ -179,7 +188,7 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
   return createPortal(
     <div className="ps-modal-overlay" onClick={onCancel}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
-        <span className="ps-av ps-av--emoji" style={{ width: 56, height: 56, fontSize: 28 }}>🎓</span>
+        <span className="ps-av ps-av--icon" style={{ width: 56, height: 56, fontSize: 28 }}><PiGraduationCap aria-hidden="true" /></span>
         <h3 className="ps-modal__title">{title || "Enter teaching track"}</h3>
         <p style={{ fontSize: 12, color: "#8a8a8a", margin: "4px 0 10px", lineHeight: 1.5 }}>
           For security, enter your <b>account login password</b> (the one you use to sign in to ShikshaCom).
@@ -190,7 +199,7 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
             onChange={(e) => setPw(e.target.value)} className="ps-pw-input" placeholder="Password"
             onKeyDown={(e) => e.key === "Enter" && pw && onConfirm(pw)} />
           <button type="button" className="ps-pw-eye" onClick={() => setShow((v) => !v)}>
-            {show ? "🙈" : "👁️"}
+            {show ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
           </button>
         </div>
         {error && <p className="ps-modal__error">{error}</p>}
@@ -373,7 +382,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   const accountEmail = user?.email || "";
   const activeTrackKey = teacherInfo?.active_track || null;
   const activeTrackDef = isTeacherContext ? trackByKey(activeTrackKey) : null;
-  const teacherEmoji = activeTrackDef?.emoji || "🎓";
+  const TeacherIcon  = activeTrackDef?.Icon || PiGraduationCap;
   const headerName   = isTeacherContext ? trackLabel(activeTrackKey) : accountName;
   const subFor = (p) => (p.relationship === "DEPENDENT" ? "Child profile" : "Primary");
 
@@ -422,7 +431,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           data-tour="header.profile-switcher"
         >
           <span className="ps-av ps-av--initials ps-trigger__av" style={{ background: ctxTint, color: ctxAccent }}>
-            {isTeacherContext ? teacherEmoji : initials(accountName)}
+            {isTeacherContext ? <TeacherIcon aria-hidden="true" /> : initials(accountName)}
           </span>
           <span className="ps-trigger__txt">
             <span className="ps-trigger__nm">{headerName}</span>
@@ -439,7 +448,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           <div className="ps-prof ps-scroll" role="menu">
             <div className="ps-prof-head">
               <span className="ps-prof-head__av" style={{ background: ctxAccent }}>
-                {isTeacherContext ? teacherEmoji : initials(accountName)}
+                {isTeacherContext ? <TeacherIcon aria-hidden="true" /> : initials(accountName)}
               </span>
               <div className="ps-prof-head__txt">
                 <div className="ps-prof-head__nm">{headerName}</div>
@@ -455,7 +464,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
                   style={!isTeacherContext ? { borderColor: LEARN_ACCENT, background: LEARN_TINT, color: LEARN_ACCENT } : undefined}
                   onClick={clickLearnPill}
                 >
-                  <span className="ps-pill__emoji">📚</span>
+                  <span className="ps-pill__icon"><FiBookOpen aria-hidden="true" /></span>
                   <span className="ps-pill__lbl">Learn</span>
                 </button>
                 {heldTracks.map((t) => {
@@ -467,7 +476,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
                       style={active ? { borderColor: t.accent, background: t.tint, color: t.accent } : undefined}
                       onClick={() => clickTrackPill(t)}
                     >
-                      <span className="ps-pill__emoji">{t.emoji}</span>
+                      <span className="ps-pill__icon"><t.Icon aria-hidden="true" /></span>
                       <span className="ps-pill__lbl">{t.role}</span>
                     </button>
                   );
@@ -511,7 +520,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
                       role="menuitem"
                     >
                       <span className="ps-prof-item__av ps-prof-item__av--tile" style={{ background: t.tint, color: t.accent }}>
-                        {t.emoji}
+                        <t.Icon aria-hidden="true" />
                       </span>
                       <div className="ps-prof-item__txt">
                         <div className="ps-prof-item__nm">{t.label}</div>
@@ -529,7 +538,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
             )}
             {noTracks && (
               <div className="ps-empty-tracks">
-                <div className="ps-empty-tracks__emoji">🎓</div>
+                <div className="ps-empty-tracks__icon"><PiGraduationCap aria-hidden="true" /></div>
                 <div className="ps-empty-tracks__title">No teaching tracks yet</div>
                 <p className="ps-empty-tracks__body">
                   Teach academic classes as <b>Faculty</b> or run skill sessions as an <b>Expert</b> — all under this account.
