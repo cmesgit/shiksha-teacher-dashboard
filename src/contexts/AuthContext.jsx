@@ -96,16 +96,31 @@ api.interceptors.response.use(
 export { api };
 
 // ── Error extractor ───────────────────────────────────────────────────────────
+// A 5xx from Django (or an nginx/gateway page) is not JSON — axios leaves the
+// body as a raw string, and returning it renders the whole
+// "<!doctype html> ... Server Error (500) ..." page as the user-facing error.
+// Markup is never a message for a human, and with DEBUG on such a page can
+// carry a stack trace. Mirrors shared/extractError.js; this copy is inline
+// because AuthContext must not import from the app it is synced into.
+const MAX_MESSAGE_LENGTH = 300;
+function usableMessage(s) {
+  const t = String(s).trim();
+  if (!t) return null;
+  if (t.startsWith("<")) return null;             // HTML/XML error document
+  if (t.length > MAX_MESSAGE_LENGTH) return null; // page body, stack trace, dump
+  return t;
+}
+
 function extractError(err) {
   const d = err?.response?.data;
   if (!d)                       return err?.message || "Something went wrong.";
-  if (typeof d === "string")    return d;
-  if (d.detail)                 return d.detail;
+  if (typeof d === "string")    return usableMessage(d) || "Something went wrong.";
+  if (d.detail)                 return usableMessage(d.detail) || "Something went wrong.";
   for (const k of Object.keys(d)) {
     if (k === "code") continue; // machine token, never user-facing
     const v = d[k];
-    if (Array.isArray(v) && v.length) return v[0];
-    if (typeof v === "string")        return v;
+    if (Array.isArray(v) && v.length) { const m = usableMessage(v[0]); if (m) return m; }
+    if (typeof v === "string")        { const m = usableMessage(v); if (m) return m; }
   }
   return "Something went wrong.";
 }
