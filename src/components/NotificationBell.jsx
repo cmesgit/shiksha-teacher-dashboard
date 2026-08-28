@@ -114,9 +114,13 @@ export default function NotificationBell() {
     // that prefix or it falls through to the root RedirectToMainLogin and
     // the user lands on a blank page.
 
-    // notifications-app events (counseling.*, forum.*, ...) carry a
-    // link_url. The /counselor/... → /teacher/counsellor/... mapping and
-    // the unrecognised-path fallback both live in the navigator hook now,
+    // Server-authored route, preferred over everything below. This now covers
+    // coursework too, not just notifications-app events (counseling.*,
+    // forum.*, …): Activity carries its own link_url, so the bell and the
+    // Communication Center follow the SAME string instead of the bell
+    // re-deriving routes by hand. That divergence is what produced the
+    // wrong-id submissions 404. The /counselor/... → /teacher/counsellor/...
+    // mapping and the unrecognised-path fallback live in the navigator hook,
     // shared with the Comm Center list.
     if (link_url && link_url.startsWith("/")) {
       if (openLink(link_url)) { setOpen(false); return; }
@@ -164,22 +168,34 @@ export default function NotificationBell() {
       if (type === "ASSIGNMENT")      navigate(`/teacher/classes/${subject_id}/assignments`);
       else if (type === "QUIZ")       navigate(`/teacher/classes/${subject_id}/quizzes`);
       else if (type === "SUBMISSION") {
-        // SUBMISSION carries the PARENT object id in `id`. For an assignment
-        // submission that's the assignment id; for a quiz submission it's the
-        // quiz id. Backend marks quiz submissions with subtype="quiz_submission"
-        // (activity/signals.py:quiz_submitted) so we can route correctly.
-        if (notif.subtype === "quiz_submission") {
+        // The PARENT object is `object_id` — NOT `id`. `id` is the Activity
+        // row's own PK (that's why markOneRead(id) above works, and it PATCHes
+        // /activity/feed/<id>/read/). Using it here built
+        // /assignments/<activity_uuid>/submissions, which get_object_or_404
+        // 404'd; the screen showed "That didn't load — Couldn't load
+        // submissions", while the same notification opened from the
+        // Communication Center worked because that surface follows the
+        // server-authored link_url instead of re-deriving the route.
+        // Both ids are UUIDv4, so nothing upstream rejected the wrong one.
+        //
+        // `object_type` (ActivitySerializer, from the row's content_type)
+        // separates an assignment submission from a quiz one — both arrive as
+        // type "SUBMISSION". It replaces `subtype`, which only ever existed on
+        // the ephemeral WS frame and was absent from anything this bell loaded
+        // over REST, so a quiz submission silently took the assignment branch.
+        const isQuiz =
+          notif.object_type === "quiz" || notif.subtype === "quiz_submission";
+        if (isQuiz) {
           navigate(`/teacher/classes/${subject_id}/quizzes`);
-        } else if (id) {
-          navigate(`/teacher/classes/${subject_id}/assignments/${id}/submissions`);
+        } else if (object_id) {
+          navigate(`/teacher/classes/${subject_id}/assignments/${object_id}/submissions`);
         } else {
           navigate(`/teacher/classes/${subject_id}/assignments`);
         }
       }
       else if (type === "SESSION")    navigate(`/teacher/classes/${subject_id}/live-sessions`);
-      // MATERIAL rows come from the REST feed with no link_url (the
-      // ActivitySerializer has no such field), so this branch — not
-      // openLink above — is what routes them on a reloaded page.
+      // Fallback for rows written before Activity carried a link_url; new
+      // ones route via openLink above.
       else if (type === "MATERIAL")   navigate(`/teacher/classes/${subject_id}/study-materials`);
       else                            navigate(`/teacher/classes/${subject_id}`);
     } else {
