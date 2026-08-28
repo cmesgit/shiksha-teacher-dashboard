@@ -5,6 +5,7 @@ import api from "../api/apiClient";
 import "../styles/submission-view.css";
 import { LoadingState, ErrorState } from "../components/StateViews";
 import TourHeaderButton from "../tour/TourHeaderButton";
+import SubmissionPreview from "../components/SubmissionPreview";
 
 export default function SubmissionView() {
   const navigate = useNavigate();
@@ -13,7 +14,12 @@ export default function SubmissionView() {
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // The message itself, not a boolean. A bad id (404) and a staffing problem
+  // (403) used to render the identical "Couldn't load submissions." card,
+  // which is how a wrong-id bug in the notification bell looked exactly like
+  // a server outage and took a cross-repo trace to tell apart.
+  const [error, setError] = useState("");
+  const [previewing, setPreviewing] = useState(null);
   const [filter, setFilter] = useState("all"); // all | submitted | pending
   const [gradingId, setGradingId] = useState(null);
   const [marksInput, setMarksInput] = useState("");
@@ -34,7 +40,7 @@ export default function SubmissionView() {
   const fetchSubmissions = async () => {
     if (!assignmentId) return;
     setLoading(true);
-    setError(false);
+    setError("");
     try {
       const res = await api.get(
         `/assignments/teacher/${assignmentId}/submissions/`
@@ -45,6 +51,7 @@ export default function SubmissionView() {
         submittedOn: s.submitted_at,
         status: s.submitted_file ? "Submitted" : "Pending",
         file: s.submitted_file,
+        fileName: s.submitted_file_name || "",
 
         // ✅ already correct
         submissionStatus: s.submission_status || "",
@@ -56,7 +63,17 @@ export default function SubmissionView() {
       setStudents(formatted);
     } catch (err) {
       console.error("Failed to load submissions", err);
-      setError(true);
+      const status = err?.response?.status;
+      if (status === 404) {
+        setError(
+          "This assignment no longer exists, or that link points somewhere else. " +
+          "Open it from the Assignments list instead."
+        );
+      } else if (status === 403) {
+        setError("You're not assigned to this class, so its submissions aren't visible to you.");
+      } else {
+        setError("Couldn't load submissions.");
+      }
     } finally {
       setLoading(false);
     }
@@ -121,7 +138,7 @@ export default function SubmissionView() {
     );
 
   if (loading) return <LoadingState label="Loading submissions" />;
-  if (error) return <ErrorState message="Couldn't load submissions." onRetry={fetchSubmissions} />;
+  if (error) return <ErrorState message={error} onRetry={fetchSubmissions} />;
 
   return (
     <div className="sv-page">
@@ -239,15 +256,18 @@ export default function SubmissionView() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 8 }}>
+                      {/* Was an <a target="_blank"> straight at the file, so
+                          reviewing meant a new tab at best and a download to
+                          disk at worst. Opens in place now; the overlay still
+                          offers Download for formats a browser can't render. */}
                       {student.file && (
-                        <a
-                          href={student.file}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          type="button"
                           className="sv-review-btn"
+                          onClick={() => setPreviewing(student)}
                         >
                           Review
-                        </a>
+                        </button>
                       )}
                       {student.status === "Submitted" && gradingId !== student.id && (
                         <button
@@ -314,6 +334,20 @@ export default function SubmissionView() {
         </div>
 
       </div>
+
+      {previewing && (
+        <SubmissionPreview
+          // Keyed so switching between two students' files remounts rather
+          // than reusing the instance — which is what lets the preview derive
+          // its initial loading state from the props instead of correcting it
+          // in an effect.
+          key={previewing.id}
+          url={previewing.file}
+          filename={previewing.fileName}
+          studentName={previewing.name}
+          onClose={() => setPreviewing(null)}
+        />
+      )}
     </div>
   );
 }

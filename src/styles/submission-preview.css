@@ -1,0 +1,178 @@
+/* SubmissionPreview — overlay for reading a submitted file in place.
+   Every colour resolves through src/shared/tokens.css; no literal hex here.
+   (submission-view.css predates that rule and still carries some — those are
+   left alone deliberately rather than migrated in an unrelated change.) */
+
+.sp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.sp-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  opacity: 0.55;
+}
+
+.sp-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(88vh, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.sp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--surface-alt);
+  flex: 0 0 auto;
+}
+
+.sp-head-text { min-width: 0; }
+
+.sp-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-card-title);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sp-filename {
+  margin: 2px 0 0;
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+  /* Storage names get long; never let one push the buttons off the panel. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.sp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hit-min);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.sp-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.sp-btn:focus-visible { outline: var(--focus-ring); }
+
+.sp-btn--icon {
+  padding: 6px;
+  aspect-ratio: 1;
+  justify-content: center;
+}
+
+.sp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.sp-pdf {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.sp-image {
+  max-width: 100%;
+  /* Photographed homework is usually portrait and tall — cap the height so
+     the whole page is visible without scrolling before zooming in. */
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--r-sm);
+}
+
+.sp-text {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 18px;
+  overflow: auto;
+  background: var(--surface);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sp-status {
+  font-size: var(--fs-body);
+  color: var(--ink-3);
+}
+
+.sp-status--error { color: var(--danger); }
+
+.sp-fallback {
+  max-width: 420px;
+  text-align: center;
+}
+
+.sp-fallback-reason {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.sp-fallback-hint {
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .sp-overlay { padding: 0; }
+  .sp-panel {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+}
