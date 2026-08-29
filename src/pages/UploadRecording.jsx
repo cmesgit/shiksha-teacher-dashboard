@@ -24,6 +24,8 @@ import { IoChevronBack } from "react-icons/io5";
 import { FiUploadCloud, FiCheckCircle, FiPlay, FiUsers, FiClock, FiCheckSquare } from "react-icons/fi";
 import api from "../api/apiClient";
 import { uploadToBunny } from "../shared/bunnyUpload";
+import ChapterTagPicker from "../components/ChapterTagPicker";
+import { EMPTY_CHAPTER_VALUE, toChapterPayload } from "../utils/chapterTagPicker";
 import "../styles/upload-recording.css";
 
 const ALLOWED_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -46,6 +48,13 @@ export default function UploadRecording() {
   const [batches, setBatches] = useState([]);
   const [batchId, setBatchId] = useState("");
   const [liveSessionId] = useState(prefill.live_session_id || null);
+
+  // Chapter placement. `SessionRecording` has always carried `chapter`,
+  // `chapter_tags`, `chapter_note` and `no_specific_chapter`, but this screen
+  // offered nothing but a free-text description — so every manually uploaded
+  // recording landed untagged and students had no way to find one by topic.
+  const [chapterValue, setChapterValue] = useState(EMPTY_CHAPTER_VALUE);
+  const chapterPickerRef = useRef(null);
 
   const [videoFile, setVideoFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -103,9 +112,19 @@ export default function UploadRecording() {
         onUploadStart: (u) => { uploadRef.current = u; },
       });
 
+      // Resolved here, not before the Bunny transfer: promoting a custom
+      // label creates real courses.Chapter rows, and doing that first would
+      // litter the syllabus every time a 3 GB upload failed halfway.
+      const resolvedChapterValue = (await chapterPickerRef.current?.resolveForSubmit()) || chapterValue;
+      const chapterPayload = toChapterPayload(resolvedChapterValue);
+
       await api.post(`/courses/subjects/${subjectId}/recordings/save/`, {
         title,
         description,
+        // This endpoint is JSON, not multipart, so the tags travel as a real
+        // array and no_specific_chapter as a real bool — no JSON-in-a-string
+        // encoding like the material upload needs.
+        ...chapterPayload,
         // The design has no date picker, but a recording made from a real
         // past live session should still carry that session's actual date,
         // not the upload date — only default to "today" for a standalone
@@ -159,11 +178,29 @@ export default function UploadRecording() {
             </select>
           </div>
 
+          {/* Chapter tagging — the shared picker. Optional and multiple: zero,
+              several, syllabus and/or custom chapters, or an explicit "no
+              specific chapter" are all valid here. */}
+          <div className="ur-field">
+            <ChapterTagPicker
+              ref={chapterPickerRef}
+              subjectId={subjectId}
+              value={chapterValue}
+              onChange={setChapterValue}
+              variant="compact"
+              noteLabel="Note for students"
+              notePlaceholder="What this session covers, what to revise first…"
+            />
+          </div>
+
           <div className="ur-field">
             <label className="ur-label">Description <span className="ur-optional">(optional)</span></label>
             <textarea
               className="ur-input ur-textarea"
-              placeholder="What was covered in this session? Add chapter references, key topics, homework links…"
+              // "Add chapter references" is no longer this field's job — the
+              // picker above does that properly, as real tags students can
+              // filter on rather than prose nobody can query.
+              placeholder="What was covered in this session? Key topics, homework links…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />

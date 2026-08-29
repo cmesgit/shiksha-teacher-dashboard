@@ -9,9 +9,10 @@
 // equally silent on both):
 //   · No Subject field — this route is already subject-scoped (:subjectId),
 //     same as Create Assignment omits Subject for the same reason.
-//   · Chapter (existing-or-custom) stays — POST /materials/materials/upload/
-//     requires chapter_id or custom_chapter+subject_id; the design has no
-//     concept of chapters at all, but there's no materials model without one.
+//   · Chapter placement stays, but as the shared ChapterTagPicker — the
+//     design has no concept of chapters at all, yet a material nobody can
+//     find is a material nobody reads. It is now optional and multiple,
+//     matching Create Assignment and the Quiz Builder.
 //   · Multi-file stays — the upload endpoint already accepts multiple
 //     file_ids and Create Assignment's own file field is multi too; the
 //     design's dropzone shows one file only because its prototype data never
@@ -26,6 +27,8 @@ import { IoChevronBack } from "react-icons/io5";
 import { FiUploadCloud, FiCheckCircle, FiFile, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 import api from "../api/apiClient";
+import ChapterTagPicker from "../components/ChapterTagPicker";
+import { EMPTY_CHAPTER_VALUE, toChapterPayload } from "../utils/chapterTagPicker";
 import "../styles/upload-material.css";
 
 export default function UploadMaterial() {
@@ -36,10 +39,12 @@ export default function UploadMaterial() {
   const [note, setNote] = useState("");
 
   const [fileItems, setFileItems] = useState([]);
-  const [chapters, setChapters] = useState([]);
-  const [chapterId, setChapterId] = useState("");
-  const [useCustomChapter, setUseCustomChapter] = useState(false);
-  const [customChapter, setCustomChapter] = useState("");
+
+  // Chapter placement, owned by ChapterTagPicker. Optional and multiple:
+  // zero, several, syllabus and/or the teacher's own labels, or an explicit
+  // "no specific chapter" are all valid states to submit.
+  const [chapterValue, setChapterValue] = useState(EMPTY_CHAPTER_VALUE);
+  const chapterPickerRef = useRef(null);
 
   // "" = course-wide (the model's own default — shared across every batch).
   const [batches, setBatches] = useState([]);
@@ -56,9 +61,8 @@ export default function UploadMaterial() {
 
   useEffect(() => {
     if (!subjectId) return;
-    api.get(`/courses/subjects/${subjectId}/chapters/`)
-      .then((res) => setChapters(res.data || []))
-      .catch(() => toast.error("Failed to load chapters."));
+    // The chapter fetch that used to live here is gone — ChapterTagPicker
+    // owns that request now, and running both meant two identical GETs.
     api.get(`/courses/subjects/${subjectId}/batches/`)
       .then((res) => setBatches(res.data || []))
       .catch(() => setBatches([]));
@@ -98,24 +102,48 @@ export default function UploadMaterial() {
 
   const handleUpload = async () => {
     if (!title.trim()) return toast.error("Enter a title.");
-    if (!useCustomChapter && !chapterId) return toast.error("Select a chapter.");
-    if (useCustomChapter && !customChapter.trim()) return toast.error("Enter the new chapter's name.");
+    // Chapter tagging is optional now — zero chapters, and an explicit "no
+    // specific chapter", are both valid submissions. The old guard here
+    // ("Select a chapter.") forced a placement onto revision packs and
+    // term-spanning handouts that genuinely have none.
     if (fileItems.length === 0) return toast.error("Add at least one file.");
     if (fileItems.some((item) => !item.id)) return toast.error("Wait for all files to finish uploading.");
 
     try {
       setUploading(true);
+
+      // Custom labels the teacher ticked "save to the course" for get
+      // promoted to real courses.Chapter rows here (POST once per label);
+      // resolveForSubmit folds their new ids back into chapterIds so they go
+      // out as chapters, not throwaway text. Untickd labels stay free text —
+      // which is the whole point: the legacy `custom_chapter` key this screen
+      // used to send ALWAYS get-or-created a real Chapter row
+      // (materials/views.py), quietly pushing a teacher's private shorthand
+      // into the shared course syllabus with no way to decline.
+      const resolvedChapterValue = (await chapterPickerRef.current?.resolveForSubmit()) || chapterValue;
+      const chapterPayload = toChapterPayload(resolvedChapterValue);
+
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", note);
       if (batchId) formData.append("batch_id", batchId);
 
-      if (useCustomChapter) {
-        formData.append("custom_chapter", customChapter);
-        formData.append("subject_id", subjectId);
-      } else {
-        formData.append("chapter_id", chapterId);
-      }
+      // Subject is the backend's NOT NULL column and its authorization
+      // anchor. It used to be inferred from the mandatory single-select
+      // `chapter_id`; tags resolve only after that check, so send it
+      // explicitly from the route param — the same contract
+      // CreateAssignment.jsx honours.
+      formData.append("subject_id", subjectId);
+      // This request is multipart (file ids alongside metadata), so
+      // `chapter_tags` cannot travel as a real JSON array — repeats of one
+      // field name collapse to a list of scalars, so appending once per tag
+      // would silently drop all but the last. The backend's
+      // _parse_chapter_tags decodes this exact shape: one field holding the
+      // JSON-encoded string.
+      formData.append("chapter_tags", JSON.stringify(chapterPayload.chapter_tags));
+      formData.append("no_specific_chapter", chapterPayload.no_specific_chapter ? "true" : "false");
+      formData.append("chapter_note", chapterPayload.chapter_note || "");
+
       fileItems.forEach((item) => formData.append("file_ids", item.id));
 
       await api.post(`/materials/materials/upload/`, formData);
@@ -149,45 +177,36 @@ export default function UploadMaterial() {
           />
         </div>
 
-        <div className="um-row">
-          <div className="um-field">
-            <label className="um-label">Chapter <span className="um-required">*</span></label>
-            {!useCustomChapter ? (
-              <div className="um-inline">
-                <select className="um-input" value={chapterId} onChange={(e) => setChapterId(e.target.value)}>
-                  <option value="">Select chapter</option>
-                  {chapters.map((c) => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
-                  ))}
-                </select>
-                <button type="button" className="um-linkBtn" onClick={() => setUseCustomChapter(true)}>Custom</button>
-              </div>
-            ) : (
-              <div className="um-inline">
-                <input
-                  className="um-input"
-                  placeholder="Enter new chapter"
-                  value={customChapter}
-                  onChange={(e) => setCustomChapter(e.target.value)}
-                />
-                <button type="button" className="um-linkBtn" onClick={() => setUseCustomChapter(false)}>Use existing</button>
-              </div>
-            )}
-          </div>
-
-          <div className="um-field">
-            <label className="um-label">Batch</label>
-            <select className="um-input" value={batchId} onChange={(e) => setBatchId(e.target.value)}>
-              <option value="">All batches</option>
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
+        <div className="um-field">
+          <label className="um-label">Batch</label>
+          <select className="um-input" value={batchId} onChange={(e) => setBatchId(e.target.value)}>
+            <option value="">All batches</option>
+            {batches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
         </div>
 
+        {/* Chapter tagging — the shared picker. Optional and multiple: zero,
+            several, syllabus and/or custom chapters, or an explicit "no
+            specific chapter" are all valid here. */}
         <div className="um-field">
-          <label className="um-label">Note</label>
+          <ChapterTagPicker
+            ref={chapterPickerRef}
+            subjectId={subjectId}
+            value={chapterValue}
+            onChange={setChapterValue}
+            variant="compact"
+            noteLabel="Note for students"
+            notePlaceholder="What this covers, what to revise first…"
+          />
+        </div>
+
+        {/* Distinct from the picker's note above: this is the material's own
+            description, and it is what the study-materials list renders under
+            the title. Relabelled from "Note" so the two aren't twins. */}
+        <div className="um-field">
+          <label className="um-label">Description</label>
           <textarea
             className="um-input um-textarea"
             placeholder='Optional: add helpful context (e.g. "Focus on examples 5-8")'

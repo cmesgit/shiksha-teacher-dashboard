@@ -270,7 +270,13 @@ export default function TeacherRoutes() {
         {/* Session Recordings */}
         <Route path="classes/:subjectId/session-recordings" element={<SessionRecordings />} />
         <Route path="classes/:subjectId/session-recordings/upload" element={<UploadRecording />} />
-        <Route path="classes/:subjectId/session-recordings/:recordingId/:videoId" element={<RecordingPlayer />} />
+        {/* No :videoId segment: it only ever existed so the player could build
+            an unauthenticated Bunny embed URL itself. The player now asks
+            /recordings/:id/playback/ for a signed one, so the guid never
+            needs to be in the address bar. The legacy 5-segment URL is kept
+            mounted so old links/bookmarks still play. */}
+        <Route path="classes/:subjectId/session-recordings/:recordingId" element={<RecordingPlayer />} />
+        <Route path="classes/:subjectId/session-recordings/:recordingId/:legacyVideoId" element={<RecordingPlayer />} />
 
         {/* Students (per class) */}
         <Route path="classes/:subjectId/students" element={<StudentsList />} />

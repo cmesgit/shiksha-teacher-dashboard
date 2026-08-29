@@ -52,9 +52,9 @@
   gap: 20px;
 }
 
-.um-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media (max-width: 520px) { .um-row { grid-template-columns: 1fr; } }
-
+/* `.um-row` (the Chapter | Batch two-up) went with the legacy chapter
+   select — Batch is on its own row now and ChapterTagPicker brings its
+   own layout. */
 .um-field { display: flex; flex-direction: column; gap: 6px; }
 .um-label {
   font-size: 10.5px;
@@ -81,20 +81,8 @@
 select.um-input { cursor: pointer; }
 .um-textarea { resize: vertical; min-height: 72px; font-family: var(--font-body); }
 
-.um-inline { display: flex; gap: 8px; align-items: center; }
-.um-inline .um-input { flex: 1; min-width: 0; }
-.um-linkBtn {
-  flex-shrink: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--primary);
-  font-size: 11.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  font-family: var(--font-body);
-}
-.um-linkBtn:hover { text-decoration: underline; }
+/* `.um-inline` / `.um-linkBtn` styled the old "Select chapter [Custom]"
+   toggle pair. Both are gone with it — the picker owns that interaction. */
 
 .um-dropzone {
   display: flex;
