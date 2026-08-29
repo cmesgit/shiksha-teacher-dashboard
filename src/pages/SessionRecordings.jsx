@@ -28,12 +28,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import api from "../api/apiClient";
 import { fetchBatchedOrFanOut, fanOutPerSubject } from "../api/batchedList";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 import ConfirmDialog from "../components/ConfirmDialog";
+import EditRecordingModal from "../components/EditRecordingModal";
 import { subjectChipSlot } from "../utils/subjectChips";
 import "../styles/academyScreens.css";
 import "../styles/session-recordings.css";
@@ -86,6 +87,7 @@ export default function SessionRecordings() {
 
   const [deletingId, setDeletingId] = useState(null); // which card is mid-delete
   const [confirmDlg, setConfirmDlg] = useState(null);  // ConfirmDialog state
+  const [editing, setEditing] = useState(null);        // recording being edited
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const uploadMenuRef = useRef(null);
 
@@ -256,8 +258,10 @@ export default function SessionRecordings() {
 
   const openPlayer = (rec) => {
     if (rec.status !== STATUS_READY) return;
+    // No bunny_video_id in the URL any more — the player fetches a signed
+    // embed URL from the API instead of building one from the guid.
     navigate(
-      `/teacher/classes/${rec.subjectId}/session-recordings/${rec.id}/${rec.bunny_video_id}`
+      `/teacher/classes/${rec.subjectId}/session-recordings/${rec.id}`
     );
   };
 
@@ -273,6 +277,17 @@ export default function SessionRecordings() {
       setDeletingId(null);
       setConfirmDlg(null);
     }
+  };
+
+  // The PATCH response is the bare SessionRecordingSerializer — the same shape
+  // the status poll returns, and with the same gap: it knows nothing about the
+  // subjectId/subjectName/courseTitle tags this screen attached when it
+  // flattened the subjects together. So MERGE it exactly as the poll does
+  // (~:196-204) rather than replacing the row or refetching the whole grid.
+  const handleSaved = (updated) => {
+    setRecordings((prev) =>
+      prev.map((rec) => (String(rec.id) === String(updated.id) ? { ...rec, ...updated } : rec))
+    );
   };
 
   const askDelete = (rec) =>
@@ -464,6 +479,22 @@ export default function SessionRecordings() {
                         </div>
 
                         <div className="recCard__actions">
+                          {/* Same availability as delete, deliberately: a
+                              failed upload is finished, and renaming one
+                              before clearing it away is a reasonable thing to
+                              want. A still-processing row has nothing stable
+                              to edit yet. */}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              className="recCard__btn"
+                              aria-label={`Edit ${rec.title}`}
+                              onClick={(e) => { e.stopPropagation(); setEditing(rec); }}
+                            >
+                              <FiEdit2 aria-hidden="true" />
+                              Edit
+                            </button>
+                          )}
                           {canDelete && (
                             <button
                               type="button"
@@ -498,6 +529,16 @@ export default function SessionRecordings() {
         dialog={confirmDlg && { ...confirmDlg, busy: deletingId != null }}
         onClose={() => setConfirmDlg(null)}
       />
+      {editing && (
+        // No player on this screen, so "Set from player" has nothing to read
+        // and renders disabled with its hint. The timecode fields are the
+        // whole control here.
+        <EditRecordingModal
+          recording={editing}
+          onClose={() => setEditing(null)}
+          onSaved={handleSaved}
+        />
+      )}
     </div>
   );
 }
