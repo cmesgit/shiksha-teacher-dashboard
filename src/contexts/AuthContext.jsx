@@ -63,6 +63,8 @@ api.interceptors.response.use(
     // other section refreshed and retried, these just failed.
     const isMeCall           = url.includes("/me/");
     const isPublicEndpoint   = url.includes("/accounts/signup/") ||
+                               url.includes("/accounts/register/") ||
+                               url.includes("/accounts/oauth/google/") ||
                                url.includes("/accounts/email/check/") ||
                                url.includes("/accounts/verify-email/") ||
                                url.includes("/accounts/resend-verification/");
@@ -266,13 +268,21 @@ export function AuthProvider({ children }) {
 
   const switchProfile = selectProfile;
 
-  // ── Step 2B — enter a teaching track (account password) ────────────────────
-  // `track` is optional and one of "academy" | "skill" (backend contract). When
-  // omitted the backend defaults to academy-if-approved, else the first approved
-  // track. Error codes map to the switcher's inline messages.
-  const enterTeacherMode = async (password, track) => {
+  // ── Step 2B — enter a teaching track (teacher-mode PIN) ────────────────────
+  // CHANGED 2026-09-06: this used to send the ACCOUNT PASSWORD. It now sends
+  // the optional teacher-mode PIN, and sends nothing when none is set — most
+  // teachers will never see a prompt at all. The password gate was removed
+  // because it protected nothing (the caller is already signed in and typed
+  // that password minutes ago at login) while being the highest-friction
+  // moment on the teacher path. The PIN exists for shared family devices,
+  // where a child on the same account could otherwise open a gradebook.
+  //
+  // `pin` may be omitted/empty. `track` is optional and one of
+  // "academy" | "skill"; when omitted the backend defaults to
+  // academy-if-approved, else the first approved track.
+  const enterTeacherMode = async (pin, track) => {
     try {
-      await api.post("/accounts/context/teacher/", { password, track });
+      await api.post("/accounts/context/teacher/", { pin, track });
       setLoading(true);
       await bootstrap();
       return { ok: true };
@@ -282,6 +292,31 @@ export function AuthProvider({ children }) {
       if (code === "not_approved")  return { notApproved: true };
       if (code === "track_pending") return { trackPending: true };
       if (code === "track_locked")  return { trackLocked: true };
+      if (code === "bad_pin")       return { badPin: true };
+      return Promise.reject({ message: extractError(err), raw: err });
+    }
+  };
+
+  // Whether entering teacher mode will prompt for a PIN. Lets a caller show
+  // the field only when it is actually needed instead of always asking.
+  const teacherPinRequired = async () => {
+    try {
+      const res = await api.get("/accounts/context/teacher/pin/");
+      return !!res.data?.requires_pin;
+    } catch {
+      return false;
+    }
+  };
+
+  // Set / change / clear the teacher-mode PIN. Requires the ACCOUNT PASSWORD —
+  // deliberately, and unlike entering teacher mode. This is the destructive
+  // operation and doubles as the forgot-PIN path (no old PIN needed). Pass an
+  // empty `pin` to remove it.
+  const setTeacherPin = async (pin, password) => {
+    try {
+      const res = await api.post("/accounts/context/teacher/pin/", { pin, password });
+      return { ok: true, requiresPin: !!res.data?.requires_pin };
+    } catch (err) {
       return Promise.reject({ message: extractError(err), raw: err });
     }
   };
@@ -355,6 +390,89 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Account-first registration ─────────────────────────────────────────────
+  // Email + password + terms. No role, no teacher type, no profile name — a
+  // person is a learner by default and teaching is added later from inside the
+  // product (see addTeacherIdentity). Does NOT sign anyone in: the account is
+  // unverified until the emailed link is clicked, and clicking it is what
+  // creates the session.
+  const register = async (email, password, termsAccepted) => {
+    try {
+      const res = await api.post("/accounts/register/", {
+        email, password, terms_accepted: !!termsAccepted,
+      });
+      return res.data;
+    } catch (err) {
+      return Promise.reject({
+        message: extractError(err),
+        code: err?.response?.data?.code,
+        raw: err,
+      });
+    }
+  };
+
+  // ── Google sign-in ─────────────────────────────────────────────────────────
+  // `credential` is the ID token from Google Identity Services.
+  //
+  // Returns { needsConsent: true, email, name } when no account exists yet —
+  // the caller shows a single terms checkbox and calls again with
+  // termsAccepted=true. Consent stays explicit; it is never inferred from the
+  // Google click.
+  const signInWithGoogle = async (credential, termsAccepted) => {
+    try {
+      const res = await api.post("/accounts/oauth/google/", {
+        credential, terms_accepted: !!termsAccepted,
+      });
+      const data = res.data;
+      setProfiles(data.profiles || []);
+      setTeacherInfo(data.teacher || null);
+      setContext(data.context);
+      setLoading(true);
+      await bootstrap();
+      return data;
+    } catch (err) {
+      const code = err?.response?.data?.code;
+      if (code === "no_account") {
+        return {
+          needsConsent: true,
+          email: err.response.data.email,
+          name:  err.response.data.name || "",
+        };
+      }
+      if (code === "disabled") return { unavailable: true };
+      return Promise.reject({ message: extractError(err), code, raw: err });
+    }
+  };
+
+  // ── Teaching identity ──────────────────────────────────────────────────────
+  // Reports what this account holds and may add. Replaces the old
+  // "re-enter signup to add a track" path — the caller is already
+  // authenticated, so no password is collected.
+  const getTeacherIdentity = async () => {
+    try {
+      const res = await api.get("/accounts/identities/teacher/");
+      return res.data;
+    } catch (err) {
+      return Promise.reject({ message: extractError(err), raw: err });
+    }
+  };
+
+  // Start teaching, or add the track not yet held. `track` is
+  // "academy" | "skill". Skill goes live immediately; academy lands in the
+  // admin review queue (`needs_review` in the response).
+  const addTeacherIdentity = async (track, payload = {}) => {
+    try {
+      const res = await api.post("/accounts/identities/teacher/", { track, ...payload });
+      setLoading(true);
+      await bootstrap();
+      return res.data;
+    } catch (err) {
+      const code = err?.response?.data?.code;
+      if (code === "track_held") return { alreadyHeld: true, detail: extractError(err) };
+      return Promise.reject({ message: extractError(err), code, raw: err });
+    }
+  };
+
   // ── Logout ─────────────────────────────────────────────────────────────────
   // Clears state, then by default hard-redirects to LOGIN_URL — the dashboard
   // apps have no in-app /login route, so they rely on this. Callers that want to
@@ -399,6 +517,9 @@ export function AuthProvider({ children }) {
         loading, api,
         login, selectProfile, switchProfile,
         enterTeacherMode, switchTrack, setProfilePin,
+        teacherPinRequired, setTeacherPin,
+        register, signInWithGoogle,
+        getTeacherIdentity, addTeacherIdentity,
         signup, lookupEmail, checkEmail, logout, hasRole, hasPermission, bootstrap,
       }}
     >
@@ -422,6 +543,9 @@ export function useAuth() {
       login: async () => null, selectProfile: async () => null, switchProfile: async () => null,
       enterTeacherMode: async () => ({ ok: false }), switchTrack: async () => ({ ok: false }),
       setProfilePin: async () => null,
+      teacherPinRequired: async () => false, setTeacherPin: async () => null,
+      register: async () => null, signInWithGoogle: async () => null,
+      getTeacherIdentity: async () => null, addTeacherIdentity: async () => null,
       signup: async () => null, checkEmail: async () => ({}),
       lookupEmail: async () => ({ profiles: [], has_teacher: false }),
       logout: () => {}, hasRole: () => false, hasPermission: () => false,

@@ -22,9 +22,12 @@
  *
  * Track data comes from useAuth().teacherInfo.tracks = { academy, skill }, each
  * "locked" | "pending" | "approved" (backend contract). Entering a Track from a
- * non-teaching context re-confirms the account password via enterTeacherMode(
- * password, track); flipping between two already-held Tracks while teaching uses
- * switchTrack(track) with no password. Locked tracks are never surfaced here —
+ * non-teaching context calls enterTeacherMode(pin, track) — with NO pin first,
+ * prompting only if the server answers `bad_pin`, so an account without a
+ * teaching PIN (the default) goes straight through with no modal. Flipping
+ * between two already-held Tracks while teaching uses switchTrack(track).
+ * Neither path asks for the account password any more; that is now only for
+ * SETTING the PIN. Locked tracks are never surfaced here —
  * they're invisible until applied for (Settings → Teacher identity), matching
  * the app-wide rule that a rejected/locked track isn't a switch target.
  *
@@ -177,12 +180,24 @@ function ResetPinModal({ profile, onConfirm, onCancel, loading, error }) {
   );
 }
 
-/* ── Account-password confirm (enter a teaching track) ── */
-function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
-  const [pw, setPw] = useState("");
+/* ── Teacher-mode PIN prompt (enter a teaching track) ──
+   Only mounts when the account actually has a teacher PIN set. Most teachers
+   never see it: entry is attempted with no PIN first and this appears only if
+   the server answers `bad_pin`.
+
+   CHANGED 2026-09-06: this used to ask for the full ACCOUNT PASSWORD on every
+   entry into teacher mode. That protected nothing — the person is already
+   signed in and typed that password at login — while being the most
+   friction-heavy moment on the teacher path. The PIN replaced it because one
+   account can hold a teacher and their own children, so a shared family
+   device does need *something*. Setting the PIN still takes the account
+   password; that lives in Settings, not here. */
+function TeacherPinModal({ title, onConfirm, onCancel, loading, error }) {
+  const [pin, setPin] = useState("");
   const [show, setShow] = useState(false);
   const ref = useRef(null);
   useEffect(() => { ref.current?.focus(); }, []);
+  const valid = /^\d{4,6}$/.test(pin);
   // Portalled to document.body — same header backdrop-filter clipping issue
   // as PinModal above.
   return createPortal(
@@ -191,19 +206,21 @@ function PasswordModal({ title, onConfirm, onCancel, loading, error }) {
         <span className="ps-av ps-av--icon" style={{ width: 56, height: 56, fontSize: 28 }}><PiGraduationCap aria-hidden="true" /></span>
         <h3 className="ps-modal__title">{title || "Enter teaching track"}</h3>
         <p style={{ fontSize: 12, color: "#8a8a8a", margin: "4px 0 10px", lineHeight: 1.5 }}>
-          For security, enter your <b>account login password</b> (the one you use to sign in to ShikshaCom).
+          This account has a <b>teaching PIN</b>. Enter it to open your teaching dashboard.
         </p>
-        <p className="ps-modal__sub">Confirm your account password</p>
+        <p className="ps-modal__sub">Teaching PIN</p>
         <div className="ps-pw-wrap">
-          <input ref={ref} type={show ? "text" : "password"} value={pw}
-            onChange={(e) => setPw(e.target.value)} className="ps-pw-input" placeholder="Password"
-            onKeyDown={(e) => e.key === "Enter" && pw && onConfirm(pw)} />
+          <input ref={ref} type={show ? "text" : "password"} value={pin}
+            inputMode="numeric" maxLength={6} autoComplete="off"
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            className="ps-pw-input" placeholder="4–6 digits"
+            onKeyDown={(e) => e.key === "Enter" && valid && onConfirm(pin)} />
           <button type="button" className="ps-pw-eye" onClick={() => setShow((v) => !v)}>
             {show ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
           </button>
         </div>
         {error && <p className="ps-modal__error">{error}</p>}
-        <button className="ps-modal__confirm" onClick={() => onConfirm(pw)} disabled={loading || !pw}>
+        <button className="ps-modal__confirm" onClick={() => onConfirm(pin)} disabled={loading || !valid}>
           {loading ? "Entering…" : "Continue"}
         </button>
         <button className="ps-modal__cancel" onClick={onCancel}>Cancel</button>
@@ -237,7 +254,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   const [open, setOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState(null);
   const [forgotTarget, setForgotTarget] = useState(null);  // reset-PIN-via-password
-  const [showPwModal, setShowPwModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
   // Deep link: land on /anything?settings=billing and Settings opens there.
   // Read during the FIRST RENDER, not in an effect: SettingsModal is a child,
   // and child effects run before the parent's, so its "clear the param while
@@ -286,7 +303,7 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const closeAll = () => { setOpen(false); setPinTarget(null); setForgotTarget(null); setShowPwModal(false); setModalError(""); };
+  const closeAll = () => { setOpen(false); setPinTarget(null); setForgotTarget(null); setShowPinModal(false); setModalError(""); };
 
   // Forgot PIN → reset with the account password (no old PIN), then switch in.
   const doResetPin = async (newPin, password) => {
@@ -334,13 +351,16 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
   const [pendingTrack, setPendingTrack] = useState(null);
   const [pendingDest,  setPendingDest]  = useState("");
 
-  // Entry point for a track button. From a non-teaching context we re-confirm
-  // the account password; while already teaching we flip tracks password-free.
+  // Entry point for a track button. While already teaching we flip tracks
+  // directly. From a non-teaching context we ATTEMPT ENTRY WITH NO PIN first
+  // and only prompt if the server says one is set — so the overwhelming
+  // majority of teachers, who have no PIN, go straight through with no modal
+  // and no extra round trip. Previously this always opened a password modal.
   const goToTrack = (track, dest) => {
     setOpen(false); setModalError("");
     if (isTeacherContext) { doSwitchTrack(track, dest); return; }
     setPendingTrack(track); setPendingDest(dest);
-    setShowPwModal(true);
+    doEnterTeacher("", { track, dest, silent: true });
   };
 
   const doSwitchTrack = async (track, dest) => {
@@ -350,11 +370,28 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
     } catch { /* already-teaching flip failed (rare race) — leave view as-is */ }
   };
 
-  const doEnterTeacher = async (password) => {
-    setModalLoading(true); setModalError("");
+  // `silent` marks the no-PIN first attempt: a `bad_pin` answer there is not an
+  // error the user should see, it is simply how we discover a PIN exists. Any
+  // OTHER failure still has to surface, and there is no modal mounted yet to
+  // show it in — hence the alert-free fallbacks below open the modal so the
+  // message has somewhere to land.
+  const doEnterTeacher = async (pin, opts = {}) => {
+    const track  = opts.track ?? pendingTrack;
+    const dest   = opts.dest  ?? pendingDest;
+    const silent = !!opts.silent;
+
+    setModalLoading(true);
+    if (!silent) setModalError("");
     try {
-      const result = await enterTeacherMode(password, pendingTrack || undefined);
-      if (result.ok) { closeAll(); window.location.href = destUrl(pendingDest); return; }
+      const result = await enterTeacherMode(pin, track || undefined);
+      if (result.ok) { closeAll(); window.location.href = destUrl(dest); return; }
+
+      if (result.badPin) {
+        // Expected on the silent probe — this account has a PIN. Ask for it.
+        setShowPinModal(true);
+        setModalError(silent ? "" : "Incorrect PIN.");
+        return;
+      }
       if (result.needsSignup) {
         closeAll();
         // App.jsx only lets an already-authenticated visitor onto /signup when
@@ -362,20 +399,25 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
         // normal logged-out-only signup guard) — without it this silently
         // bounces back to "/" with no explanation. teacherSignupUrl is a bare
         // "/signup?role=teacher" from the caller, so append the specific track
-        // the user just tried to enter (known here as `pendingTrack`).
+        // the user just tried to enter.
         if (teacherSignupUrl) {
           const sep = teacherSignupUrl.includes("?") ? "&" : "?";
-          window.location.href = pendingTrack
-            ? `${teacherSignupUrl}${sep}add_track=${pendingTrack}`
+          window.location.href = track
+            ? `${teacherSignupUrl}${sep}add_track=${track}`
             : teacherSignupUrl;
         }
         return;
       }
-      if (result.notApproved)  { setModalError("Your teacher account is awaiting admin approval."); return; }
-      if (result.trackPending) { setModalError("This track is awaiting approval — you'll get access once it's reviewed."); return; }
-      if (result.trackLocked)  { setModalError("This track isn't enabled on your account yet. Apply from Settings → Teacher identity."); return; }
-    } catch (err) { setModalError(err.message || "Incorrect password."); }
-    finally { setModalLoading(false); }
+      // These three can now arrive on the silent probe, before any modal is
+      // mounted. Open it so the explanation is visible instead of the click
+      // appearing to do nothing.
+      if (result.notApproved)  { setShowPinModal(true); setModalError("Your teacher account is awaiting admin approval."); return; }
+      if (result.trackPending) { setShowPinModal(true); setModalError("This track is awaiting approval — you'll get access once it's reviewed."); return; }
+      if (result.trackLocked)  { setShowPinModal(true); setModalError("This track isn't enabled on your account yet. Apply from Settings → Teacher identity."); return; }
+    } catch (err) {
+      setShowPinModal(true);
+      setModalError(err.message || "Couldn't open your teaching dashboard.");
+    } finally { setModalLoading(false); }
   };
 
   const accountName  = activeProfile?.display_name || user?.username || "Account";
@@ -596,11 +638,11 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
           onCancel={() => { setForgotTarget(null); setModalError(""); }}
           loading={modalLoading} error={modalError} />
       )}
-      {showPwModal && (
-        <PasswordModal
+      {showPinModal && (
+        <TeacherPinModal
           title={`Switch to ${trackLabel(pendingTrack)}`}
-          onConfirm={doEnterTeacher}
-          onCancel={() => { setShowPwModal(false); setModalError(""); }}
+          onConfirm={(pin) => doEnterTeacher(pin)}
+          onCancel={() => { setShowPinModal(false); setModalError(""); }}
           loading={modalLoading} error={modalError} />
       )}
 
