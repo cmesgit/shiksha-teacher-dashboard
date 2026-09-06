@@ -152,7 +152,7 @@ export default function SettingsModal({
   open,
   section: initialSection = "profiles",
   onClose,
-  teacherSignupUrl = "/signup?role=teacher",
+  teacherSignupUrl = "/become-a-teacher",
   teachUrl = "",
   onManageTrack,
 }) {
@@ -367,9 +367,9 @@ export default function SettingsModal({
   /* Teaching-track destinations. The Faculty and Expert public-profile editors
      are real screens in the teacher app; Settings links to them rather than
      shipping a second copy of each form. */
-  const homeBase = (teacherSignupUrl || "").split("/signup")[0];
+  const homeBase = (teacherSignupUrl || "").split("/become-a-teacher")[0];
   const applyUrl = (track) =>
-    `${homeBase}/signup?role=teacher&add_track=${encodeURIComponent(track)}`;
+    `${homeBase}/become-a-teacher?track=${encodeURIComponent(track)}`;
   // "Edit … profile" goes to that track's public-profile editor; "Switch to …"
   // goes to the track's normal landing page — switching tracks shouldn't dump
   // you into a form you didn't ask for.

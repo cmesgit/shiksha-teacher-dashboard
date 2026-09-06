@@ -460,11 +460,24 @@ export function AuthProvider({ children }) {
   // Start teaching, or add the track not yet held. `track` is
   // "academy" | "skill". Skill goes live immediately; academy lands in the
   // admin review queue (`needs_review` in the response).
+  //
+  // ⚠ DELIBERATELY DOES NOT BOOTSTRAP. `bootstrap()` sets loading=true, and
+  // App.jsx renders `<RouteFallback />` for the whole app while loading —
+  // which UNMOUNTS the route tree, destroying the calling screen's state. The
+  // symptom is brutal to diagnose: the POST returns 201, the track really is
+  // added, and the user is bounced back to a freshly-mounted form as though
+  // nothing happened. Caught in the browser, not by any test.
+  //
+  // This is the same trap Content Studio hit (see the root CLAUDE.md note
+  // about `load({quiet: true})` and dialogs being destroyed by a refresh).
+  //
+  // The caller shows its own confirmation and every exit from it is a real
+  // navigation, so the next page load bootstraps with fresh teacherInfo
+  // anyway. If a caller ever needs the context updated in place, it must call
+  // bootstrap() itself AFTER committing whatever state it needs to survive.
   const addTeacherIdentity = async (track, payload = {}) => {
     try {
       const res = await api.post("/accounts/identities/teacher/", { track, ...payload });
-      setLoading(true);
-      await bootstrap();
       return res.data;
     } catch (err) {
       const code = err?.response?.data?.code;

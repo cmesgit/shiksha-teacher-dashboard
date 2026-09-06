@@ -394,16 +394,16 @@ export default function ProfileSwitcher({ teacherSignupUrl, learnUrl, teachUrl, 
       }
       if (result.needsSignup) {
         closeAll();
-        // App.jsx only lets an already-authenticated visitor onto /signup when
-        // ?add_track= is present (it's the "add a teaching track" bypass of the
-        // normal logged-out-only signup guard) — without it this silently
-        // bounces back to "/" with no explanation. teacherSignupUrl is a bare
-        // "/signup?role=teacher" from the caller, so append the specific track
-        // the user just tried to enter.
+        // `teacherSignupUrl` now points at /become-a-teacher, which is an
+        // ordinary authenticated page — so none of the old ?add_track=
+        // machinery is needed. That parameter existed purely to bypass
+        // App.jsx's "signup is for logged-out visitors" guard, because adding
+        // a track meant re-entering SIGNUP while already signed in. It does
+        // not any more, and passing ?track= is only a convenience hint.
         if (teacherSignupUrl) {
           const sep = teacherSignupUrl.includes("?") ? "&" : "?";
           window.location.href = track
-            ? `${teacherSignupUrl}${sep}add_track=${track}`
+            ? `${teacherSignupUrl}${sep}track=${track}`
             : teacherSignupUrl;
         }
         return;
