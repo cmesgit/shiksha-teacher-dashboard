@@ -34,6 +34,7 @@ import api from "../api/apiClient";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 import ConfirmDialog from "../components/ConfirmDialog";
+import EditMaterialModal from "../components/EditMaterialModal";
 import "../styles/academyScreens.css";
 import "../styles/study-materials.css";
 
@@ -77,6 +78,8 @@ export default function StudyMaterials() {
   const [sortOrder, setSortOrder] = useState("newest");
   const [openMenu, setOpenMenu] = useState(null);
   const [confirmTarget, setConfirmTarget] = useState(null);
+  // The raw serializer payload of the material being edited, or null.
+  const [editTarget, setEditTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   // One entry per subject actually taught. The payload can repeat a subject
@@ -112,12 +115,18 @@ export default function StudyMaterials() {
         id: item.id,
         subjectId: String(cls.subjectId),
         subjectName: cls.subjectName || item.subject_name || "Subject",
-        // The design's sub-line is "subject · batch", but the materials
-        // serializer exposes no batch (StudyMaterial.batch exists on the model
-        // and is simply not serialised). Chapter is the nearest thing it does
-        // return and is what a teacher scans for, so it stands in until/unless
-        // the API grows a batch field — at which point this picks it up.
+        // The design's sub-line is "subject · batch": batch when the material
+        // has one, chapter for a course-wide material, which has no batch to
+        // name. (The comment that used to sit here claimed the serializer
+        // exposed no batch and that chapter "stands in until the API grows a
+        // batch field". That was already untrue when it was written —
+        // get_batch_name has been on StudyMaterialSerializer the whole time —
+        // and this line has always read batch_name first.)
         scope: item.batch_name || item.chapter_title || "No chapter",
+        // The untouched serializer payload, for the edit modal. Kept whole
+        // rather than destructured so adding a field to the form does not mean
+        // threading it through this mapper as well.
+        raw: item,
         title: item.title,
         date: created.toLocaleDateString("en-GB", {
           day: "numeric",
@@ -468,6 +477,31 @@ export default function StudyMaterials() {
                             type="button"
                             role="menuitem"
                             className="ac-menu__item"
+                            onClick={() => {
+                              setOpenMenu(null);
+                              setEditTarget(item.raw);
+                            }}
+                          >
+                            <svg
+                              width="13"
+                              height="13"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                            Edit details
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="ac-menu__item"
                             onClick={() => handleDownload(item)}
                           >
                             <svg
@@ -537,6 +571,34 @@ export default function StudyMaterials() {
         }
         onClose={() => { if (!deleting) setConfirmTarget(null); }}
       />
+
+      {editTarget && (
+        <EditMaterialModal
+          material={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={(updated) =>
+            // Patch the one row in place from the response rather than
+            // refetching: a reload here would re-run the whole subject fan-out
+            // and, more importantly, reset the pill and sort the teacher had
+            // set before opening the modal.
+            setMaterials((prev) =>
+              prev.map((m) =>
+                m.id === updated.id
+                  ? {
+                      ...m,
+                      title: updated.title,
+                      scope:
+                        updated.batch_name ||
+                        updated.chapter_title ||
+                        "No chapter",
+                      raw: updated,
+                    }
+                  : m
+              )
+            )
+          }
+        />
+      )}
     </div>
   );
 }

@@ -14,6 +14,9 @@ export const NAV = [
   { l: "Students", i: "users", to: "/teacher/students" },
   { l: "Batch Progress", i: "chart", to: "/teacher/batch-progress" },
   { section: "CONTENT" },
+  // First in CONTENT because it is the index of everything below it: the four
+  // items that follow each show one type, this shows all four at once.
+  { l: "My Resources", i: "book", to: "/teacher/resources" },
   { l: "Assignments", i: "file", to: "/teacher/assignments" },
   { l: "Tests & Quizzes", i: "help", to: "/teacher/quizzes" },
   // Phase 6 item 4. `badgeKey` binds the live pill resolved by the sidebar —

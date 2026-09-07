@@ -1,0 +1,150 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   my-resources.css — the unified teacher content index (/teacher/resources).
+
+   Layout only. Every shape here — the row, the tabs, the tags, the selects —
+   comes from academyScreens.css; this file positions the extra columns that
+   list does not already have (type tag, author, batch, status, date) and
+   nothing else.
+
+   The `.mres-` prefix is deliberate and unique: `.sm-*` had to be renamed
+   `.stm-*` once already because shared/SettingsModal.css defines a global
+   `.sm-title`. Check for a collision before adding a prefix, not after.
+
+   NO LITERAL COLOURS. Everything resolves through src/shared/tokens.css.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Controls ──────────────────────────────────────────────────────────── */
+
+.mres-tabs {
+  /* The type chips scroll rather than wrap: five of them plus their counts
+     overflow a narrow viewport, and a wrapped second row reads as a separate
+     control group. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mres-tabs::-webkit-scrollbar { display: none; }
+
+.mres-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mres-controls .ac-searchInput {
+  /* Takes the slack so the four controls sit flush at any width, but never
+     collapses below a readable field — min-width:0 alone would let it shrink
+     to nothing next to the selects. */
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+.mres-seg { flex: 0 0 auto; }
+
+.mres-linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--action);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ── Row ───────────────────────────────────────────────────────────────── */
+
+.mres-row {
+  cursor: pointer;
+  align-items: center;
+}
+
+.mres-row:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* A fixed width, not a min: the type word is the leftmost thing on every row
+   and a tag that resizes per row ("Quiz" vs "Assignment") makes the titles
+   beside it fail to line up into a scannable column. */
+.mres-typeTag {
+  flex: 0 0 84px;
+  text-align: center;
+}
+
+.mres-title {
+  /* Long titles truncate rather than wrap — a wrapped title changes the row
+     height and breaks the scan line the fixed type column exists to create. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Budget check before changing any of these: the row is a flex line, so the
+   title gets `content width − (sum of these + type tag + status + 5 gaps)`.
+   With the 240px sidebar, a 1000px window leaves ~618px of row content —
+   which these four columns at their old widths consumed down to a 71px title.
+   The breakpoints below exist to keep that from happening, so widening a
+   column means re-checking them, not just this line. */
+.mres-owner { flex: 0 0 96px; }
+.mres-batch { flex: 0 0 96px; }
+.mres-date  { flex: 0 0 84px; text-align: right; }
+
+.mres-status {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Dim the list while a filter change is in flight, so a slow response reads as
+   "working" rather than as a result set that simply didn't change. Kept off
+   the first load, which shows the real LoadingState instead. */
+.mres-list--busy {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+/* ── Pager ─────────────────────────────────────────────────────────────── */
+
+.mres-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.mres-pager__label {
+  font-size: var(--fs-meta);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* ── Narrow viewports ──────────────────────────────────────────────────── */
+
+/* Below this the six columns cannot coexist on one line. Rather than let them
+   wrap into an unreadable block, the secondary columns fold away and the row
+   keeps its title, type and status — the three that identify it. The
+   information is still reachable on the type's own screen.
+
+   1150px, NOT ~900px: the fold has to happen while the title still has room,
+   not once it has already been crushed. Measured at 928px with the columns
+   still showing, the title got 71px — the row was unreadable well before the
+   old breakpoint would have rescued it. Verify by measuring `.mres-title`'s
+   width across this boundary, not by eye. */
+@media (max-width: 1150px) {
+  .mres-owner,
+  .mres-batch { display: none; }
+}
+
+@media (max-width: 820px) {
+  .mres-date { display: none; }
+
+  .mres-typeTag { flex-basis: 70px; }
+
+  .mres-controls .ac-select,
+  .mres-controls .ac-searchInput { flex: 1 1 100%; }
+
+  .mres-seg { width: 100%; }
+}

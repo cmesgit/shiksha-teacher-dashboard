@@ -34,6 +34,7 @@ import QuizDraftPreview from "../pages/QuizDraftPreview";
 import QuizSubmissionView from "../pages/QuizSubmissionView";
 import QuizReviewView from "../pages/QuizReviewView";
 import StudyMaterials from "../pages/StudyMaterials";
+import MyResources from "../pages/MyResources";
 import UploadMaterial from "../pages/UploadMaterial";
 import StudyMaterialView from "../pages/StudyMaterialView";
 import SessionRecordings from "../pages/SessionRecordings";
@@ -229,6 +230,10 @@ export default function TeacherRoutes() {
             they render the same screen with that subject's pill preselected. */}
         <Route path="assignments" element={<Assignments />} />
         <Route path="study-materials" element={<StudyMaterials />} />
+        {/* The union of the four lists above. Registered in academyNav.js too —
+            a route added in only one of the two places renders, but the
+            sidebar never lights up and the header shows no title. */}
+        <Route path="resources" element={<MyResources />} />
         <Route path="recordings" element={<SessionRecordings />} />
         <Route path="quizzes" element={<Quizzes />} />
 
