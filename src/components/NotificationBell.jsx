@@ -283,8 +283,20 @@ export default function NotificationBell() {
                     </span>
                     <div className="notif-bell-content">
                       <p className="notif-bell-title">{notif.title}</p>
-                      {notif.subject_name && (
-                        <p className="notif-bell-subject">{notif.subject_name}</p>
+                      {/* Which course, not just which subject. A student
+                          enrolled in two courses (or one account with two
+                          children) could not tell an assignment in Class 10
+                          Science from one in Class 12 Physics — the title
+                          named the item, the meta line named the subject, and
+                          nothing named the course. `course_name` is resolved
+                          read-time by ActivitySerializer, so this labels
+                          existing notifications too, not just new ones.
+                          filter(Boolean) so a row missing either half never
+                          renders a dangling separator. */}
+                      {(notif.subject_name || notif.course_name) && (
+                        <p className="notif-bell-subject">
+                          {[notif.subject_name, notif.course_name].filter(Boolean).join(" \u00b7 ")}
+                        </p>
                       )}
                       <p className="notif-bell-time">
                         {timeAgo(notif.created_at)}

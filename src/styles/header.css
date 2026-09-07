@@ -45,6 +45,10 @@
 /* react-icons glyph (was a literal emoji) — flex keeps the SVG off the baseline. */
 .notif-bell-icon { display:flex; align-items:center; font-size:var(--icon-sm); flex-shrink:0; margin-top:2px; }
 .notif-bell-title { font-size:13px; color:var(--ink); margin:0 0 4px; line-height:1.4; }
+/* The meta line under the title: "Physics · Class 10 Science". Rendered by
+   NotificationBell.jsx but with NO rule anywhere in either dashboard, so it
+   inherited the title's size and read as a second headline. */
+.notif-bell-subject { font-size:11px; color:var(--ink-muted); margin:0 0 3px; line-height:1.35; }
 .notif-bell-time { font-size:11px; color:var(--ink-faint); margin:0; }
 @media (max-width:1239px){
   .header{padding:0 16px;gap:12px}
