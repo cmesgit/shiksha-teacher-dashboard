@@ -32,10 +32,24 @@ import { LoadingState } from "../../components/StateViews";
 const MODES = [
   { v: "online", label: "Online only" },
   { v: "home",   label: "At my place" },
-  { v: "travel", label: "I travel" },
+  { v: "travel", label: "Home tutor (I travel to the learner)" },
 ];
 
 const OFFLINE = new Set(["home", "travel"]);
+
+/* The languages offered here are a FIXED vocabulary, unlike the directory's
+   language filter which is derived from what the roster already teaches
+   (GET /skill/languages/). The asymmetry is deliberate: a filter must only
+   offer values that match somebody, but an input cannot be sourced from
+   existing answers or the first teacher to speak a language could never say
+   so. Anything a teacher already had that is not in this list is preserved and
+   rendered alongside it — see `languageOptions` below — so tightening the
+   vocabulary never silently drops an existing answer. */
+const LANGUAGE_OPTIONS = [
+  "English", "Hindi", "Mizo", "Assamese", "Bengali", "Gujarati", "Kannada",
+  "Malayalam", "Manipuri", "Marathi", "Nepali", "Odia", "Punjabi", "Tamil",
+  "Telugu", "Urdu",
+];
 
 // Friendly labels for the field names the backend returns in `missing`.
 const MISSING_LABELS = {
@@ -73,6 +87,8 @@ export default function ExpertProfileEdit() {
   const [saved, setSaved]       = useState(false);
   const [err, setErr]           = useState("");
   const [cats, setCats]         = useState([]);
+  const [stateNames, setStateNames] = useState([]);
+  const [districts, setDistricts]   = useState([]);
   const [f, setF]               = useState(BLANK);
   const [photoUrl, setPhotoUrl] = useState("");   // existing photo from server
   const [photoFile, setPhotoFile] = useState(null); // newly chosen file
@@ -98,6 +114,10 @@ export default function ExpertProfileEdit() {
     api.get("/skill/categories/")
       .then((r) => { if (alive) setCats(Array.isArray(r.data) ? r.data : []); })
       .catch(() => { /* category list is optional — free-text still works */ });
+
+    api.get("/accounts/states/")
+      .then((r) => { if (alive) setStateNames((r.data || []).map((s) => s.name)); })
+      .catch(() => { /* the selects fall back to whatever is already saved */ });
 
     api.get("/skill/teacher/profile/")
       .then((r) => {
@@ -149,6 +169,46 @@ export default function ExpertProfileEdit() {
   useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
 
   const set = (k) => (e) => { setSaved(false); setF((p) => ({ ...p, [k]: e.target.value })); };
+
+  /* Districts follow the chosen state. Guarded because a teacher clicking
+     through the state list fires overlapping requests, and the slowest reply
+     would otherwise win and repopulate the list for a state they left. */
+  useEffect(() => {
+    if (!f.state) { setDistricts([]); return undefined; }
+    let alive = true;
+    api.get(`/accounts/states/${encodeURIComponent(f.state)}/districts/`)
+      .then((r) => { if (alive) setDistricts(Array.isArray(r.data) ? r.data : []); })
+      .catch(() => { if (alive) setDistricts([]); });
+    return () => { alive = false; };
+  }, [f.state]);
+
+  /* Changing state must drop a district belonging to the old one, or the
+     profile saves a (state, district) pair that cannot both be true. */
+  const changeState = (e) => {
+    const next = e.target.value;
+    setSaved(false);
+    setF((p) => ({ ...p, state: next, district: "" }));
+  };
+
+  /* Kept as the comma string the save path already sends; the chips just
+     rewrite it. A language the teacher saved before this list existed stays
+     selectable rather than vanishing from their own profile. */
+  const chosenLangs = (f.languages || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const languageOptions = [
+    ...LANGUAGE_OPTIONS,
+    ...chosenLangs.filter(
+      (l) => !LANGUAGE_OPTIONS.some((o) => o.toLowerCase() === l.toLowerCase()),
+    ),
+  ];
+  const toggleLanguage = (name) => {
+    setSaved(false);
+    const on = chosenLangs.some((l) => l.toLowerCase() === name.toLowerCase());
+    const next = on
+      ? chosenLangs.filter((l) => l.toLowerCase() !== name.toLowerCase())
+      : [...chosenLangs, name];
+    setF((p) => ({ ...p, languages: next.join(", ") }));
+  };
+
   const offline = OFFLINE.has(f.class_mode);
   const hasPhoto = !!(photoFile || photoUrl);
 
@@ -400,8 +460,18 @@ export default function ExpertProfileEdit() {
                         placeholder="A short intro learners will read on your profile" />
             </div>
             <div className="sk-field">
-              <label>Languages (comma-separated)</label>
-              <input className="sk-input" value={f.languages} onChange={set("languages")} placeholder="English, Hindi, Manipuri" />
+              <label>Languages you teach in</label>
+              <div className="sk-tags">
+                {languageOptions.map((l) => {
+                  const on = chosenLangs.some((c) => c.toLowerCase() === l.toLowerCase());
+                  return (
+                    <button key={l} type="button" className={on ? "on" : ""}
+                            aria-pressed={on} onClick={() => toggleLanguage(l)}>
+                      {l}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="sk-field"><label>Availability note</label>
               <input className="sk-input" value={f.availability} onChange={set("availability")} placeholder="e.g. Evenings & weekends" /></div>
@@ -435,10 +505,29 @@ export default function ExpertProfileEdit() {
                     <input className="sk-input" value={f.pincode} onChange={set("pincode")} /></div>
                   <div className="sk-field"><label>City</label>
                     <input className="sk-input" value={f.city} onChange={set("city")} /></div>
-                  <div className="sk-field"><label>District</label>
-                    <input className="sk-input" value={f.district} onChange={set("district")} /></div>
+                  {/* State first, then district: the district list is a
+                      function of the state, so the reverse order offers a
+                      control that cannot be used yet. */}
                   <div className="sk-field"><label>State</label>
-                    <input className="sk-input" value={f.state} onChange={set("state")} /></div>
+                    <select className="sk-input" value={f.state} onChange={changeState}>
+                      <option value="">Select a state</option>
+                      {stateNames.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {/* A state saved before this list existed (or one the
+                          request failed to load) must stay visible, or opening
+                          the form silently blanks it on the next save. */}
+                      {f.state && !stateNames.includes(f.state) && (
+                        <option value={f.state}>{f.state}</option>
+                      )}
+                    </select></div>
+                  <div className="sk-field"><label>District</label>
+                    <select className="sk-input" value={f.district} onChange={set("district")}
+                            disabled={!f.state}>
+                      <option value="">{f.state ? "Select a district" : "Pick a state first"}</option>
+                      {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+                      {f.district && !districts.includes(f.district) && (
+                        <option value={f.district}>{f.district}</option>
+                      )}
+                    </select></div>
                 </div>
                 <div style={{ fontSize: 11.5, color: "#9aa9af", lineHeight: 1.5 }}>
                   Nearby learners searching for offline lessons will find you by pincode / district / state.

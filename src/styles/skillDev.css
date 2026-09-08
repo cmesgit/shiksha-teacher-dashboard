@@ -404,6 +404,34 @@
   color: var(--acc-ink);
 }
 
+/* Like .sk-seg, but for a set that wraps and has no fixed count — .sk-seg's
+   flex:1 would stretch three languages across the card and squeeze sixteen
+   into unreadable slivers. */
+.sk-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.sk-tags button {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s ease;
+}
+.sk-tags button:hover { border-color: var(--acc); }
+.sk-tags button.on {
+  border: 1.5px solid var(--acc);
+  background: var(--acc-soft);
+  color: var(--acc-ink);
+  font-weight: 700;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
    RESPONSIVE
 ───────────────────────────────────────────────────────────────────────────── */
