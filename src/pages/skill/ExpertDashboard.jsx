@@ -246,10 +246,53 @@ function advertised(a = {}) {
   return { label: "Not promoted", bg: "#9aa9af22", fg: "#6b7c83", blurb: "Subscribe to be advertised consistently and grow your reach." };
 }
 
+/* skills/profile_ops.py's expert_missing + personal_missing keys, in the
+   expert's own words. hourly_rate is deliberately NOT in that set ("booking
+   is free at launch"), so it is not here either. An unrecognised key falls
+   back to its own name so a field added server-side still shows up. */
+const MISSING_LABELS = {
+  subject_description: "what you teach",
+  languages:           "your teaching languages",
+  bio:                 "a short introduction",
+  class_mode:          "online or in-person",
+  class_location:      "your class location",
+  full_name:           "your name",
+  date_of_birth:       "your date of birth",
+  phone:               "a phone number",
+  profile_photo:       "a profile photo",
+};
+
 function buildTodos(p = {}) {
   const out = [];
-  if (p.needs_location) {
+
+  /* ExpertProfile.refresh_listing only sets is_listed once completeness()
+     passes, so a newly added Skill Dev track is unlisted with a blank
+     profile. Nothing here used to say so — this card only ever mentioned
+     location, and `missing` was read by no frontend at all.
+
+     `is_complete === false` explicitly, not `!p.is_complete`: is_listed /
+     is_complete / missing were added to profile_todo on 2026-09-09, so a
+     dashboard talking to an older backend gets `undefined` — which must not
+     render as "your profile is incomplete" to an expert who is fully set up.
+     That also lets this ship without waiting on the backend deploy. */
+  const missing = Array.isArray(p.missing) ? p.missing : null;
+
+  if (p.is_complete === false && missing && missing.length) {
+    const names = missing.map((k) => MISSING_LABELS[k] || k.replace(/_/g, " "));
+    const shown = names.slice(0, 3).join(", ");
+    const rest  = names.length > 3 ? ` and ${names.length - 3} more` : "";
+    out.push({
+      key: "listing",
+      to: "/teacher/expert/profile",
+      cta: "Complete profile",
+      text: `Learners can't find you yet — your listing stays hidden until your profile is complete. Still needed: ${shown}${rest}.`,
+    });
+  } else if (p.needs_location) {
+    // Fallback path for a backend that predates the completeness keys.
+    // Once they are present this is redundant: class_location is itself part
+    // of `missing` whenever an offline mode is set without one.
     out.push({ key: "loc", to: "/teacher/expert/profile", cta: "Add location", text: "Add your class location so nearby learners can find you for offline lessons." });
   }
+
   return out;
 }
