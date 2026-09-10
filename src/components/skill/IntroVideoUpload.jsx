@@ -14,10 +14,16 @@
  *
  * Statuses (ExpertProfile.INTRO_VIDEO_STATUS_CHOICES, reused verbatim):
  *   0 Created · 1 Uploaded · 2 Processing · 3 Transcoding · 4 Finished · 5 Error
+ *
+ * Validation lives in shared/introVideoRules.js, shared with the expert-level
+ * uploader. This component used to accept anything and report every failure —
+ * wrong format, too large, network drop — as the single word "failed".
  */
 import { useEffect, useRef, useState } from "react";
 import api from "../../shared/apiClient";
 import { uploadToBunny } from "../../shared/bunnyUpload";
+import extractError from "../../shared/extractError";
+import { ACCEPT_ATTR, MAX_SECONDS, validateIntroVideo } from "../../shared/introVideoRules";
 
 const POLL_MS = 4000;
 
@@ -29,6 +35,7 @@ export default function IntroVideoUpload({ listingId, status }) {
   // fresher status this component already saw.
   const [local, setLocal]       = useState(null);
   const [name, setName]         = useState("");
+  const [error, setError]       = useState("");
   const inputRef = useRef(null);
 
   const state = local ?? status ?? null;
@@ -46,6 +53,19 @@ export default function IntroVideoUpload({ listingId, status }) {
 
   const upload = async (file) => {
     if (!file || !listingId) return;
+
+    // Checked here as well as on the server, so a bad file costs a moment
+    // rather than a whole upload. `accept` on the input does not apply to
+    // the drop path at all, which is how untyped files got this far before.
+    const problem = await validateIntroVideo(file);
+    if (problem) {
+      setError(problem);
+      setName("");
+      setProgress(null);
+      return;
+    }
+
+    setError("");
     setName(file.name);
     setProgress(0);
     try {
@@ -53,15 +73,22 @@ export default function IntroVideoUpload({ listingId, status }) {
         title: file.name,
       });
       await uploadToBunny(file, data, { onProgress: setProgress });
-      await api.post(`/skill/teacher/listings/${listingId}/intro-video/save/`, {
+      const saved = await api.post(`/skill/teacher/listings/${listingId}/intro-video/save/`, {
         video_id: data.video_id,
       });
       setProgress(100);
-      setLocal(1);
-    } catch {
-      setLocal(5);
+      // The server syncs with Bunny on save, so this is the real status —
+      // often already 4 — not an assumed "uploaded".
+      setLocal(saved.data.intro_video_status ?? 1);
+    } catch (err) {
+      // Includes the server's own duration refusal, which names the length.
+      setError(extractError(err) || "The upload didn’t finish. Please try again.");
+      setProgress(null);
+      setLocal(null);
     }
   };
+
+  const pick = (file) => { void upload(file); };
 
   if (!listingId) {
     return (
@@ -73,12 +100,15 @@ export default function IntroVideoUpload({ listingId, status }) {
 
   if (state === 4) {
     return (
-      <div className="sk-vid sk-vid--done">
-        <span>Intro video live</span>
-        <button type="button" onClick={() => inputRef.current?.click()}>Replace</button>
-        <input ref={inputRef} type="file" accept="video/*" hidden
-               onChange={(e) => upload(e.target.files?.[0])} />
-      </div>
+      <>
+        <div className="sk-vid sk-vid--done">
+          <span>Intro video live</span>
+          <button type="button" onClick={() => inputRef.current?.click()}>Replace</button>
+          <input ref={inputRef} type="file" accept={ACCEPT_ATTR} hidden
+                 onChange={(e) => pick(e.target.files?.[0])} />
+        </div>
+        {error && <div className="sk-vid sk-vid--err"><span>{error}</span></div>}
+      </>
     );
   }
 
@@ -89,16 +119,21 @@ export default function IntroVideoUpload({ listingId, status }) {
         className="sk-drop"
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); upload(e.dataTransfer.files?.[0]); }}
+        onDrop={(e) => { e.preventDefault(); pick(e.dataTransfer.files?.[0]); }}
       >
         <i>▶</i>
         <b>Drop a clip, or browse</b>
-        <em>Under 90 seconds. Uploads to Bunny; you&apos;ll see it here once transcoding finishes.</em>
+        <em>
+          MP4, WebM or MOV, up to {MAX_SECONDS} seconds. Uploads to Bunny;
+          you&apos;ll see it here once transcoding finishes.
+        </em>
       </button>
-      <input ref={inputRef} type="file" accept="video/*" hidden
-             onChange={(e) => upload(e.target.files?.[0])} />
+      <input ref={inputRef} type="file" accept={ACCEPT_ATTR} hidden
+             onChange={(e) => pick(e.target.files?.[0])} />
 
-      {(progress != null || (state != null && state < 4)) && (
+      {error && <div className="sk-vid sk-vid--err"><span>{error}</span></div>}
+
+      {!error && (progress != null || (state != null && state < 4)) && (
         <div className={`sk-vid${state === 5 ? " sk-vid--err" : ""}`}>
           <span>
             {name || "intro clip"} · {state === 5 ? "failed" : state >= 1 ? "transcoding" : "uploading"}
