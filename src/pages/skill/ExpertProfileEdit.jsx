@@ -26,6 +26,8 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { Icon } from "../../components/SkillIcons";
 import api from "../../shared/apiClient";
 import { useBunnyUpload } from "../../hooks/useBunnyUpload";
+import extractError from "../../shared/extractError";
+import { ACCEPT_ATTR, MAX_SECONDS, validateIntroVideo } from "../../shared/introVideoRules";
 import "../../styles/skillDev.css";
 import { LoadingState } from "../../components/StateViews";
 
@@ -125,25 +127,50 @@ export default function ExpertProfileEdit() {
   const onIntroVideoFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const allowed = ["video/mp4", "video/webm", "video/quicktime"];
-    if (!allowed.includes(file.type)) {
-      setErr("Only MP4, WebM, or MOV files are allowed.");
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024 * 1024) {
-      setErr("File is too large (max 4 GB).");
+    // Format, size and duration all live in shared/introVideoRules.js, shared
+    // with the per-listing uploader so the two can't drift apart.
+    const problem = await validateIntroVideo(file);
+    if (problem) {
+      setErr(problem);
       return;
     }
     setErr("");
     try {
       const videoId = await uploadIntroVideo(file, { title: `intro-${f.full_name || "expert"}` });
-      await api.post("/skill/teacher/intro-video/save/", { video_id: videoId });
-      // Bunny still needs to transcode — not playable immediately.
-      setIntroVideoPending(true);
-    } catch {
-      setErr("Video upload failed. Please try again.");
+      const saved = await api.post("/skill/teacher/intro-video/save/", { video_id: videoId });
+      // The server now syncs with Bunny on save, so a clip Bunny has already
+      // finished comes back playable immediately instead of sitting at
+      // "uploaded" forever.
+      const url = saved.data?.intro_video_embed_url || "";
+      setIntroVideoUrl(url);
+      setIntroVideoPending(!url);
+    } catch (err) {
+      // Surfaces the server's duration refusal, which names the real length.
+      setErr(extractError(err) || "Video upload failed. Please try again.");
     }
   };
+
+  // Bunny transcodes asynchronously, so a clip that wasn't ready on save has
+  // to be polled. Nothing polled this endpoint before, which is why every
+  // expert clip ever uploaded stayed at "uploaded" and never became playable.
+  useEffect(() => {
+    if (!introVideoPending) return undefined;
+    const timer = setInterval(() => {
+      api.get("/skill/teacher/intro-video/status/")
+        .then((r) => {
+          const url = r.data?.intro_video_embed_url || "";
+          if (url) {
+            setIntroVideoUrl(url);
+            setIntroVideoPending(false);
+          } else if (r.data?.intro_video_status === 5) {
+            setIntroVideoPending(false);
+            setErr("That clip couldn’t be processed. Please try another file.");
+          }
+        })
+        .catch(() => { /* transient — the next tick retries */ });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [introVideoPending]);
 
   // Revoke the preview object URL when it changes / on unmount.
   useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
@@ -309,7 +336,7 @@ export default function ExpertProfileEdit() {
             </div>
 
             <div className="sk-field">
-              <label>Intro video <span style={{ fontWeight: 500, color: "#9aa9af" }}>— a short clip advertising what you teach</span></label>
+              <label>Intro video <span style={{ fontWeight: 500, color: "var(--ink-muted)" }}>— a short clip advertising what you teach, up to {MAX_SECONDS} seconds</span></label>
               {introVideoUrl ? (
                 <div style={{ marginTop: 4 }}>
                   <iframe
@@ -321,7 +348,7 @@ export default function ExpertProfileEdit() {
                   />
                   <label className="sk-btn sk-btn--ghost" style={{ display: "inline-flex", marginTop: 8, cursor: "pointer" }}>
                     Replace video
-                    <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={onIntroVideoFile} style={{ display: "none" }} />
+                    <input type="file" accept={ACCEPT_ATTR} onChange={onIntroVideoFile} style={{ display: "none" }} />
                   </label>
                 </div>
               ) : introUploading ? (
@@ -336,7 +363,7 @@ export default function ExpertProfileEdit() {
                   Processing your video — check back in a few minutes.
                 </div>
               ) : (
-                <input className="sk-input" type="file" accept="video/mp4,video/webm,video/quicktime" onChange={onIntroVideoFile} />
+                <input className="sk-input" type="file" accept={ACCEPT_ATTR} onChange={onIntroVideoFile} />
               )}
             </div>
 
