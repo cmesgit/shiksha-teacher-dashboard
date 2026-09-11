@@ -84,6 +84,10 @@ export default function ExpertProfileEdit() {
   // per profile, uploaded via Bunny, same pattern as Academy recordings.
   const [introVideoUrl, setIntroVideoUrl] = useState("");     // ready embed URL, or ""
   const [introVideoPending, setIntroVideoPending] = useState(false); // uploaded, still transcoding
+  // Kept separate from the form-level `err`, which renders at the very bottom
+  // of a long form — a video failure shown there is off-screen from the field
+  // that caused it, so it reads as "the button did nothing".
+  const [videoErr, setVideoErr] = useState("");
   const {
     upload: uploadIntroVideo,
     progress: introProgress,
@@ -116,7 +120,13 @@ export default function ExpertProfileEdit() {
         });
         setPhotoUrl(d.photo || "");
         setIntroVideoUrl(d.intro_video_embed_url || "");
-        setIntroVideoPending(!!d.intro_video_bunny_id && !d.intro_video_embed_url);
+        // serialize_expert() deliberately never returns intro_video_bunny_id,
+        // so testing it here made this always false: a clip still transcoding
+        // when the page reloaded fell through to the bare "choose a file"
+        // input and the poll below never started again. Nothing else syncs a
+        // saved clip, so it stayed unplayable forever. `intro_video_status`
+        // IS serialized, and non-null means Bunny has a clip for us.
+        setIntroVideoPending(d.intro_video_status != null && !d.intro_video_embed_url);
       })
       .catch(() => setErr("Couldn't load your profile."))
       .finally(() => { if (alive) setLoading(false); });
@@ -126,17 +136,25 @@ export default function ExpertProfileEdit() {
 
   const onIntroVideoFile = async (e) => {
     const file = e.target.files && e.target.files[0];
-    if (!file) return;
+    // Clearing the input is what makes a RETRY possible. Without it, picking
+    // the same file again fires no change event, so the second attempt after
+    // any failure silently does nothing at all.
+    e.target.value = "";
+    if (!file || introUploading) return;
+
     // Format, size and duration all live in shared/introVideoRules.js, shared
     // with the per-listing uploader so the two can't drift apart.
     const problem = await validateIntroVideo(file);
     if (problem) {
-      setErr(problem);
+      setVideoErr(problem);
       return;
     }
-    setErr("");
+    setVideoErr("");
     try {
-      const videoId = await uploadIntroVideo(file, { title: `intro-${f.full_name || "expert"}` });
+      const videoId = await uploadIntroVideo(file, {
+        title: `intro-${f.full_name || "expert"}`,
+        fileSize: file.size,
+      });
       const saved = await api.post("/skill/teacher/intro-video/save/", { video_id: videoId });
       // The server now syncs with Bunny on save, so a clip Bunny has already
       // finished comes back playable immediately instead of sitting at
@@ -146,7 +164,7 @@ export default function ExpertProfileEdit() {
       setIntroVideoPending(!url);
     } catch (err) {
       // Surfaces the server's duration refusal, which names the real length.
-      setErr(extractError(err) || "Video upload failed. Please try again.");
+      setVideoErr(extractError(err) || "Video upload failed. Please try again.");
     }
   };
 
@@ -164,7 +182,7 @@ export default function ExpertProfileEdit() {
             setIntroVideoPending(false);
           } else if (r.data?.intro_video_status === 5) {
             setIntroVideoPending(false);
-            setErr("That clip couldn’t be processed. Please try another file.");
+            setVideoErr("That clip couldn’t be processed. Please try another file.");
           }
         })
         .catch(() => { /* transient — the next tick retries */ });
@@ -337,34 +355,50 @@ export default function ExpertProfileEdit() {
 
             <div className="sk-field">
               <label>Intro video <span style={{ fontWeight: 500, color: "var(--ink-muted)" }}>— a short clip advertising what you teach, up to {MAX_SECONDS} seconds</span></label>
-              {introVideoUrl ? (
-                <div style={{ marginTop: 4 }}>
-                  <iframe
-                    src={introVideoUrl}
-                    title="Your intro video"
-                    style={{ width: "100%", aspectRatio: "16/9", border: "none", borderRadius: 10 }}
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-                    allowFullScreen
-                  />
-                  <label className="sk-btn sk-btn--ghost" style={{ display: "inline-flex", marginTop: 8, cursor: "pointer" }}>
-                    Replace video
-                    <input type="file" accept={ACCEPT_ATTR} onChange={onIntroVideoFile} style={{ display: "none" }} />
-                  </label>
+              {/* The current clip stays on screen through a replace — it is
+                  still the live one until the new upload lands. Progress and
+                  errors render BELOW it rather than instead of it, so a
+                  replace can never look like a no-op. This used to test
+                  introVideoUrl first, which made the progress bar
+                  unreachable on the replace path entirely. */}
+              {introVideoUrl && (
+                <iframe
+                  src={introVideoUrl}
+                  title="Your intro video"
+                  className="sk-introvid__frame"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowFullScreen
+                />
+              )}
+
+              {introUploading ? (
+                <div className="sk-introvid__bar" role="progressbar" aria-label="Uploading intro video"
+                     aria-valuenow={introProgress} aria-valuemin={0} aria-valuemax={100}>
+                  <i style={{ width: `${introProgress}%` }} />
                 </div>
-              ) : introUploading ? (
-                <div style={{ marginTop: 6 }}>
-                  <div style={{ height: 8, borderRadius: 999, background: "#e9eef0", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${introProgress}%`, background: "var(--skill)", transition: "width .2s" }} />
-                  </div>
-                  <div style={{ fontSize: 11.5, color: "#9aa9af", marginTop: 4 }}>Uploading… {introProgress}%</div>
-                </div>
-              ) : introVideoPending ? (
-                <div style={{ fontSize: 11.5, color: "#9aa9af", marginTop: 4 }}>
+              ) : null}
+              {introUploading && (
+                <div className="sk-introvid__note">Uploading… {introProgress}%</div>
+              )}
+
+              {!introUploading && introVideoPending && (
+                <div className="sk-introvid__note">
                   Processing your video — check back in a few minutes.
                 </div>
-              ) : (
-                <input className="sk-input" type="file" accept={ACCEPT_ATTR} onChange={onIntroVideoFile} />
               )}
+
+              {!introUploading && !introVideoPending && (
+                introVideoUrl ? (
+                  <label className="sk-btn sk-btn--ghost sk-introvid__replace">
+                    Replace video
+                    <input type="file" accept={ACCEPT_ATTR} onChange={onIntroVideoFile} hidden />
+                  </label>
+                ) : (
+                  <input className="sk-input" type="file" accept={ACCEPT_ATTR} onChange={onIntroVideoFile} />
+                )
+              )}
+
+              {videoErr && <div className="sk-introvid__err">{videoErr}</div>}
             </div>
 
             <div className="sk-field">
