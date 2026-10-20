@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from "react";
 import { addAvailability, deleteAvailability, getAvailability } from "../../api/counselorService";
-import { useCounselor } from "../../layout/CounselorLayout";
+import { useCounselor } from "../../layout/CounselorContext";
 import "../../styles/counsellor.css";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];

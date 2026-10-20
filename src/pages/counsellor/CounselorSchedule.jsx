@@ -1,13 +1,12 @@
 // PLACEMENT: src/pages/counsellor/CounselorSchedule.jsx   (NEW FILE — teacher dashboard app)
 //
-// The counsellor's home: upcoming sessions (with assessment-ready
-// badges and quick meeting-link state), plus history tabs. Each card
+// Upcoming sessions (with assessment-ready badges and meeting-link state). Each card
 // opens the full student file at /teacher/counsellor/appointments/:id.
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAppointments } from "../../api/counselorService";
-import { useCounselor } from "../../layout/CounselorLayout";
+import { useCounselor } from "../../layout/CounselorContext";
 import "../../styles/counsellor.css";
 
 const fmtWhen = (iso) =>
@@ -18,37 +17,38 @@ const fmtWhen = (iso) =>
 
 const STATUS_META = {
   confirmed: ["Confirmed", "co-chip--green"],
-  completed: ["Completed", "co-chip--grey"],
-  cancelled: ["Cancelled", "co-chip--red"],
-  no_show:   ["No-show", "co-chip--red"],
 };
 
 export default function CounselorSchedule() {
   const navigate = useNavigate();
   const { me } = useCounselor() || {};
-  const [tab, setTab] = useState("upcoming");
+  const [filter, setFilter] = useState("all");
+  const [order, setOrder] = useState("chronological");
   const [upcoming, setUpcoming] = useState(null);
-  const [history, setHistory] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     getAppointments({ upcoming: 1 })
       .then((d) => setUpcoming(d.results || []))
       .catch(() => setError("Couldn't load your schedule — please refresh."));
-    getAppointments()
-      .then((d) => setHistory((d.results || []).filter(
-        (a) => a.status !== "confirmed" || new Date(a.scheduled_at) < new Date()
-      )))
-      .catch(() => {});
   }, []);
 
-  const list = tab === "upcoming" ? upcoming : history;
+  const today = new Date();
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + 7);
+  const list = upcoming?.filter((a) => {
+    const when = new Date(a.scheduled_at);
+    return filter === "all" || (filter === "today"
+      ? when.toDateString() === today.toDateString()
+      : when < weekEnd);
+  }).sort((a, b) => (order === "chronological" ? 1 : -1) *
+    (new Date(a.scheduled_at) - new Date(b.scheduled_at)));
 
   return (
     <div className="co-page">
       <div className="co-head">
         <div>
-          <h1 className="co-title">Counselling schedule</h1>
+          <h1 className="co-title">Upcoming sessions</h1>
           <p className="co-sub">
             {me?.display_name} · {me?.session_duration_minutes}-minute sessions
             {me?.is_listed === false ? " · currently unlisted" : ""}
@@ -59,13 +59,15 @@ export default function CounselorSchedule() {
         </button>
       </div>
 
-      <div className="co-tabs">
-        <button className={`co-tab${tab === "upcoming" ? " co-tab--on" : ""}`} onClick={() => setTab("upcoming")}>
-          Upcoming {upcoming?.length > 0 && <span className="co-count">{upcoming.length}</span>}
-        </button>
-        <button className={`co-tab${tab === "history" ? " co-tab--on" : ""}`} onClick={() => setTab("history")}>
-          History
-        </button>
+      <div className="co-head">
+        <div className="co-tabs" role="tablist" aria-label="Upcoming session dates">
+          {[["all", "All"], ["today", "Today"], ["week", "Next 7 days"]].map(([value, label]) =>
+            <button key={value} role="tab" aria-selected={filter === value}
+              className={`co-tab${filter === value ? " co-tab--on" : ""}`} onClick={() => setFilter(value)}>{label}</button>)}
+        </div>
+        <label className="co-sort">Sort <select className="co-select" value={order} onChange={(e) => setOrder(e.target.value)}>
+          <option value="chronological">Soonest first</option><option value="recent">Latest first</option>
+        </select></label>
       </div>
 
       {error && <div className="co-error">{error}</div>}
@@ -75,11 +77,9 @@ export default function CounselorSchedule() {
       ) : list.length === 0 ? (
         <div className="co-empty">
           <div className="co-empty-title">
-            {tab === "upcoming" ? "No upcoming sessions" : "No past sessions yet"}
+            No sessions in this view
           </div>
-          {tab === "upcoming"
-            ? "Bookings land here the moment a student confirms a slot. Make sure your weekly availability is set."
-            : "Completed and cancelled sessions will appear here."}
+          Confirmed bookings appear here. You can change the date filter above.
         </div>
       ) : (
         <div className="co-list">

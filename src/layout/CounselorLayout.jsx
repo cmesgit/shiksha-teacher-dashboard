@@ -13,32 +13,38 @@
 // The backend's IsApprovedCounselor permission enforces all of this
 // server-side; the gate just gives each state a proper screen.
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { IoClose } from "react-icons/io5";
 import Header from "../components/Header";
 import logo from "../assets/Shiksha.svg";
 import { HOME_URL } from "../config/urls";
-import { getMe } from "../api/counselorService";
+import { getMe, getCounselorUnreadCount } from "../api/counselorService";
+import { CounselorCtx } from "./CounselorContext";
 import CounselorApply from "../pages/counsellor/CounselorApply";
 import "./layout.css";
 import "../styles/skillSidebar.css";
 import "../styles/counsellor.css";
 
 const NAV = [
-  { to: "/teacher/counsellor", label: "Schedule", end: true, icon: "🗓" },
+  { to: "/teacher/counsellor", label: "Today", end: true, icon: "🏠" },
+  { to: "/teacher/counsellor/upcoming", label: "Upcoming", icon: "🗓" },
+  { to: "/teacher/counsellor/requests", label: "Requests", icon: "📥" },
+  { to: "/teacher/counsellor/history", label: "History", icon: "📚" },
+  { to: "/teacher/counsellor/students", label: "Students", icon: "🎓" },
+  { to: "/teacher/counsellor/notes", label: "Session Notes", icon: "📝" },
+  { to: "/teacher/counsellor/reviews", label: "Reviews", icon: "⭐" },
   { to: "/teacher/counsellor/availability", label: "Availability", icon: "⏰" },
+  { to: "/teacher/counsellor/notifications", label: "Notifications", icon: "🔔" },
   { to: "/teacher/counsellor/profile", label: "My Profile", icon: "👤" },
 ];
-
-const CounselorCtx = createContext(null);
-export const useCounselor = () => useContext(CounselorCtx);
 
 export default function CounselorLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [me, setMe] = useState(undefined);      // undefined=loading, null=no profile
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const refresh = () =>
     getMe().then(setMe).catch((e) => {
@@ -46,6 +52,8 @@ export default function CounselorLayout() {
       else setMe({ error: true });
     });
   useEffect(() => { refresh(); }, []);
+  const refreshNotifications = () => getCounselorUnreadCount().then(setUnreadCount).catch(() => {});
+  useEffect(() => { if (me?.status === "approved") refreshNotifications(); }, [me?.status, pathname]);
 
   const isActive = (to, end) =>
     end ? pathname === to : pathname === to || pathname.startsWith(to + "/");
@@ -77,6 +85,8 @@ export default function CounselorLayout() {
               >
                 <span className="sk-link__i">{item.icon}</span>
                 {item.label}
+                {item.label === "Notifications" && unreadCount > 0 &&
+                  <span className="co-nav-count" aria-label={`${unreadCount} unread`}>{unreadCount}</span>}
               </button>
             ))}
           </nav>
@@ -88,7 +98,7 @@ export default function CounselorLayout() {
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
       <div className="teacher-main">
-        <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage />
+        <Header onMenuClick={() => setSidebarOpen(true)} isExpertPage titleOverride="Career Counselling" />
         <main className="teacher-content teacher-content--expert page-fade" key={pathname}>{content}</main>
       </div>
     </div>
@@ -105,7 +115,7 @@ export default function CounselorLayout() {
 
   // approved → the console, with the profile in context for child pages
   return shell(
-    <CounselorCtx.Provider value={{ me, refreshMe: refresh }}>
+    <CounselorCtx.Provider value={{ me, refreshMe: refresh, refreshNotifications }}>
       <Outlet />
     </CounselorCtx.Provider>,
     true

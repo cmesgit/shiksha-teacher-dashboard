@@ -52,6 +52,9 @@ export async function cancelAppointment(appointmentId, reason = "") {
 export async function getNotes(appointmentId) {
   return (await api.get(`/counseling/counselor/appointments/${appointmentId}/notes/`)).data;
 }
+export async function getNotesIndex() {
+  return (await api.get("/counseling/counselor/notes/")).data;
+}
 export async function addNote(appointmentId, content) {
   return (await api.post(`/counseling/counselor/appointments/${appointmentId}/notes/`, { content })).data;
 }
@@ -61,4 +64,25 @@ export async function getReport(appointmentId) {
 export async function saveReport(appointmentId, payload, publish = false) {
   return (await api.put(`/counseling/counselor/appointments/${appointmentId}/report/`,
     publish ? { ...payload, publish: true } : payload)).data;
+}
+
+// ── Booking requests + reviews (workflow §11) ───────────────────────────
+
+export async function actOnRequest(appointmentId, action, reason = "") {
+  // action: "approve" | "decline". Decline requires a reason server-side.
+  return (await api.post(
+    `/counseling/counselor/appointments/${appointmentId}/${action}/request/`,
+    action === "decline" ? { reason } : {},
+  )).data;
+}
+
+export async function getCounselorReviews(counselorId) {
+  return (await api.get(`/counseling/counselors/${counselorId}/reviews/`)).data;
+}
+
+export async function getCounselorUnreadCount() {
+  const { data } = await api.get("/notifications/", {
+    params: { role: "COUNSELOR", verb_prefix: "counseling.", unread: 1, page_size: 1 },
+  });
+  return data.count || 0;
 }
