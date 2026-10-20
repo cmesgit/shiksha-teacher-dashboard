@@ -32,13 +32,13 @@ import { HOME_URL, APP_URL } from "../config/urls";
 // "Saturday, 25 July 2026" — en-GB, matching the design's date sub-line.
 const DATE_FMT = { weekday: "long", day: "numeric", month: "long", year: "numeric" };
 
-export default function Header({ onMenuClick, isExpertPage }) {
+export default function Header({ onMenuClick, isExpertPage, titleOverride }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { teacherInfo } = useAuth();
   const isSkillActive = teacherInfo?.active_track === "skill";
 
-  const title = isExpertPage ? "Skill Development" : pageTitleFor(pathname);
+  const title = titleOverride || (isExpertPage ? "Skill Development" : pageTitleFor(pathname));
   const todayLong = new Date().toLocaleDateString("en-GB", DATE_FMT);
 
   return (
