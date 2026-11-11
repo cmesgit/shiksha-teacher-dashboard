@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getSpecializations, updateMe } from "../../api/counselorService";
-import { useCounselor } from "../../layout/CounselorLayout";
+import { useCounselor } from "../../layout/CounselorContext";
 import "../../styles/counsellor.css";
 
 const EXPERIENCE = [
@@ -17,28 +17,20 @@ const EXPERIENCE = [
 export default function CounselorProfile() {
   const { me, refreshMe } = useCounselor() || {};
   const [specs, setSpecs] = useState([]);
-  const [form, setForm] = useState(null);
-  const [picked, setPicked] = useState([]);
+  const [form, setForm] = useState(() => ({
+    display_name: me?.display_name || "",
+    bio: me?.bio || "",
+    qualifications: me?.qualifications || "",
+    certifications: me?.certifications || "",
+    approach: me?.approach || "",
+    years_experience: me?.years_experience || "1_3",
+    languages: me?.languages || "",
+  }));
+  const [picked, setPicked] = useState(() => (me?.specializations || []).map((s) => s.id));
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { getSpecializations().then(setSpecs).catch(() => {}); }, []);
-  useEffect(() => {
-    if (!me) return;
-    setForm({
-      display_name: me.display_name || "",
-      bio: me.bio || "",
-      qualifications: me.qualifications || "",
-      certifications: me.certifications || "",
-      approach: me.approach || "",
-      years_experience: me.years_experience || "1_3",
-      languages: me.languages || "",
-    });
-    setPicked((me.specializations || []).map((s) => s.id));
-  }, [me]);
-
-  if (!form) return <div className="co-skel" style={{ height: 260 }} />;
-
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const toggle = (id) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -66,7 +58,7 @@ export default function CounselorProfile() {
         <div>
           <h1 className="co-title">My counsellor profile</h1>
           <p className="co-sub">
-            Status: <b style={{ color: "#047857" }}>{me.status}</b>
+            Status: <b style={{ color: "var(--success)" }}>{me.status}</b>
             {me.is_listed ? " · listed in the directory" : " · currently unlisted"}
             {Number(me.avg_rating) > 0 ? ` · ★ ${me.avg_rating} (${me.rating_count})` : ""}
           </p>

@@ -83,6 +83,13 @@ import CounselorSchedule from "../pages/counsellor/CounselorSchedule";
 import CounselorSession from "../pages/counsellor/CounselorSession";
 import CounselorAvailability from "../pages/counsellor/CounselorAvailability";
 import CounselorProfile from "../pages/counsellor/CounselorProfile";
+import CounselorRequests from "../pages/counsellor/CounselorRequests";
+import CounselorStudents from "../pages/counsellor/CounselorStudents";
+import CounselorReviews from "../pages/counsellor/CounselorReviews";
+import CounselorToday from "../pages/counsellor/CounselorToday";
+import CounselorHistory from "../pages/counsellor/CounselorHistory";
+import CounselorNotes from "../pages/counsellor/CounselorNotes";
+import CounselorNotifications from "../pages/counsellor/CounselorNotifications";
 
 import { LOGIN_URL } from "../config/urls";
 
@@ -176,9 +183,16 @@ export default function TeacherRoutes() {
         path="/teacher/counsellor"
         element={<ProtectedTeacherRoute><CounselorLayout /></ProtectedTeacherRoute>}
       >
-        <Route index element={<CounselorSchedule />} />
+        <Route index element={<CounselorToday />} />
+        <Route path="upcoming" element={<CounselorSchedule />} />
         <Route path="appointments/:id" element={<CounselorSession />} />
+        <Route path="requests" element={<CounselorRequests />} />
+        <Route path="history" element={<CounselorHistory />} />
+        <Route path="students" element={<CounselorStudents />} />
+        <Route path="notes" element={<CounselorNotes />} />
+        <Route path="reviews" element={<CounselorReviews />} />
         <Route path="availability" element={<CounselorAvailability />} />
+        <Route path="notifications" element={<CounselorNotifications />} />
         <Route path="profile" element={<CounselorProfile />} />
       </Route>
 
