@@ -304,6 +304,25 @@ export default function Assignments() {
   // would need one call per row. It is a small endpoint, deliberately left to
   // its own phase rather than bolted on here. See NILIMA.md.
   const [reminding, setReminding] = useState(null);
+  // Rail only. `null` = not answered yet or the call failed, which the card
+  // renders as an honest unknown rather than as "nothing has come in".
+  const [recentSubs, setRecentSubs] = useState(null);
+
+  // Its own request, deliberately not folded into the list fetch: a rail
+  // card is not worth failing the screen for.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/assignments/teacher/recent-submissions/?limit=4");
+        if (!cancelled) setRecentSubs(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("Failed to load recent submissions for the rail:", err);
+        if (!cancelled) setRecentSubs(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const remind = async (assignment) => {
     setReminding(assignment.id);
@@ -377,9 +396,40 @@ export default function Assignments() {
       ],
     };
 
-    return [callout, grading];
+    // ── 3. Latest submissions ──
+    const initials = (name) =>
+      (name || "?").replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean)
+        .slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?";
+
+    const ago = (iso) => {
+      const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+      if (mins < 1) return "just now";
+      if (mins < 60) return `${mins}m ago`;
+      if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
+      return `${Math.floor(mins / 1440)}d ago`;
+    };
+
+    const latest = {
+      kind: "card",
+      title: "Latest submissions",
+      rows: (recentSubs || []).map((r) => ({
+        key: r.id,
+        lead: initials(r.student_name),
+        title: [r.student_name, r.batch_name].filter(Boolean).join(" · "),
+        sub: `${r.assignment_title} · ${ago(r.submitted_at)}`,
+        action: {
+          label: "Grade",
+          onClick: () => navigate(`/teacher/assignments/${r.assignment_id}/submissions`),
+        },
+      })),
+      empty: recentSubs === null
+        ? "Couldn't load recent submissions."
+        : "Nothing new to grade.",
+    };
+
+    return [callout, grading, latest];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, reminding]);
+  }, [rows, reminding, recentSubs, navigate]);
 
   // ── Create / edit / delete ──────────────────────────────────────────────
   const createFor = (sid) => navigate(`/teacher/classes/${sid}/assignments/create`);
