@@ -883,9 +883,13 @@
 }
 
 .ac-railCalloutBtn:hover:not(:disabled) { background: var(--action-hover); }
+/* --ink-muted, not --ink-faint: faint measured 2.24:1 on --page-bg, which is
+   unreadable. WCAG exempts disabled controls from the contrast minimum, but a
+   button whose LABEL cannot be read is useless — the label is what explains
+   why it is disabled. The muted fill already signals the state. */
 .ac-railCalloutBtn:disabled {
   background: var(--page-bg);
-  color: var(--ink-faint);
+  color: var(--ink-muted);
   cursor: not-allowed;
 }
 
