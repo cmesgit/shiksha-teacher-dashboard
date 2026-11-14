@@ -23,6 +23,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FiEdit2, FiTrash2, FiMoreHorizontal } from "react-icons/fi";
 import api from "../api/apiClient";
+import AcademyRail from "../components/academy/AcademyRail";
 import { fetchBatchedOrFanOut, fanOutPerSubject } from "../api/batchedList";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
@@ -294,6 +295,92 @@ export default function Assignments() {
     return out;
   }, [rows]);
 
+  // ── Right rail ──────────────────────────────────────────────────────────
+  // Spec: Academy Lists.dc.html, role=teacher screen=assignments.
+  //
+  // Two of the design's three cards are built. The third, "Latest
+  // submissions", is NOT: it wants the most recent submissions ACROSS
+  // assignments, and nothing answers that — the per-assignment roster endpoint
+  // would need one call per row. It is a small endpoint, deliberately left to
+  // its own phase rather than bolted on here. See NILIMA.md.
+  const [reminding, setReminding] = useState(null);
+
+  const remind = async (assignment) => {
+    setReminding(assignment.id);
+    try {
+      const res = await api.post(`/assignments/teacher/${assignment.id}/remind/`);
+      // The endpoint reports how many it actually reached, which is not the
+      // same as how many have not submitted — a learner profile with no
+      // account behind it is skipped. Report the server's number, not ours.
+      toast.success(res?.data?.detail || "Reminder sent.");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Couldn't send the reminder.");
+    } finally {
+      setReminding(null);
+    }
+  };
+
+  const railItems = useMemo(() => {
+    const open = rows.filter((a) => !a.overdue && a.dueTs != null);
+
+    // ── 1. The next assignment to close ──
+    const soonest = open.slice().sort((a, b) => a.dueTs - b.dueTs)[0];
+    let callout = null;
+    if (soonest) {
+      const hasCohort = typeof soonest.cohort_size === "number";
+      const outstanding = hasCohort
+        ? Math.max(0, soonest.cohort_size - soonest.total_submissions)
+        : null;
+      const where = courseLabel(
+        soonest.batch_name || soonest.course_title || null, soonest.board_name
+      );
+      callout = {
+        kind: "callout",
+        tone: "warning",
+        kicker: `Closes ${fmtDue(soonest.due_date)}`,
+        title: soonest.title,
+        text: outstanding === null
+          // cohort_size is null on the per-subject endpoint, so the headcount
+          // is unknown here. Say what IS known rather than guessing a number.
+          ? `${where || "This class"} — submissions are still open.`
+          : outstanding === 0
+            ? `Everyone in ${where || "this class"} has submitted.`
+            : `${outstanding} student${outstanding === 1 ? "" : "s"} in ${where || "this class"} ${outstanding === 1 ? "has" : "have"} not submitted yet.`,
+        btn: {
+          label: reminding === soonest.id ? "Sending…" : "Remind students",
+          onClick: () => remind(soonest),
+          // Nothing to nag about, and a reminder to nobody is a confusing
+          // no-op rather than a kindness.
+          disabled: reminding !== null || outstanding === 0,
+        },
+      };
+    }
+
+    // ── 2. Grading ──
+    const toGrade = rows.reduce((n, a) => n + (a.toGrade || 0), 0);
+    const withCohort = rows.filter((a) => typeof a.cohort_size === "number" && a.cohort_size > 0);
+    const subTotal = withCohort.reduce((n, a) => n + a.total_submissions, 0);
+    const cohortTotal = withCohort.reduce((n, a) => n + a.cohort_size, 0);
+    const grading = {
+      kind: "card",
+      title: "Grading",
+      kv: [
+        { k: "Submissions to grade", v: String(toGrade), tone: toGrade > 0 ? "warning" : undefined },
+        { k: "Open assignments", v: String(open.length) },
+        cohortTotal > 0
+          ? { k: "Average submission rate", v: `${Math.round((subTotal / cohortTotal) * 100)}%` }
+          : {
+              k: "Average submission rate",
+              unavailable: true,
+              reason: "Needs the class size, which this view doesn't report.",
+            },
+      ],
+    };
+
+    return [callout, grading];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, reminding]);
+
   // ── Create / edit / delete ──────────────────────────────────────────────
   const createFor = (sid) => navigate(`/teacher/classes/${sid}/assignments/create`);
 
@@ -448,6 +535,7 @@ export default function Assignments() {
         </div>
       </div>
 
+      <div className="ac-railLayout">
       <section className="ac-listCard">
         <div className="ac-list">
           {rows.length === 0 ? (
@@ -553,6 +641,13 @@ export default function Assignments() {
           )}
         </div>
       </section>
+
+      {/* Derived from the SAME `rows` the list renders, so the rail follows
+          the active batch and subject filters rather than silently reporting
+          on assignments the teacher has filtered away. */}
+      <AcademyRail items={railItems} />
+      </div>
+
       <ConfirmDialog
         dialog={confirmDlg && { ...confirmDlg, busy: deletingId != null }}
         onClose={() => setConfirmDlg(null)}
