@@ -43,6 +43,8 @@ import { fetchBatchedOrFanOut } from "../api/batchedList";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import { LoadingState, ErrorState, EmptyState } from "../components/StateViews";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { courseLabel } from "../shared/boardLabel";
+import AcademyRail from "../components/academy/AcademyRail";
 import { subjectChipSlot } from "../utils/subjectChips";
 import "../styles/academyScreens.css";
 import "../styles/quizzes.css";
@@ -93,7 +95,11 @@ function timingRule(q) {
   if ((q.quiz_type || "practice") === "mock") {
     const parts = [];
     if (q.time_limit_minutes) parts.push(`${q.time_limit_minutes} min`);
-    parts.push(q.max_attempts === 1 ? "one attempt" : `${q.max_attempts} attempts`);
+    // max_attempts is NULLABLE. Unguarded this rendered the literal string
+    // "null attempts" in the row meta — pre-existing, visible on any mock
+    // whose attempt cap was never set.
+    if (q.max_attempts === 1) parts.push("one attempt");
+    else if (typeof q.max_attempts === "number") parts.push(`${q.max_attempts} attempts`);
     return parts.join(", ");
   }
   return "unlimited retries";
@@ -353,7 +359,11 @@ export default function Quizzes() {
         // is the closest real substitute for "which class" a subtitle can
         // show without fabricating a batch name.
         meta: [
-          q.course_title || null,
+          // courseLabel, not course_title alone: prod has TWO courses titled
+          // "Class 10" (CBSE and MBSE) and the same twinning for 8, 9 and
+          // every 11/12 stream, so the title is not an identity. BUILD_GUIDE
+          // non-negotiable #10. Assignments.jsx already does this.
+          courseLabel(q.course_title || null, q.board_name) || null,
           q.total_attempts > 0 ? `avg ${pct(q.average_score)}` : null,
           plural(questions, "question"),
         ].filter(Boolean).join(" · "),
@@ -373,7 +383,7 @@ export default function Quizzes() {
           : { label: "Draft — not assigned", tone: "neutral" },
         bankChip: bankChipFor(q),
         t1Meta: [
-          q.course_title || null,
+          courseLabel(q.course_title || null, q.board_name) || null,
           plural(questions, "question"),
           timingRule(q),
           ...(q.chapter_tags || []).map((t) => t.label).filter(Boolean),
@@ -402,6 +412,70 @@ export default function Quizzes() {
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
     [decorated, subjectFilter, typeFilter]
   );
+
+  // ── Right rail ──────────────────────────────────────────────────────────
+  // Spec: Academy Lists.dc.html, role=teacher screen=quizzes.
+  //
+  // The "Needs your attention" callout deliberately POINTS AT the existing
+  // /teacher/bank-status screen rather than reproducing it. That screen
+  // already is this rail card, at full size — rebuilding its contents here
+  // would give the same queue two homes that can disagree.
+  const railItems = useMemo(() => {
+    const changes = rows.reduce((n, q) => n + (q.bank_changes_requested || 0), 0);
+
+    const attention = changes > 0 ? {
+      kind: "callout",
+      tone: "danger",
+      kicker: "Needs your attention",
+      title: `${changes} question${changes === 1 ? "" : "s"} need${changes === 1 ? "s" : ""} changes`,
+      // The design's copy makes the non-obvious reassurance explicit: a
+      // bank rejection does NOT unpublish the quiz. The two states are
+      // independent, which is the whole premise of this screen's two chips.
+      text: "The academy team sent questions back. The quiz stays live for your class either way.",
+      btn: { label: "Open questions", onClick: () => navigate("/teacher/bank-status") },
+    } : null;
+
+    // "Lowest scoring" — ranked client-side; the list already carries both
+    // halves of the ratio. Only quizzes anyone has actually sat: a quiz with
+    // no attempts has no score, and ranking it lowest would be a lie.
+    //
+    // ⚠ RANK AND LABEL ON THE RATIO, NEVER ON average_score ITSELF. It is RAW
+    // MARKS (see scorePct above and the serializer's own comment), so sorting
+    // by it compares a 3-mark quiz against a 50-mark one and calls the wrong
+    // one worse — and printing it as a percentage turns 2-out-of-3 into "2%".
+    // Both of those were in the first draft of this card.
+    const ratioOf = (q) =>
+      q.total_marks ? q.average_score / q.total_marks : null;
+    const scored = rows
+      .filter((q) =>
+        q.total_attempts > 0 &&
+        typeof q.average_score === "number" &&
+        ratioOf(q) !== null)
+      .sort((a, b) => ratioOf(a) - ratioOf(b))
+      .slice(0, 3);
+
+    const lowest = {
+      kind: "card",
+      title: "Lowest scoring",
+      rows: scored.map((q) => ({
+        key: q.id,
+        lead: scorePct(q.average_score, q.total_marks),
+        tone: ratioOf(q) < 0.5 ? "danger" : ratioOf(q) < 0.7 ? "warning" : "success",
+        title: q.title,
+        sub: [
+          `${q.total_attempts} attempt${q.total_attempts === 1 ? "" : "s"}`,
+          courseLabel(q.course_title || null, q.board_name) || null,
+        ].filter(Boolean).join(" · "),
+        action: {
+          label: "Results",
+          onClick: () => navigate(`/teacher/quizzes/${q.id}/analytics`),
+        },
+      })),
+      empty: "No quiz has been attempted yet, so there is nothing to rank.",
+    };
+
+    return [attention, lowest];
+  }, [rows, navigate]);
 
   /* ── T1 stat strip (Phase 6) ────────────────────────────────────────────
    * "Live for my batches" is counted here rather than fetched: the quiz list
@@ -561,12 +635,14 @@ export default function Quizzes() {
               className={`ac-pill${subjectFilter === String(s.subjectId) ? " is-active" : ""}`}
               onClick={() => setSubjectFilter(String(s.subjectId))}
             >
-              {[s.subjectName || "Subject", s.courseTitle].filter(Boolean).join(" · ")}
+              {[s.subjectName || "Subject", courseLabel(s.courseTitle, s.board)]
+                .filter(Boolean).join(" · ")}
             </button>
           ))}
         </div>
       </div>
 
+      <div className="ac-railLayout">
       {rows.length === 0 ? (
         <section className="ac-listCard">
           <EmptyState
@@ -687,6 +763,12 @@ export default function Quizzes() {
           })}
         </section>
       )}
+
+      {/* Derived from the SAME `rows` the list renders, so the rail follows
+          the active subject and type filters rather than reporting on
+          quizzes the teacher has filtered away. */}
+      <AcademyRail items={railItems} />
+      </div>
 
       <ConfirmDialog
         dialog={confirmDlg && { ...confirmDlg, busy: deletingId != null }}
