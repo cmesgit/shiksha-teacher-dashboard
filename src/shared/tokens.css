@@ -433,3 +433,28 @@
 /* Role chrome in dark. The sidebar keeps its hue but drops in value, so the
    student/teacher distinction survives the theme flip. */
 :root[data-theme="dark"] { --side-bg: #4a1414; }
+
+/* 🔴 The dark block's --acc-ink / --acc-soft above are DEAD without this rule.
+   Custom properties resolve from the nearest ancestor that sets them, and
+   specificity does not enter into it: [data-track="academy"] sits on the
+   LAYOUT ROOT, which is a descendant of <html>, so its
+   `--acc-ink: var(--primary)` shadows :root[data-theme="dark"]'s #9db7d4 for
+   every element inside the app — which is all of them.
+
+   Measured before this fix: .ac-railRowBtn rendered #425f7f on #172229 in
+   dark, a contrast ratio of 2.43:1. --primary and --academy-soft are both
+   undarkened by design (the role chrome keeps its hue), so the per-track
+   block has to be re-stated inside the dark scope rather than relying on the
+   tokens it points at.
+
+   Pre-existing: introduced with the Phase 0 dark block, not by the screen
+   that surfaced it. Any screen using --acc-ink or --acc-soft was affected. */
+:root[data-theme="dark"] [data-track="academy"] {
+  --acc-ink:  #9db7d4;
+  --acc-soft: #1d2c3a;
+}
+:root[data-theme="dark"] [data-track="skill"] {
+  /* The Skill track's accent is the brand orange and is legible on the dark
+     surfaces as-is; only the soft fill needs to stop being a light tint. */
+  --acc-soft: #3a2a1a;
+}

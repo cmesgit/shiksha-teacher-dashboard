@@ -9,6 +9,7 @@ import { LoadingState, EmptyState, ErrorState } from "../components/StateViews";
 import { useToast } from "../contexts/ToastContext";
 import { subjectChipPalette } from "../utils/subjectChips";
 import { fmtClockTime, dayLabel, startsInText } from "../utils/sessionTime";
+import AcademyRail from "../components/academy/AcademyRail";
 import ScheduleSessionModal from "../components/live/ScheduleSessionModal";
 import NotesViewModal from "../components/live/NotesViewModal";
 
@@ -228,6 +229,12 @@ export default function LiveSessions() {
   const { showToast } = useToast();
 
   const [sessions, setSessions] = useState([]);
+  // Rail only: which past sessions already have a recording. Its own request
+  // because no session field answers this — the join lives on the recording
+  // (SessionRecording.live_session), not the session. `null` means "not
+  // answered yet or the call failed", which the rail renders as an honest
+  // unknown rather than as "nothing to upload".
+  const [recordedSessionIds, setRecordedSessionIds] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("upcoming");
@@ -274,6 +281,27 @@ export default function LiveSessions() {
       setLoading(false);
     }
   }, [subjectId]);
+
+  // Deliberately NOT folded into fetchSessions: the list must render even if
+  // this 403s or the teacher has no recordings yet. A rail card is not worth
+  // failing the screen for.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/courses/teacher/recordings/all/");
+        const rows = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        if (cancelled) return;
+        setRecordedSessionIds(
+          new Set(rows.map((r) => r.live_session).filter(Boolean).map(String))
+        );
+      } catch (err) {
+        console.error("Failed to load recordings for the rail:", err);
+        if (!cancelled) setRecordedSessionIds(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     fetchSessions();
@@ -465,6 +493,147 @@ export default function LiveSessions() {
     return order.map((label) => ({ label, items: byHeading.get(label) }));
   }, [rows]);
 
+  // ── Right rail ──────────────────────────────────────────────────────────
+  // Spec: Academy Lists.dc.html, role=teacher screen=live — "Next class",
+  // "This week", "Recordings to upload". All three are derived from data this
+  // screen already has; none needed a new endpoint.
+  //
+  // The design's third "This week" stat is "Average attendance 93%".
+  // ATTENDANCE DOES NOT EXIST in this backend — no model, field, endpoint or
+  // aggregate — so it renders as an explicit unknown instead of a number.
+  // LiveSessionAttendance is LiveKit room-presence telemetry for one call,
+  // not a roll-call, and has no denominator or "attended" threshold.
+  const railItems = useMemo(() => {
+    const now = Date.now();
+
+    // Monday-start week, matching how the teacher UIs elsewhere talk about
+    // "this week".
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const inThisWeek = (s) => {
+      const t = new Date(s.start_time).getTime();
+      return t >= weekStart.getTime() && t < weekEnd.getTime();
+    };
+
+    // ── 1. Next class / Live now ──
+    const next = upcomingRows[0];
+    let callout = null;
+    if (next) {
+      const isLive = next.computed_status === "LIVE";
+      const students = next.batch_student_count;
+      const where = next.batch_name || next.course_name || "This class";
+      const parts = [];
+      if (next.title) parts.push(next.title);
+      if (typeof students === "number") {
+        parts.push(`${students} student${students === 1 ? "" : "s"} ${next.batch_name ? "are in this batch" : "are enrolled"}`);
+      }
+      // startsInText() returns a bare phrase — "in 25 min", or "in progress"
+      // once the start time has passed — so the verb belongs here. Printing it
+      // raw gave "Class 11 Science — Demo Course in progress", which reads as
+      // a missing word rather than a status.
+      const startedAt = new Date(next.start_time);
+      const overdue = startedAt.getTime() <= now;
+      callout = {
+        kind: "callout",
+        tone: isLive ? "teal" : "info",
+        kicker: isLive ? "Live now" : "Next class",
+        title: isLive
+          ? `${where} is live`
+          : overdue
+            // Scheduled, its slot has arrived, nobody has started it. Naming
+            // the time is more use than "in progress", which it is not.
+            ? `${where} was due at ${fmtClockTime(startedAt)}`
+            : `${where} starts ${startsInText(startedAt)}`,
+        // Same honesty note the v2 dashboard hero carries: the design puts
+        // "Start class" on a session 25 minutes out, and pressing it opens a
+        // room no student can enter yet.
+        text:
+          parts.join(". ") + (parts.length ? "." : "") +
+          (!isLive && !overdue && startedAt.getTime() - now > 15 * 60000
+            ? " Opening the room now won’t let students in — they can join from 15 minutes before the start time."
+            : ""),
+        btn: {
+          label: isLive ? "Join class" : "Start class",
+          onClick: () => handleStart(next),
+          // NOT gated on the start time. teacherCanJoin() deliberately has no
+          // start-time rule — a teacher may open the room whenever they like;
+          // it only refuses a cancelled session or an expired teacher_left_at
+          // grace window. T−15m is the rule for STUDENTS being admitted, which
+          // is a different claim, and the note below is where that gets said.
+          disabled: !next.can_join,
+        },
+      };
+    }
+
+    // ── 2. This week ──
+    const weekSessions = sessions.filter(
+      (s) => inThisWeek(s) && s.computed_status !== "CANCELLED"
+    );
+    const taught = weekSessions.filter((s) => s.computed_status === "COMPLETED").length;
+    const thisWeek = {
+      kind: "card",
+      title: "This week",
+      kv: [
+        { k: "Sessions scheduled", v: String(weekSessions.length) },
+        { k: "Taught so far", v: String(taught) },
+        {
+          k: "Average attendance",
+          unavailable: true,
+          reason: "Attendance isn't tracked yet, so this can't be calculated.",
+        },
+      ],
+    };
+
+    // ── 3. Recordings to upload ──
+    // A past session with no SessionRecording pointing at it. Unknown until
+    // the recordings call lands — and an unknown must not render as "all
+    // caught up", which is the opposite claim.
+    const endedWithoutRecording =
+      recordedSessionIds === null
+        ? null
+        : sessions
+            .filter((s) => s.computed_status === "COMPLETED")
+            .filter((s) => !recordedSessionIds.has(String(s.id)))
+            .sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
+            .slice(0, 4);
+
+    const initials = (s) =>
+      (s.batch_name || s.subject_name || "?")
+        .replace(/[^A-Za-z0-9 ]/g, " ")
+        .split(/\s+/).filter(Boolean).slice(0, 2)
+        .map((w) => w[0].toUpperCase()).join("") || "?";
+
+    const toUpload = {
+      kind: "card",
+      title: "Recordings to upload",
+      rows: (endedWithoutRecording || []).map((s) => ({
+        key: s.id,
+        lead: initials(s),
+        title: s.title,
+        sub: `${dayLabel(new Date(s.start_time))} ${fmtClockTime(new Date(s.start_time))} · no recording yet`,
+        action: {
+          label: "Upload",
+          // UploadRecording reads its prefill from router state, not the
+          // query string, and passes live_session_id through to the save
+          // call — so the recording lands attached to this session.
+          onClick: () => navigate(
+            `/teacher/classes/${s.subject_id}/session-recordings/upload`,
+            { state: { live_session_id: s.id, title: s.title } },
+          ),
+        },
+      })),
+      empty: endedWithoutRecording === null
+        ? "Couldn't check which sessions have recordings."
+        : "Every finished session has a recording.",
+    };
+
+    return [callout, thisWeek, toUpload];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, upcomingRows, recordedSessionIds, tick, navigate]);
+
   if (loading) return <div className="liveSessionsPage"><LoadingState label="Loading sessions" /></div>;
   if (error) return <div className="liveSessionsPage"><ErrorState message={error} onRetry={fetchSessions} /></div>;
 
@@ -530,6 +699,7 @@ export default function LiveSessions() {
         </div>
       )}
 
+      <div className="ac-railLayout">
       <section className="liveSessionsListCard">
         {rows.length === 0 ? (
           <EmptyState
@@ -580,6 +750,13 @@ export default function LiveSessions() {
           </div>
         )}
       </section>
+
+      {/* The rail is derived from the SAME `sessions` array the list uses, so
+          it stays correct on a WS update without its own refetch. It is
+          suppressed on the Past tab: every card answers a question about what
+          is coming up or still owed, which a historical view does not ask. */}
+      {tab === "upcoming" && <AcademyRail items={railItems} />}
+      </div>
 
       {showSchedule && (
         <ScheduleSessionModal
