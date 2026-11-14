@@ -55,6 +55,8 @@ import api from "../api/apiClient";
 import { useTeacherClasses } from "../contexts/TeacherClassesContext";
 import useTheme from "../hooks/useTheme";
 import CommandPalette from "../components/CommandPalette";
+import OfflineBanner from "../components/OfflineBanner";
+import { FiVideo, FiCheckCircle, FiLayers, FiUsers } from "react-icons/fi";
 import "../styles/dashboardV2.css";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June",
@@ -197,6 +199,11 @@ export default function TeacherDashboardV2() {
 
   const [data, setData] = useState(null);
   const [batches, setBatches] = useState([]);
+  // my-batches returns { groups, stats } — stats carries active_batches and
+  // students, which two of the four stat tiles need. Null until it lands, so
+  // a slow call renders "—" rather than a confident 0.
+  const [batchStats, setBatchStats] = useState(null);
+  const [lastLoadedAt, setLastLoadedAt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -216,6 +223,9 @@ export default function TeacherDashboardV2() {
     try {
       const res = await api.get("/dashboard/", { signal: controller.signal });
       setData(res.data);
+      // Stamped only on SUCCESS: the offline banner cites this time as "what
+      // was saved at …", so it must mean a load that actually landed.
+      setLastLoadedAt(Date.now());
     } catch (err) {
       if (controller.signal.aborted) return;
       setError("Couldn't load your dashboard.");
@@ -237,8 +247,9 @@ export default function TeacherDashboardV2() {
         }
       }
       setBatches(flat);
+      setBatchStats(b.data?.stats ?? null);
     } catch {
-      if (!controller.signal.aborted) setBatches([]);
+      if (!controller.signal.aborted) { setBatches([]); setBatchStats(null); }
     }
   }, []);
 
@@ -265,6 +276,23 @@ export default function TeacherDashboardV2() {
   const privateSessions = data?.private_sessions ?? [];
   const gradingQueue = data?.grading_queue ?? [];
   const gradingCount = data?.grading_count ?? gradingQueue.length;
+
+  // ── The design's four stat tiles ────────────────────────────────────────
+  // "Dashboard Home.dc.html" :477 — Sessions today / Submissions to grade /
+  // Active batches / Students taught. All four are real numbers this screen
+  // already has; none is invented.
+  const stats = useMemo(() => ([
+    { key: "sessions", tone: "teal",    icon: <FiVideo size={18} />,
+      value: String(sessions.length), label: "Sessions today" },
+    { key: "grading",  tone: "warning", icon: <FiCheckCircle size={18} />,
+      value: String(gradingCount), label: "Submissions to grade" },
+    { key: "batches",  tone: "acc",     icon: <FiLayers size={18} />,
+      value: batchStats ? String(batchStats.active_batches ?? 0) : null,
+      label: "Active batches" },
+    { key: "students", tone: "info",    icon: <FiUsers size={18} />,
+      value: batchStats ? String(batchStats.students ?? 0) : null,
+      label: "Students taught" },
+  ]), [sessions.length, gradingCount, batchStats]);
 
   // NEXT CLASS = the live one if there is one, else the soonest still ahead.
   const heroSession = useMemo(() => {
@@ -362,6 +390,34 @@ export default function TeacherDashboardV2() {
           </button>
         </div>
       </header>
+
+      <OfflineBanner
+        lastLoadedAt={lastLoadedAt}
+        onRetry={fetchAll}
+        retrying={loading}
+      />
+
+      <div className="dv2-stats">
+        {stats.map((st) => (
+          <div className="dv2-stat" key={st.key}>
+            <div
+              className="dv2-statIcon"
+              style={{
+                background: st.tone === "acc" ? "var(--acc-soft)" : `var(--${st.tone}-soft)`,
+                color: st.tone === "acc" ? "var(--acc-ink)" : `var(--${st.tone})`,
+              }}
+            >
+              {st.icon}
+            </div>
+            <div className="dv2-statBody">
+              <div className={`dv2-statValue${st.value === null ? " dv2-statValue--na" : ""}`}>
+                {st.value ?? "—"}
+              </div>
+              <div className="dv2-statLabel">{st.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="dv2-grid">
         {/* hero — NEXT CLASS */}
