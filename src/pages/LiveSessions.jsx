@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { IoChevronBack } from "react-icons/io5";
 import { FiMoreHorizontal } from "react-icons/fi";
 import api from "../api/apiClient";
@@ -50,13 +50,17 @@ const UPCOMING_STATUSES = new Set([
 
 // Only the statuses actually rendered through the pill branch below (see
 // LiveSessionRow) — SCHEDULED/LIVE/COMPLETED each get their own plain-text
-// or dedicated-pill treatment instead. Colors are the design spec's semantic
-// tokens (mirrors the same mapping on the student side).
+// or dedicated-pill treatment instead.
+//
+// These six values used to be literal hexes that happened to equal
+// --warning/--info/--danger and their -soft pairs, which broke the app's
+// no-raw-hex rule and, more concretely, meant this screen did not follow the
+// dark theme: the tokens flip, the literals did not.
 const STATUS_CONFIG = {
-  PAUSED: { label: "Paused", color: "#c2701c", bg: "#fef3ec" },
-  RECONNECTING: { label: "Reconnecting", color: "#c2701c", bg: "#fef3ec" },
-  WAITING_FOR_TEACHER: { label: "Starting soon", color: "#1d4ed8", bg: "#e8edfb" },
-  CANCELLED: { label: "Cancelled", color: "#dc2626", bg: "#fef2f2" },
+  PAUSED: { label: "Paused", color: "var(--warning)", bg: "var(--warning-soft)" },
+  RECONNECTING: { label: "Reconnecting", color: "var(--warning)", bg: "var(--warning-soft)" },
+  WAITING_FOR_TEACHER: { label: "Starting soon", color: "var(--info)", bg: "var(--info-soft)" },
+  CANCELLED: { label: "Cancelled", color: "var(--danger)", bg: "var(--danger-soft)" },
 };
 
 function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, onOpenDetail, onEdit, onCancel, onEnd, menuOpen, onToggleMenu }) {
@@ -419,6 +423,47 @@ export default function LiveSessions() {
     });
 
   const rows = tab === "upcoming" ? upcomingRows : pastRows;
+  // Unfiltered, for the tab badge — see the Past button below.
+  const pastTotal = sessions.filter((s) => !UPCOMING_STATUSES.has(s.computed_status)).length;
+
+  // ── Day grouping ────────────────────────────────────────────────────────
+  // The design groups rows under Today / Tomorrow / Later this week. The row
+  // itself already shows a per-row day via dayLabel(), but that emits "Tmrw"
+  // and a bare weekday — fine inside a dense row, wrong as a section heading,
+  // so the headings get their own full-word vocabulary rather than reusing it.
+  //
+  // Grouping follows the ACTIVE SORT rather than imposing a date order:
+  // upcomingRows is sorted by status first (live sessions float to the top),
+  // so re-sorting by day here would silently move a live session below a
+  // scheduled one. Groups are therefore emitted in first-appearance order.
+  const dayGroups = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const headingFor = (dt) => {
+      const d0 = new Date(dt);
+      d0.setHours(0, 0, 0, 0);
+      const diff = Math.round((d0 - startOfToday) / 86400000);
+      if (diff === 0) return "Today";
+      if (diff === 1) return "Tomorrow";
+      if (diff === -1) return "Yesterday";
+      if (diff > 1 && diff <= 7) return "Later this week";
+      if (diff < -1 && diff >= -7) return "Earlier this week";
+      return dt.toLocaleDateString("en-GB", {
+        day: "numeric", month: "long", year: "numeric",
+      });
+    };
+
+    const order = [];
+    const byHeading = new Map();
+    for (const s of rows) {
+      const dt = new Date(s.start_time);
+      const key = Number.isNaN(dt.getTime()) ? "Scheduled" : headingFor(dt);
+      if (!byHeading.has(key)) { byHeading.set(key, []); order.push(key); }
+      byHeading.get(key).push(s);
+    }
+    return order.map((label) => ({ label, items: byHeading.get(label) }));
+  }, [rows]);
 
   if (loading) return <div className="liveSessionsPage"><LoadingState label="Loading sessions" /></div>;
   if (error) return <div className="liveSessionsPage"><ErrorState message={error} onRetry={fetchSessions} /></div>;
@@ -447,6 +492,7 @@ export default function LiveSessions() {
               onClick={() => setTab("upcoming")}
             >
               Upcoming
+              <span className="liveSessionsTabs__count">{upcomingRows.length}</span>
             </button>
             <button
               type="button"
@@ -454,6 +500,11 @@ export default function LiveSessions() {
               onClick={() => setTab("past")}
             >
               Past
+              {/* The PAST count is deliberately the UNFILTERED total. pastRows
+                  has the search term applied, so using it would make the tab
+                  label count down as the teacher types — a tab count answers
+                  "how much is in here", not "how much matches". */}
+              <span className="liveSessionsTabs__count">{pastTotal}</span>
             </button>
           </div>
         </div>
@@ -498,7 +549,17 @@ export default function LiveSessions() {
           />
         ) : (
           <div className="liveSessionsList">
-            {rows.map((s) => (
+            {dayGroups.map((group) => (
+              <Fragment key={group.label}>
+                {/* One group means the heading says nothing the list doesn't
+                    already — skip it rather than print a lone "Today". */}
+                {dayGroups.length > 1 && (
+                  <div className="liveSessionsList__dayHead">
+                    <span>{group.label}</span>
+                    <span className="liveSessionsList__dayCount">{group.items.length}</span>
+                  </div>
+                )}
+                {group.items.map((s) => (
               <LiveSessionRow
                 key={s.id}
                 session={s}
@@ -513,6 +574,8 @@ export default function LiveSessions() {
                 menuOpen={rowMenu === s.id}
                 onToggleMenu={toggleRowMenu}
               />
+                ))}
+              </Fragment>
             ))}
           </div>
         )}

@@ -18,7 +18,7 @@
 // that predate that endpoint — see api/batchedList.js for why only a 404.
 // ──────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FiEdit2, FiTrash2, FiMoreHorizontal } from "react-icons/fi";
@@ -168,15 +168,28 @@ export default function Assignments() {
       assignments.map((a) => {
         const dueTs = a.due_date ? new Date(a.due_date).getTime() : null;
         const overdue = dueTs != null && dueTs < now;
+        // "19 of 28 submitted" — cohort_size is annotated by
+        // /assignments/teacher/all/ (Phase A3a) with the SAME scope the
+        // submissions roster uses: a batch-scoped assignment counts only its
+        // batch, batch IS NULL counts the whole course.
+        //
+        // It is null on the per-subject endpoint, which does not annotate it.
+        // Fall back to the bare count there rather than printing "19 of —":
+        // null means "not measured", which is different from an empty class.
+        const hasCohort = typeof a.cohort_size === "number";
+        const submitted = hasCohort
+          ? `${a.total_submissions} of ${a.cohort_size} submitted`
+          : a.total_submissions > 0
+            ? `${a.total_submissions} submission${a.total_submissions === 1 ? "" : "s"}`
+            : "No submissions yet";
+
         const meta = [
           // Batch name alone is ambiguous across boards, and for a course-wide
           // assignment there is no batch name at all — in both cases the board
           // is what tells the teacher which "Class 9" this row belongs to.
           courseLabel(a.batch_name || a.course_title || null, a.board_name) || null,
           a.chapter_name || null,
-          a.total_submissions > 0
-            ? `${a.total_submissions} submission${a.total_submissions === 1 ? "" : "s"}`
-            : "No submissions yet",
+          submitted,
         ]
           .filter(Boolean)
           .join(" · ");
@@ -186,6 +199,10 @@ export default function Assignments() {
           overdue,
           stLabel: a.due_date ? `Due ${fmtDue(a.due_date)}` : "No due date",
           meta,
+          // Only a positive count is worth a chip; 0 and null both mean
+          // "nothing is waiting on you", and null additionally means the
+          // endpoint didn't measure it.
+          toGrade: typeof a.ungraded_count === "number" ? a.ungraded_count : 0,
         };
       }),
     [assignments, now]
@@ -255,6 +272,27 @@ export default function Assignments() {
         }),
     [decorated, subjectFilter, batchFilter]
   );
+
+  // ── Open / Past due ─────────────────────────────────────────────────────
+  // DELIBERATE REVERSAL of the decision recorded in `decorated` above. That
+  // comment is still accurate about the STATUS TAG: the tag stays teal
+  // "Due {date}" and never turns into an angry "Overdue", because a teacher
+  // is not racing their own deadline.
+  //
+  // What changes is the LIST SHAPE. The sort already buckets overdue rows to
+  // the bottom; it just did so silently, so a teacher scrolling a long list
+  // had no marker for where "still open" ended. The design splits them into
+  // two labelled sections with counts, which names the existing order rather
+  // than introducing a new judgement. Rows are untouched.
+  const sections = useMemo(() => {
+    const open = rows.filter((a) => !a.overdue);
+    const past = rows.filter((a) => a.overdue);
+    const out = [];
+    // Never render an empty section header — "Past due 0" reads as a warning.
+    if (open.length || !past.length) out.push({ key: "open", label: "Open", items: open });
+    if (past.length) out.push({ key: "past", label: "Past due", items: past });
+    return out;
+  }, [rows]);
 
   // ── Create / edit / delete ──────────────────────────────────────────────
   const createFor = (sid) => navigate(`/teacher/classes/${sid}/assignments/create`);
@@ -419,7 +457,17 @@ export default function Assignments() {
                 : `No assignments for ${batchFilter}.`}
             </div>
           ) : (
-            rows.map((a) => (
+            sections.map((sec) => (
+            <Fragment key={sec.key}>
+              {/* Only shown once there is something to separate — a lone
+                  "Open" header above every assignment is noise. */}
+              {sections.length > 1 && (
+                <div className="ac-sectionHead">
+                  <span>{sec.label}</span>
+                  <span className="ac-sectionCount">{sec.items.length}</span>
+                </div>
+              )}
+              {sec.items.map((a) => (
               <div key={a.id} className="ac-row ac-row--tall">
                 <div className="ac-row__body">
                   <div className="ac-row__meta">
@@ -429,6 +477,13 @@ export default function Assignments() {
                     {/* Always teal/"Due {date}" — see the decorated useMemo above
                         for why this never turns into an Overdue/Closed color. */}
                     <span className="ac-tag ac-tag--teal">{a.stLabel}</span>
+                    {/* "4 to grade" — work waiting on THIS teacher, so it gets
+                        the one attention colour on the row. Hidden at 0: a
+                        grey "0 to grade" on every finished assignment is the
+                        kind of chip people learn to stop reading. */}
+                    {a.toGrade > 0 && (
+                      <span className="ac-tag ac-tag--amber">{a.toGrade} to grade</span>
+                    )}
                   </div>
                   <div className="ac-row__topic">{a.title}</div>
                   {a.meta && <div className="ac-row__sub">{a.meta}</div>}
@@ -492,6 +547,8 @@ export default function Assignments() {
                   </button>
                 </div>
               </div>
+              ))}
+            </Fragment>
             ))
           )}
         </div>
