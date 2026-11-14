@@ -102,6 +102,8 @@
   --teal-soft:     #e6f4f6;
   --maroon:        #7a1c1c;
   --maroon-soft:   #f4e6e6;
+  --violet:        #7c3aed;   /* Dashboards v2: English subject chip */
+  --violet-soft:   #f1e9fb;
   --chip-neutral:      #6b7c83;
   --chip-neutral-soft: #f3f4f6;
 
@@ -373,3 +375,61 @@
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Dark mode — Dashboards v2
+   ═══════════════════════════════════════════════════════════════════════
+   Values transcribed from design_handoff_dashboards_v2 (the DARK map in
+   `Dashboard Home.dc.html`); see that handoff's README § Design tokens.
+
+   Opt-in only: inert until `data-theme="dark"` is set on <html>. It is NOT
+   behind `prefers-color-scheme`, deliberately — a system-level preference
+   would flip every existing screen at once, and screens that still carry
+   literal hex values (e.g. pages/LiveSessions.jsx's STATUS_CONFIG) do not
+   survive that. Widen to the media query only after a dark audit.
+
+   --maroon is deliberately NOT darkened (only --maroon-soft is), matching
+   the design: the teacher's role chrome keeps its hue and gets a darker
+   --side-bg from the role block below instead.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  --page-bg:       #0f171c;
+  --surface:       #172229;
+  --surface-alt:   #1e2b33;
+  --surface-hover: #1b2830;
+  --surface-muted: #1b2830;
+  --border:        #26363f;
+  --border-strong: #34474f;
+  --divider:       #1f2d35;
+  --toggle-track:  #22313a;
+
+  --ink:       #e8eef1;
+  --ink-2:     #c7d1d6;
+  --ink-muted: #93a3ab;
+  --ink-faint: #6b7c83;
+  --dot-idle:  #3d4d55;
+
+  --acc-ink:  #9db7d4;
+  --acc-soft: #1d2c3a;
+
+  --success:      #5cc46e;
+  --success-soft: #173021;
+  --info:         #7c9bf5;
+  --info-soft:    #1a2747;
+  --warning:      #e09a4f;
+  --warning-soft: #3a2a1a;
+  --danger:       #f17171;
+  --danger-soft:  #3a1c1c;
+  --teal:         #3fb6c6;
+  --teal-soft:    #12343a;
+  --maroon-soft:  #3a1c1c;
+  --violet:       #a98bf0;
+  --violet-soft:  #2a2140;
+
+  --sh-card:  0 1px 3px rgba(0, 0, 0, .3);
+  --sh-modal: 0 20px 60px rgba(0, 0, 0, .6);
+}
+
+/* Role chrome in dark. The sidebar keeps its hue but drops in value, so the
+   student/teacher distinction survives the theme flip. */
+:root[data-theme="dark"] { --side-bg: #4a1414; }

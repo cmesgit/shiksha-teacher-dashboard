@@ -406,6 +406,31 @@
    uses the same teal as --tag--live (dc.html's classes-card stLabel) but isn't
    a live-session state, so it must not inherit the livePulse animation. */
 .ac-tag--teal    { background: var(--teal-soft);    color: var(--teal); }
+.ac-tag--amber   { background: var(--warning-soft); color: var(--warning); }
+
+/* Open / Past due section headers on the Assignments list (Phase A3b).
+   The sort already bucketed overdue rows to the bottom; these name that
+   existing order rather than introducing a new judgement, so they stay quiet —
+   no colour, no rule above the first one. */
+.ac-sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--ink-muted);
+}
+.ac-sectionHead:first-child { padding-top: 6px; }
+.ac-sectionCount {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
 
 /* In-progress session. The design's static prototype has no equivalent — its
    rows only ever show plain relative-time text — but a session here can really

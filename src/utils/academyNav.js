@@ -38,6 +38,9 @@ export const NAV = [
 // under /teacher/classes/:subjectId/... — title those by what they show, not
 // as "Classes", so the header tracks the actual screen.
 const EXTRA_TITLES = [
+  // Dashboards v2 lives off-nav while it is being reviewed; without a
+  // title here the header humanises the path and reads "V2".
+  { to: "/teacher/v2", l: "Dashboard" },
   { to: "/teacher/profile", l: "Profile" },
   { to: "/teacher/change-password", l: "Change Password" },
   { to: "/teacher/settings", l: "Settings" },
