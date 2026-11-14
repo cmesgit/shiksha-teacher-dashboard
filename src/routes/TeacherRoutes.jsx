@@ -52,6 +52,7 @@ import AllStudents from "../pages/AllStudents";
 import AllStudentDetail from "../pages/AllStudentDetail";
 import ProtectedTeacherRoute from "./ProtectedTeacherRoute";
 import RequireTrack from "./RequireTrack";
+import RequireFlag from "./RequireFlag";
 import QuizStudentAttemptsView from "../pages/QuizStudentAttemptsView";
 import PrivateSessionsDashboard from "../pages/PrivateSessionsDashboard";
 import PrivateSessionAvailability from "../pages/PrivateSessionAvailability";
@@ -225,7 +226,17 @@ export default function TeacherRoutes() {
             track not added yet" instead of their expert dashboard.
             DashboardEntry now renders the gate itself when appropriate. */}
         <Route path="dashboard" element={<DashboardEntry />} />
-        <Route path="v2" element={<RequireTrack track="academy"><TeacherDashboardV2 /></RequireTrack>} />
+        {/* Gated on dashboards_v2_enabled (default OFF) as well as the track:
+            while the redesign is under review the route must not be reachable
+            by anyone who merely knows the URL. */}
+        <Route
+          path="v2"
+          element={
+            <RequireFlag flag="dashboards_v2_enabled">
+              <RequireTrack track="academy"><TeacherDashboardV2 /></RequireTrack>
+            </RequireFlag>
+          }
+        />
 
         <Route element={<RequireTrack track="academy"><Outlet /></RequireTrack>}>
         <Route path="profile" element={<FacultyProfile />} />
