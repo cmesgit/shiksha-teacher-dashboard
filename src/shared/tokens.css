@@ -41,6 +41,19 @@
   --side-tile:        rgba(255, 255, 255, .12);  /* brand logo tile */
   --side-tile-border: rgba(255, 255, 255, .22);
 
+  /* Label colour for text/icons sitting ON a filled accent — --action,
+     --primary, --academy, --maroon. Those four do NOT darken under
+     data-theme="dark" (the role chrome keeps its hue; see the dark block
+     below), so their labels must NOT flip either.
+
+     Use this, never --surface. --surface is #ffffff in light, which makes
+     `color: var(--surface)` look like a correct migration of `color: #fff`
+     and stay byte-identical in light mode — then turn near-black on an
+     undarkened maroon the moment dark is switched on. --surface is only
+     right on a fill that DOES flip light in dark (--danger, --success,
+     --warning, --info and their -soft pairs all do). */
+  --on-accent:        #ffffff;
+
   /* ── Surfaces & structure ──────────────────────────────────────────── */
   --page-bg:       #eef1f2;   /* app canvas */
   --surface:       #ffffff;   /* cards, header, modals */
