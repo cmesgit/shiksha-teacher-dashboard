@@ -154,7 +154,12 @@
 .co-card--row .co-card-sub { display: block }
 .co-note-preview { display: block; margin-top: 8px; font: 400 var(--fs-small)/1.5 var(--font-body); color: var(--ink-2); white-space: pre-wrap }
 .co-notification--unread { border-color: var(--action) }
-.co-nav-count { margin-left: auto; min-width: 19px; padding: 2px 6px; border-radius: var(--r-pill); background: var(--action); color: var(--surface); font: 700 var(--fs-micro) var(--font-body); text-align: center }
+/* --on-accent, NOT --surface: the fill is --action, which does not darken
+   under data-theme="dark", so a --surface label would stay #ffffff in light
+   (looking correct) and flip to near-black on maroon the moment dark lands.
+   This badge now renders in TWO places — Notifications and Requests — so the
+   latent inversion had two sites, not one. */
+.co-nav-count { margin-left: auto; min-width: 19px; padding: 2px 6px; border-radius: var(--r-pill); background: var(--action); color: var(--on-accent); font: 700 var(--fs-micro) var(--font-body); text-align: center }
 @media (max-width: 820px) {
   .co-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .co-today-grid { grid-template-columns: 1fr }
