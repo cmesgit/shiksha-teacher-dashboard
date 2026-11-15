@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { IoChevronBack } from "react-icons/io5";
 import { FiMoreHorizontal } from "react-icons/fi";
 import api from "../api/apiClient";
@@ -9,6 +9,7 @@ import { LoadingState, EmptyState, ErrorState } from "../components/StateViews";
 import { useToast } from "../contexts/ToastContext";
 import { subjectChipPalette } from "../utils/subjectChips";
 import { fmtClockTime, dayLabel, startsInText } from "../utils/sessionTime";
+import AcademyRail from "../components/academy/AcademyRail";
 import ScheduleSessionModal from "../components/live/ScheduleSessionModal";
 import NotesViewModal from "../components/live/NotesViewModal";
 
@@ -50,13 +51,17 @@ const UPCOMING_STATUSES = new Set([
 
 // Only the statuses actually rendered through the pill branch below (see
 // LiveSessionRow) — SCHEDULED/LIVE/COMPLETED each get their own plain-text
-// or dedicated-pill treatment instead. Colors are the design spec's semantic
-// tokens (mirrors the same mapping on the student side).
+// or dedicated-pill treatment instead.
+//
+// These six values used to be literal hexes that happened to equal
+// --warning/--info/--danger and their -soft pairs, which broke the app's
+// no-raw-hex rule and, more concretely, meant this screen did not follow the
+// dark theme: the tokens flip, the literals did not.
 const STATUS_CONFIG = {
-  PAUSED: { label: "Paused", color: "#c2701c", bg: "#fef3ec" },
-  RECONNECTING: { label: "Reconnecting", color: "#c2701c", bg: "#fef3ec" },
-  WAITING_FOR_TEACHER: { label: "Starting soon", color: "#1d4ed8", bg: "#e8edfb" },
-  CANCELLED: { label: "Cancelled", color: "#dc2626", bg: "#fef2f2" },
+  PAUSED: { label: "Paused", color: "var(--warning)", bg: "var(--warning-soft)" },
+  RECONNECTING: { label: "Reconnecting", color: "var(--warning)", bg: "var(--warning-soft)" },
+  WAITING_FOR_TEACHER: { label: "Starting soon", color: "var(--info)", bg: "var(--info-soft)" },
+  CANCELLED: { label: "Cancelled", color: "var(--danger)", bg: "var(--danger-soft)" },
 };
 
 function LiveSessionRow({ session, tick, onStart, onOpenRecording, onOpenNotes, onOpenDetail, onEdit, onCancel, onEnd, menuOpen, onToggleMenu }) {
@@ -224,6 +229,12 @@ export default function LiveSessions() {
   const { showToast } = useToast();
 
   const [sessions, setSessions] = useState([]);
+  // Rail only: which past sessions already have a recording. Its own request
+  // because no session field answers this — the join lives on the recording
+  // (SessionRecording.live_session), not the session. `null` means "not
+  // answered yet or the call failed", which the rail renders as an honest
+  // unknown rather than as "nothing to upload".
+  const [recordedSessionIds, setRecordedSessionIds] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("upcoming");
@@ -270,6 +281,27 @@ export default function LiveSessions() {
       setLoading(false);
     }
   }, [subjectId]);
+
+  // Deliberately NOT folded into fetchSessions: the list must render even if
+  // this 403s or the teacher has no recordings yet. A rail card is not worth
+  // failing the screen for.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get("/courses/teacher/recordings/all/");
+        const rows = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        if (cancelled) return;
+        setRecordedSessionIds(
+          new Set(rows.map((r) => r.live_session).filter(Boolean).map(String))
+        );
+      } catch (err) {
+        console.error("Failed to load recordings for the rail:", err);
+        if (!cancelled) setRecordedSessionIds(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     fetchSessions();
@@ -419,6 +451,188 @@ export default function LiveSessions() {
     });
 
   const rows = tab === "upcoming" ? upcomingRows : pastRows;
+  // Unfiltered, for the tab badge — see the Past button below.
+  const pastTotal = sessions.filter((s) => !UPCOMING_STATUSES.has(s.computed_status)).length;
+
+  // ── Day grouping ────────────────────────────────────────────────────────
+  // The design groups rows under Today / Tomorrow / Later this week. The row
+  // itself already shows a per-row day via dayLabel(), but that emits "Tmrw"
+  // and a bare weekday — fine inside a dense row, wrong as a section heading,
+  // so the headings get their own full-word vocabulary rather than reusing it.
+  //
+  // Grouping follows the ACTIVE SORT rather than imposing a date order:
+  // upcomingRows is sorted by status first (live sessions float to the top),
+  // so re-sorting by day here would silently move a live session below a
+  // scheduled one. Groups are therefore emitted in first-appearance order.
+  const dayGroups = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const headingFor = (dt) => {
+      const d0 = new Date(dt);
+      d0.setHours(0, 0, 0, 0);
+      const diff = Math.round((d0 - startOfToday) / 86400000);
+      if (diff === 0) return "Today";
+      if (diff === 1) return "Tomorrow";
+      if (diff === -1) return "Yesterday";
+      if (diff > 1 && diff <= 7) return "Later this week";
+      if (diff < -1 && diff >= -7) return "Earlier this week";
+      return dt.toLocaleDateString("en-GB", {
+        day: "numeric", month: "long", year: "numeric",
+      });
+    };
+
+    const order = [];
+    const byHeading = new Map();
+    for (const s of rows) {
+      const dt = new Date(s.start_time);
+      const key = Number.isNaN(dt.getTime()) ? "Scheduled" : headingFor(dt);
+      if (!byHeading.has(key)) { byHeading.set(key, []); order.push(key); }
+      byHeading.get(key).push(s);
+    }
+    return order.map((label) => ({ label, items: byHeading.get(label) }));
+  }, [rows]);
+
+  // ── Right rail ──────────────────────────────────────────────────────────
+  // Spec: Academy Lists.dc.html, role=teacher screen=live — "Next class",
+  // "This week", "Recordings to upload". All three are derived from data this
+  // screen already has; none needed a new endpoint.
+  //
+  // The design's third "This week" stat is "Average attendance 93%".
+  // ATTENDANCE DOES NOT EXIST in this backend — no model, field, endpoint or
+  // aggregate — so it renders as an explicit unknown instead of a number.
+  // LiveSessionAttendance is LiveKit room-presence telemetry for one call,
+  // not a roll-call, and has no denominator or "attended" threshold.
+  const railItems = useMemo(() => {
+    const now = Date.now();
+
+    // Monday-start week, matching how the teacher UIs elsewhere talk about
+    // "this week".
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    const inThisWeek = (s) => {
+      const t = new Date(s.start_time).getTime();
+      return t >= weekStart.getTime() && t < weekEnd.getTime();
+    };
+
+    // ── 1. Next class / Live now ──
+    const next = upcomingRows[0];
+    let callout = null;
+    if (next) {
+      const isLive = next.computed_status === "LIVE";
+      const students = next.batch_student_count;
+      const where = next.batch_name || next.course_name || "This class";
+      const parts = [];
+      if (next.title) parts.push(next.title);
+      if (typeof students === "number") {
+        parts.push(`${students} student${students === 1 ? "" : "s"} ${next.batch_name ? "are in this batch" : "are enrolled"}`);
+      }
+      // startsInText() returns a bare phrase — "in 25 min", or "in progress"
+      // once the start time has passed — so the verb belongs here. Printing it
+      // raw gave "Class 11 Science — Demo Course in progress", which reads as
+      // a missing word rather than a status.
+      const startedAt = new Date(next.start_time);
+      const overdue = startedAt.getTime() <= now;
+      callout = {
+        kind: "callout",
+        tone: isLive ? "teal" : "info",
+        kicker: isLive ? "Live now" : "Next class",
+        title: isLive
+          ? `${where} is live`
+          : overdue
+            // Scheduled, its slot has arrived, nobody has started it. Naming
+            // the time is more use than "in progress", which it is not.
+            ? `${where} was due at ${fmtClockTime(startedAt)}`
+            : `${where} starts ${startsInText(startedAt)}`,
+        // Same honesty note the v2 dashboard hero carries: the design puts
+        // "Start class" on a session 25 minutes out, and pressing it opens a
+        // room no student can enter yet.
+        text:
+          parts.join(". ") + (parts.length ? "." : "") +
+          (!isLive && !overdue && startedAt.getTime() - now > 15 * 60000
+            ? " Opening the room now won’t let students in — they can join from 15 minutes before the start time."
+            : ""),
+        btn: {
+          label: isLive ? "Join class" : "Start class",
+          onClick: () => handleStart(next),
+          // NOT gated on the start time. teacherCanJoin() deliberately has no
+          // start-time rule — a teacher may open the room whenever they like;
+          // it only refuses a cancelled session or an expired teacher_left_at
+          // grace window. T−15m is the rule for STUDENTS being admitted, which
+          // is a different claim, and the note below is where that gets said.
+          disabled: !next.can_join,
+        },
+      };
+    }
+
+    // ── 2. This week ──
+    const weekSessions = sessions.filter(
+      (s) => inThisWeek(s) && s.computed_status !== "CANCELLED"
+    );
+    const taught = weekSessions.filter((s) => s.computed_status === "COMPLETED").length;
+    const thisWeek = {
+      kind: "card",
+      title: "This week",
+      kv: [
+        { k: "Sessions scheduled", v: String(weekSessions.length) },
+        { k: "Taught so far", v: String(taught) },
+        {
+          k: "Average attendance",
+          unavailable: true,
+          reason: "Attendance isn't tracked yet, so this can't be calculated.",
+        },
+      ],
+    };
+
+    // ── 3. Recordings to upload ──
+    // A past session with no SessionRecording pointing at it. Unknown until
+    // the recordings call lands — and an unknown must not render as "all
+    // caught up", which is the opposite claim.
+    const endedWithoutRecording =
+      recordedSessionIds === null
+        ? null
+        : sessions
+            .filter((s) => s.computed_status === "COMPLETED")
+            .filter((s) => !recordedSessionIds.has(String(s.id)))
+            .sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
+            .slice(0, 4);
+
+    const initials = (s) =>
+      (s.batch_name || s.subject_name || "?")
+        .replace(/[^A-Za-z0-9 ]/g, " ")
+        .split(/\s+/).filter(Boolean).slice(0, 2)
+        .map((w) => w[0].toUpperCase()).join("") || "?";
+
+    const toUpload = {
+      kind: "card",
+      title: "Recordings to upload",
+      rows: (endedWithoutRecording || []).map((s) => ({
+        key: s.id,
+        lead: initials(s),
+        title: s.title,
+        sub: `${dayLabel(new Date(s.start_time))} ${fmtClockTime(new Date(s.start_time))} · no recording yet`,
+        action: {
+          label: "Upload",
+          // UploadRecording reads its prefill from router state, not the
+          // query string, and passes live_session_id through to the save
+          // call — so the recording lands attached to this session.
+          onClick: () => navigate(
+            `/teacher/classes/${s.subject_id}/session-recordings/upload`,
+            { state: { live_session_id: s.id, title: s.title } },
+          ),
+        },
+      })),
+      empty: endedWithoutRecording === null
+        ? "Couldn't check which sessions have recordings."
+        : "Every finished session has a recording.",
+    };
+
+    return [callout, thisWeek, toUpload];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, upcomingRows, recordedSessionIds, tick, navigate]);
 
   if (loading) return <div className="liveSessionsPage"><LoadingState label="Loading sessions" /></div>;
   if (error) return <div className="liveSessionsPage"><ErrorState message={error} onRetry={fetchSessions} /></div>;
@@ -447,6 +661,7 @@ export default function LiveSessions() {
               onClick={() => setTab("upcoming")}
             >
               Upcoming
+              <span className="liveSessionsTabs__count">{upcomingRows.length}</span>
             </button>
             <button
               type="button"
@@ -454,6 +669,11 @@ export default function LiveSessions() {
               onClick={() => setTab("past")}
             >
               Past
+              {/* The PAST count is deliberately the UNFILTERED total. pastRows
+                  has the search term applied, so using it would make the tab
+                  label count down as the teacher types — a tab count answers
+                  "how much is in here", not "how much matches". */}
+              <span className="liveSessionsTabs__count">{pastTotal}</span>
             </button>
           </div>
         </div>
@@ -479,6 +699,7 @@ export default function LiveSessions() {
         </div>
       )}
 
+      <div className="ac-railLayout">
       <section className="liveSessionsListCard">
         {rows.length === 0 ? (
           <EmptyState
@@ -498,7 +719,17 @@ export default function LiveSessions() {
           />
         ) : (
           <div className="liveSessionsList">
-            {rows.map((s) => (
+            {dayGroups.map((group) => (
+              <Fragment key={group.label}>
+                {/* One group means the heading says nothing the list doesn't
+                    already — skip it rather than print a lone "Today". */}
+                {dayGroups.length > 1 && (
+                  <div className="liveSessionsList__dayHead">
+                    <span>{group.label}</span>
+                    <span className="liveSessionsList__dayCount">{group.items.length}</span>
+                  </div>
+                )}
+                {group.items.map((s) => (
               <LiveSessionRow
                 key={s.id}
                 session={s}
@@ -513,10 +744,19 @@ export default function LiveSessions() {
                 menuOpen={rowMenu === s.id}
                 onToggleMenu={toggleRowMenu}
               />
+                ))}
+              </Fragment>
             ))}
           </div>
         )}
       </section>
+
+      {/* The rail is derived from the SAME `sessions` array the list uses, so
+          it stays correct on a WS update without its own refetch. It is
+          suppressed on the Past tab: every card answers a question about what
+          is coming up or still owed, which a historical view does not ask. */}
+      {tab === "upcoming" && <AcademyRail items={railItems} />}
+      </div>
 
       {showSchedule && (
         <ScheduleSessionModal

@@ -5,16 +5,22 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { pageTitleFor } from "../utils/academyNav";
 
 const APP_NAME = "ShikshaCom";
 
-function pageLabel(pathname) {
-  const segs = pathname.split("/").filter(Boolean);
-  // Teacher routes are all under /teacher/… — use the segment after it.
-  const s = segs[0] === "teacher" ? segs[1] : segs[0];
-  if (!s || s === "dashboard") return "Dashboard";
-  return s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+// The tab title comes from the SAME table as the in-app header
+// (academyNav.js's NAV + EXTRA_TITLES) rather than a second, private copy.
+//
+// This file used to carry its own `pageLabel()` that just humanised the path
+// segment. That silently diverged from the header the moment a route needed
+// an explicit title: /teacher/v2 rendered "Dashboard" in the header — because
+// academyNav has an EXTRA_TITLES entry for it — while the browser tab said
+// "V2", since this function had never heard of that table. Any future
+// off-nav route would have had the same split-brain.
+//
+// pageTitleFor falls back to the same humanise() this used to do, so every
+// path that was already correct stays correct.
 
 export default function DocumentTitle() {
   const { pathname } = useLocation();
@@ -31,7 +37,7 @@ export default function DocumentTitle() {
     } else {
       who = activeProfile?.display_name || "";
     }
-    const page = pageLabel(pathname);
+    const page = pageTitleFor(pathname);
     document.title = who
       ? `${page} · ${who} — ${APP_NAME}`
       : `${page} — ${APP_NAME}`;
