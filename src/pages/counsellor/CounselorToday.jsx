@@ -60,11 +60,31 @@ export default function CounselorToday() {
         <button className="co-btn co-btn--outline co-btn--sm" onClick={() => navigate("/teacher/counsellor/profile")}>Edit profile</button>
       </div>
       {!summary ? <div className="co-skel" style={{ height: 180 }} /> : <>
+        {/* The four stats are buttons, not read-outs — "2 pending requests"
+            is a thing you want to go and deal with, and the artboard treats
+            them as the fastest route into each screen. "Sessions today" has
+            nowhere of its own to go, so it stays a plain tile rather than
+            pretending to be clickable. */}
         <div className="co-stats">
           {[
-            ["Sessions today", summary.today.length], ["Upcoming", summary.upcoming],
-            ["Pending requests", summary.pending.length], ["Completed total", summary.completed],
-          ].map(([label, value]) => <div className="co-card co-stat" key={label}><strong>{value}</strong><span>{label}</span></div>)}
+            ["Sessions today", summary.today.length, null],
+            ["Upcoming", summary.upcoming, "/teacher/counsellor/upcoming"],
+            ["Pending requests", summary.pending.length, "/teacher/counsellor/requests"],
+            ["Completed total", summary.completed, "/teacher/counsellor/history"],
+          ].map(([label, value, to]) => (to ? (
+            <button
+              className="co-card co-stat co-stat--link"
+              key={label}
+              onClick={() => navigate(to)}
+              aria-label={`${label}: ${value}. Open.`}
+            >
+              <strong>{value}</strong><span>{label}</span>
+            </button>
+          ) : (
+            <div className="co-card co-stat" key={label}>
+              <strong>{value}</strong><span>{label}</span>
+            </div>
+          )))}
         </div>
         <div className="co-today-grid">
           <section>

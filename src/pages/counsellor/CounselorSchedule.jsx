@@ -9,11 +9,19 @@ import { getAppointments } from "../../api/counselorService";
 import { useCounselor } from "../../layout/CounselorContext";
 import "../../styles/counsellor.css";
 
-const fmtWhen = (iso) =>
-  new Date(iso).toLocaleString("en-IN", {
+// "Tue, 17 Nov · 6:00 PM" — see the note on the identical helper in
+// CounselorRequests.jsx. Kept local to each screen rather than extracted,
+// matching how these files already duplicate their small formatters.
+const fmtWhen = (iso) => {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("en-IN", {
     weekday: "short", day: "numeric", month: "short",
-    hour: "numeric", minute: "2-digit", hour12: true,
   });
+  const time = d.toLocaleTimeString("en-IN", {
+    hour: "numeric", minute: "2-digit", hour12: true,
+  }).toUpperCase();
+  return `${date} · ${time}`;
+};
 
 const STATUS_META = {
   confirmed: ["Confirmed", "co-chip--green"],
@@ -36,13 +44,31 @@ export default function CounselorSchedule() {
   const today = new Date();
   const weekEnd = new Date(today);
   weekEnd.setDate(today.getDate() + 7);
-  const list = upcoming?.filter((a) => {
+  // One predicate shared by the tab counts and the list, so a tab can never
+  // claim a number the list then contradicts.
+  const inFilter = (a, f) => {
     const when = new Date(a.scheduled_at);
-    return filter === "all" || (filter === "today"
+    if (f === "all") return true;
+    return f === "today"
       ? when.toDateString() === today.toDateString()
-      : when < weekEnd);
-  }).sort((a, b) => (order === "chronological" ? 1 : -1) *
-    (new Date(a.scheduled_at) - new Date(b.scheduled_at)));
+      : when < weekEnd;
+  };
+  const counts = upcoming === null ? null : {
+    all: upcoming.length,
+    today: upcoming.filter((a) => inFilter(a, "today")).length,
+    week: upcoming.filter((a) => inFilter(a, "week")).length,
+  };
+
+  // ⚠ This screen CRASHED on every load before this line changed, and the
+  // crash was invisible to a build: `upcoming` starts as null,
+  // `null?.filter(...)` evaluates to UNDEFINED (not null), and the loading
+  // guard below tests `list === null` — false for undefined. So render fell
+  // through to `list.length` and threw into the ErrorBoundary every time, on
+  // the only path that ever runs. Branch explicitly so loading stays null.
+  const list = upcoming === null ? null : upcoming
+    .filter((a) => inFilter(a, filter))
+    .sort((a, b) => (order === "chronological" ? 1 : -1) *
+      (new Date(a.scheduled_at) - new Date(b.scheduled_at)));
 
   return (
     <div className="co-page">
@@ -61,9 +87,16 @@ export default function CounselorSchedule() {
 
       <div className="co-head">
         <div className="co-tabs" role="tablist" aria-label="Upcoming session dates">
+          {/* Counts per tab, as the artboard shows them — "Today 2" answers
+              "is there anything today" without having to switch to find out.
+              Computed from the same `upcoming` array the list filters, so a
+              tab's number and its contents can never disagree. */}
           {[["all", "All"], ["today", "Today"], ["week", "Next 7 days"]].map(([value, label]) =>
             <button key={value} role="tab" aria-selected={filter === value}
-              className={`co-tab${filter === value ? " co-tab--on" : ""}`} onClick={() => setFilter(value)}>{label}</button>)}
+              className={`co-tab${filter === value ? " co-tab--on" : ""}`} onClick={() => setFilter(value)}>
+              {label}
+              {counts && <span className="co-count">{counts[value]}</span>}
+            </button>)}
         </div>
         <label className="co-sort">Sort <select className="co-select" value={order} onChange={(e) => setOrder(e.target.value)}>
           <option value="chronological">Soonest first</option><option value="recent">Latest first</option>
