@@ -10,7 +10,11 @@ import { useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { LOGIN_URL, PICK_PROFILE_URL } from "../config/urls";
 
-function Centered({ children }) {
+// Exported so ProtectedCounsellorRoute renders the identical waiting state
+// rather than duplicating it. Worth sharing specifically because the spinner
+// carries three pre-token literal hexes — a second copy would double them,
+// and this app's rule is that new CSS is token-only.
+export function Centered({ children }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center",

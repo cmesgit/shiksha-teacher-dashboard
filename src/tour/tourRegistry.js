@@ -150,8 +150,18 @@ export const tourRegistry = [
       {
         target: '[data-tour="sidebar-counsellor.nav-teacher-counsellor"]',
         placement: "right",
-        title: "Your schedule",
-        body: "Booked appointments show up here as students request them.",
+        // Was "Your schedule" / "Booked appointments show up here" — that
+        // described this screen before it became a dashboard. Today now
+        // opens on the day's sessions, four counts and the request queue,
+        // so the old copy pointed at the right place for the wrong reason.
+        title: "Your day at a glance",
+        body: "Today's sessions, what's waiting on you, and the counts — each one opens the screen behind it.",
+      },
+      {
+        target: '[data-tour="sidebar-counsellor.nav-teacher-counsellor-requests"]',
+        placement: "right",
+        title: "Students waiting on a decision",
+        body: "A number here means someone has asked for a session and hasn't heard back yet.",
       },
       {
         target: '[data-tour="sidebar-counsellor.nav-teacher-counsellor-availability"]',

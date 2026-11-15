@@ -19,7 +19,7 @@ import { IoClose } from "react-icons/io5";
 import Header from "../components/Header";
 import logo from "../assets/Shiksha.svg";
 import { HOME_URL } from "../config/urls";
-import { getMe, getCounselorUnreadCount } from "../api/counselorService";
+import { getMe, getCounselorUnreadCount, getAppointments } from "../api/counselorService";
 import { CounselorCtx } from "./CounselorContext";
 import CounselorApply from "../pages/counsellor/CounselorApply";
 import "./layout.css";
@@ -45,6 +45,10 @@ export default function CounselorLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [me, setMe] = useState(undefined);      // undefined=loading, null=no profile
   const [unreadCount, setUnreadCount] = useState(0);
+  // Bookings waiting on a decision. The artboard badges Requests the same way
+  // it badges Notifications, and for the same reason: a request nobody looks
+  // at is a student left hanging.
+  const [pendingCount, setPendingCount] = useState(0);
 
   const refresh = () =>
     getMe().then(setMe).catch((e) => {
@@ -53,7 +57,20 @@ export default function CounselorLayout() {
     });
   useEffect(() => { refresh(); }, []);
   const refreshNotifications = () => getCounselorUnreadCount().then(setUnreadCount).catch(() => {});
-  useEffect(() => { if (me?.status === "approved") refreshNotifications(); }, [me?.status, pathname]);
+  // `count` is the server's own qs.count(), NOT results.length — the two
+  // would diverge the day this list starts paginating, and a badge that
+  // silently stops counting past a page is worse than no badge.
+  const refreshPending = () =>
+    getAppointments({ status: "pending" })
+      .then((d) => setPendingCount(d?.count ?? (d?.results || []).length))
+      .catch(() => {});
+  // Re-read on every navigation so approving a request in Requests updates
+  // the sidebar without a reload.
+  useEffect(() => {
+    if (me?.status !== "approved") return;
+    refreshNotifications();
+    refreshPending();
+  }, [me?.status, pathname]);
 
   const isActive = (to, end) =>
     end ? pathname === to : pathname === to || pathname.startsWith(to + "/");
@@ -87,6 +104,8 @@ export default function CounselorLayout() {
                 {item.label}
                 {item.label === "Notifications" && unreadCount > 0 &&
                   <span className="co-nav-count" aria-label={`${unreadCount} unread`}>{unreadCount}</span>}
+                {item.label === "Requests" && pendingCount > 0 &&
+                  <span className="co-nav-count" aria-label={`${pendingCount} waiting for a decision`}>{pendingCount}</span>}
               </button>
             ))}
           </nav>
@@ -145,6 +164,16 @@ function StatusScreen({ me, onReload }) {
           <button className="co-btn co-btn--outline" onClick={onReload}>Check again</button>
         </div>
       </div>
+
+      {/* The rejected copy above says "you can update your profile details
+          below". Until this existed there was nothing below, and no route
+          back into the queue at all — `status` is read-only on the profile
+          serializer, so editing alone left the application rejected for
+          ever. Suspended deliberately gets NO form: that is an admin action
+          and a user must not be able to re-apply their way out of it. */}
+      {me.status === "rejected" && (
+        <CounselorApply existing={me} onApplied={onReload} />
+      )}
     </div>
   );
 }

@@ -48,6 +48,7 @@ import StudentDetail from "../pages/StudentDetail";
 import AllStudents from "../pages/AllStudents";
 import AllStudentDetail from "../pages/AllStudentDetail";
 import ProtectedTeacherRoute from "./ProtectedTeacherRoute";
+import ProtectedCounsellorRoute from "./ProtectedCounsellorRoute";
 import RequireTrack from "./RequireTrack";
 import QuizStudentAttemptsView from "../pages/QuizStudentAttemptsView";
 import PrivateSessionsDashboard from "../pages/PrivateSessionsDashboard";
@@ -178,10 +179,14 @@ export default function TeacherRoutes() {
         <Route path="inbox" element={<SkillInbox />} />
       </Route>
 
-      {/* ── Counselling — CounselorLayout (own onboarding gate) ── */}
+      {/* ── Counselling — CounselorLayout (own onboarding gate) ──
+          Gated on ProtectedCounsellorRoute, NOT ProtectedTeacherRoute: a
+          counsellor who does not also teach cannot mint a teacher-context
+          token, so the teacher gate locked them out of their own console
+          while every endpoint behind it would have answered them fine. */}
       <Route
         path="/teacher/counsellor"
-        element={<ProtectedTeacherRoute><CounselorLayout /></ProtectedTeacherRoute>}
+        element={<ProtectedCounsellorRoute><CounselorLayout /></ProtectedCounsellorRoute>}
       >
         <Route index element={<CounselorToday />} />
         <Route path="upcoming" element={<CounselorSchedule />} />

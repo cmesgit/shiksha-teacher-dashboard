@@ -15,6 +15,13 @@ export async function getMe() {
 export async function updateMe(payload) {
   return (await api.put("/counseling/counselor/me/", payload)).data;
 }
+// rejected → pending. Its own endpoint because `status` is read-only on the
+// profile serializer (so nobody can approve themselves with a PUT), which
+// left a rejected applicant able to edit forever and never re-enter the
+// admin queue. Refuses every other transition — suspended especially.
+export async function reapplyCounselor() {
+  return (await api.post("/counseling/counselor/reapply/")).data;
+}
 export async function getSpecializations() {
   return (await api.get("/counseling/specializations/")).data;
 }
