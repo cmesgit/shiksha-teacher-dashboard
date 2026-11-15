@@ -62,7 +62,22 @@ export default function TrackSwitcher() {
   const skillStatus   = teacherInfo?.tracks?.skill   ?? "locked";
 
   const showCounsellor = hasRole("COUNSELOR");
-  const TRACKS_WITH_COUNSELLOR = showCounsellor ? [...TRACKS, COUNSELLOR_TRACK] : TRACKS;
+
+  // A PURE counsellor — COUNSELOR role and no teacher identity at all — has
+  // no Academy or Skill Dev to switch to. Both would default to "locked" and
+  // render as lock pills whose only destinations are a bounce back out
+  // (Academy navigates to /teacher/dashboard, which its own gate refuses;
+  // Skill Dev leaves for the marketing site's apply flow). Offering two doors
+  // that cannot open is worse than not drawing them.
+  //
+  // Scoped deliberately narrowly: this changes NOTHING for any account that
+  // has a teacher identity, including a counsellor who also teaches — they
+  // keep exactly today's pills, locked states and copy.
+  const hasTeacherIdentity = Boolean(teacherInfo);
+  const switchableTracks = showCounsellor && !hasTeacherIdentity ? [] : TRACKS;
+  const TRACKS_WITH_COUNSELLOR = showCounsellor
+    ? [...switchableTracks, COUNSELLOR_TRACK]
+    : TRACKS;
 
   const current = pathname.startsWith("/teacher/counsellor") ? "counsellor"
                 : pathname.startsWith("/teacher/expert")     ? "skill"
