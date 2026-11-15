@@ -6,7 +6,7 @@
 // teacher-approvals flow). Approval grants the COUNSELOR role.
 
 import React, { useEffect, useState } from "react";
-import { applyCounselor, getSpecializations } from "../../api/counselorService";
+import { applyCounselor, getSpecializations, reapplyCounselor, updateMe } from "../../api/counselorService";
 import "../../styles/counsellor.css";
 import { LoadingState } from "../../components/StateViews";
 
@@ -15,13 +15,33 @@ const EXPERIENCE = [
   ["5_10", "5–10 years"], ["10plus", "10+ years"],
 ];
 
-export default function CounselorApply({ onApplied }) {
+/**
+ * The apply form, in two modes.
+ *
+ * `existing` absent  → first application. POSTs /counselor/apply/.
+ * `existing` present → a REJECTED applicant editing and re-submitting. PUTs
+ *   the profile, then POSTs /counselor/reapply/ to move it back to pending.
+ *   Two calls because `status` is read-only on the profile serializer by
+ *   design; see the endpoint's docstring.
+ *
+ * The rejected gate used to say "you can update your profile details below"
+ * with nothing below it and no way back into the queue. This is the "below".
+ */
+export default function CounselorApply({ onApplied, existing = null }) {
+  const isReapply = !!existing;
   const [specs, setSpecs] = useState([]);
   const [form, setForm] = useState({
-    display_name: "", bio: "", qualifications: "", certifications: "",
-    approach: "", years_experience: "1_3", languages: "",
+    display_name: existing?.display_name || "",
+    bio: existing?.bio || "",
+    qualifications: existing?.qualifications || "",
+    certifications: existing?.certifications || "",
+    approach: existing?.approach || "",
+    years_experience: existing?.years_experience || "1_3",
+    languages: existing?.languages || "",
   });
-  const [picked, setPicked] = useState([]);
+  const [picked, setPicked] = useState(
+    (existing?.specializations || []).map((s) => s.id)
+  );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -37,7 +57,14 @@ export default function CounselorApply({ onApplied }) {
     setBusy(true);
     setError("");
     try {
-      await applyCounselor({ ...form, specialization_ids: picked });
+      if (isReapply) {
+        // Save the edits first — if the re-submit fails, the applicant's
+        // corrections are still stored rather than lost with the request.
+        await updateMe({ ...form, specialization_ids: picked });
+        await reapplyCounselor();
+      } else {
+        await applyCounselor({ ...form, specialization_ids: picked });
+      }
       onApplied?.();
     } catch (e) {
       setError(e?.response?.data?.detail || "Couldn't submit — please try again.");
@@ -48,11 +75,13 @@ export default function CounselorApply({ onApplied }) {
   return (
     <div className="co-gate" style={{ maxWidth: 700 }}>
       <div className="co-card">
-        <h2 className="co-title">Become a career counsellor</h2>
+        <h2 className="co-title">
+          {isReapply ? "Update and re-apply" : "Become a career counsellor"}
+        </h2>
         <p className="co-sub" style={{ marginBottom: 18 }}>
-          Guide students one-on-one — stream selection, entrance exams,
-          career direction. Fill this in once; our team reviews every
-          application before you appear in the directory.
+          {isReapply
+            ? "Change whatever the reviewer asked about, then send it back. Your application returns to the queue and the team takes another look."
+            : "Guide students one-on-one — stream selection, entrance exams, career direction. Fill this in once; our team reviews every application before you appear in the directory."}
         </p>
         {error && <div className="co-error">{error}</div>}
 
@@ -99,7 +128,9 @@ export default function CounselorApply({ onApplied }) {
         </div>
 
         <button className="co-btn" disabled={busy} onClick={submit} style={{ marginTop: 4 }}>
-          {busy ? "Submitting…" : "Submit application"}
+          {busy
+            ? (isReapply ? "Re-submitting…" : "Submitting…")
+            : (isReapply ? "Update and re-apply" : "Submit application")}
         </button>
       </div>
     </div>

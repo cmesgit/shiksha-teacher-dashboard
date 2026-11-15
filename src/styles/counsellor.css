@@ -133,6 +133,15 @@
 .co-stat { display: flex; flex-direction: column; gap: 4px }
 .co-stat strong { font: 700 var(--fs-stat) var(--font-display); color: var(--ink) }
 .co-stat span { font: 500 var(--fs-small) var(--font-body); color: var(--ink-muted) }
+/* Three of the four stats open the screen they count. A <button> inherits
+   none of the card's layout, so it restates alignment and resets the UA's
+   border/background — .co-card supplies the surface. Token-only: this file
+   carries 80 pre-token literals from before the token system, and nothing
+   new adds to that count. */
+.co-stat--link { width: 100%; align-items: flex-start; text-align: left; border: 0; background: transparent; cursor: pointer; font: inherit }
+.co-stat--link:hover { border-color: var(--border-strong) }
+.co-stat--link:hover strong { color: var(--action) }
+.co-stat--link:focus-visible { outline: 2px solid var(--action); outline-offset: 2px }
 .co-today-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr); gap: var(--gap-lg); align-items: start }
 .co-today-aside { margin-bottom: var(--gap) }
 .co-today-aside .co-btn { margin-top: 12px }

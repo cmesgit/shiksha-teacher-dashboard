@@ -17,11 +17,20 @@ export default function CounselorHistory() {
       .catch(() => setError("Couldn't load session history. Please refresh."));
   }, []);
 
+  const inTab = (s, t) => (t === "completed" ? s.status === "completed" : CANCELLED.has(s.status));
+
   const shown = useMemo(() => {
     if (!sessions) return null;
-    const list = sessions.filter((s) => tab === "completed" ? s.status === "completed" : CANCELLED.has(s.status));
+    const list = sessions.filter((s) => inTab(s, tab));
     return list.sort((a, b) => (order === "recent" ? -1 : 1) * (new Date(a.scheduled_at) - new Date(b.scheduled_at)));
   }, [sessions, tab, order]);
+
+  // Per-tab counts, as the artboard shows them. Same predicate as the list
+  // above, so the number on a tab always matches what opening it reveals.
+  const counts = useMemo(() => (sessions ? {
+    completed: sessions.filter((s) => inTab(s, "completed")).length,
+    cancelled: sessions.filter((s) => inTab(s, "cancelled")).length,
+  } : null), [sessions]);
 
   return <div className="co-page">
     <div className="co-head"><div><h1 className="co-title">Session history</h1><p className="co-sub">Completed, cancelled and declined sessions.</p></div></div>
@@ -30,6 +39,7 @@ export default function CounselorHistory() {
         {["completed", "cancelled"].map((value) => <button key={value} role="tab" aria-selected={tab === value}
           className={`co-tab${tab === value ? " co-tab--on" : ""}`} onClick={() => setTab(value)}>
           {value === "completed" ? "Completed" : "Cancelled & declined"}
+          {counts && <span className="co-count">{counts[value]}</span>}
         </button>)}
       </div>
       <label className="co-sort">Sort <select className="co-select" value={order} onChange={(e) => setOrder(e.target.value)}><option value="recent">Most recent</option><option value="oldest">Oldest first</option></select></label>
