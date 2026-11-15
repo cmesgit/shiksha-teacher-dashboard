@@ -35,8 +35,19 @@ const DATE_FMT = { weekday: "long", day: "numeric", month: "long", year: "numeri
 export default function Header({ onMenuClick, isExpertPage, titleOverride }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { teacherInfo } = useAuth();
+  const { teacherInfo, hasRole } = useAuth();
   const isSkillActive = teacherInfo?.active_track === "skill";
+
+  // A PURE counsellor — COUNSELOR role and no teacher identity at all — now
+  // reaches this header, because /teacher/counsellor is gated on
+  // ProtectedCounsellorRoute rather than ProtectedTeacherRoute. Everything
+  // else under /teacher still sits behind the teacher gate, so the controls
+  // below would hand them links that bounce straight to the profile picker.
+  //
+  // Scoped narrowly on purpose: `teacherInfo` is non-null for ANY account with
+  // a teacher identity, including a counsellor who also teaches, so every
+  // existing user keeps exactly today's header.
+  const pureCounsellor = hasRole("COUNSELOR") && !teacherInfo;
 
   const title = titleOverride || (isExpertPage ? "Skill Development" : pageTitleFor(pathname));
   const todayLong = new Date().toLocaleDateString("en-GB", DATE_FMT);
@@ -52,14 +63,25 @@ export default function Header({ onMenuClick, isExpertPage, titleOverride }) {
       </div>
       <div className="header__right">
       <TrackSwitcher />
-      <MessagesPopover viewAllHref={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
+      {/* Every destination this popover can navigate to is a /teacher route
+          behind the teacher gate — `viewAllHref` is its ONLY navigation — so
+          for a pure counsellor it is a control that cannot work. Hidden
+          rather than pointed somewhere unrelated: counselling has no messages
+          surface, and sending "View all messages" to notifications would be a
+          different thing wearing the same label. */}
+      {!pureCounsellor && (
+        <MessagesPopover viewAllHref={isSkillActive ? "/teacher/expert/inbox" : "/teacher/chat"} />
+      )}
       <NotificationBell />
       <ProfileSwitcher
         compact
         teacherSignupUrl={`${HOME_URL}/signup?role=teacher`}
         learnUrl={APP_URL}
-        teachUrl={window.location.origin + "/teacher/dashboard"}
-        quickActions={[
+        teachUrl={window.location.origin + (pureCounsellor ? "/teacher/counsellor" : "/teacher/dashboard")}
+        quickActions={pureCounsellor ? [
+          { label: "Counselling", icon: <RiDashboardLine />, onClick: () => navigate("/teacher/counsellor") },
+          { label: "Requests", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/counsellor/requests") },
+        ] : [
           { label: "Dashboard", icon: <RiDashboardLine />, onClick: () => navigate(isSkillActive ? "/teacher/expert" : "/teacher/dashboard") },
           isSkillActive
             ? { label: "My skills", icon: <RiBookOpenLine />, onClick: () => navigate("/teacher/expert/skills") }
