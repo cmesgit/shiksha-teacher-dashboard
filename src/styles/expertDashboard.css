@@ -90,3 +90,42 @@
 .ed-reviewBody { font-size: 12.5px; color: var(--ink-muted); line-height: 1.55; margin-top: 3px; }
 .ed-stars { color: var(--skill); font-size: 12px; letter-spacing: 1px; }
 .ed-starsEmpty { color: var(--border-strong); }
+
+/* ── Session status chip + Accept/Decline on Today's schedule ────────────
+   Nine SkillSession statuses exist; four can appear on an upcoming list and
+   each gets its own tone. needs_reconfirmation is deliberately distinct from
+   confirmed — it means the expert is waiting on the LEARNER. */
+.ed-sessChip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.ed-sessChip--ok   { background: var(--success-soft); color: var(--success); }
+.ed-sessChip--warn { background: var(--warning-soft); color: var(--warning); }
+.ed-sessChip--info { background: var(--info-soft);    color: var(--info); }
+
+.ed-sessActions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* --on-accent, never --surface: these sit on filled accents that do not
+   darken under data-theme="dark". */
+.ed-declineBtn {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+.ed-declineBtn:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.ed-declineBtn:disabled,
+.ed-startBtn:disabled { opacity: .6; cursor: not-allowed; }

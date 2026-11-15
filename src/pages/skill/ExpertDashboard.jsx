@@ -17,6 +17,8 @@ import api from "../../shared/apiClient";
 import "../../styles/skillDev.css";
 import "../../styles/expertDashboard.css";
 import { LoadingState } from "../../components/StateViews";
+import { useSkillToast } from "../../components/useSkillToast";
+import extractError from "../../shared/extractError";
 
 function fmtTime(iso) {
   if (!iso) return "";
@@ -28,6 +30,18 @@ function fmtDate(iso) {
   try { return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" }); }
   catch { return ""; }
 }
+
+/* SkillSession has NINE statuses. Only four can reach an upcoming schedule —
+   the rest are terminal — and the design collapses even those into two
+   chips, which loses the one that matters most: needs_reconfirmation means
+   the EXPERT already proposed a new time and the learner has not answered.
+   Showing that as "confirmed" would tell them the opposite of the truth. */
+const SESSION_STATUS = {
+  requested:            { label: "Awaiting your reply", tone: "warn" },
+  confirmed:            { label: "Confirmed",           tone: "ok" },
+  needs_reconfirmation: { label: "Waiting on learner",  tone: "info" },
+  pending_payment:      { label: "Awaiting payment",    tone: "warn" },
+};
 
 function Stars({ n }) {
   const full = Math.round(n || 0);
@@ -56,6 +70,42 @@ export default function ExpertDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [profile, setProfile] = useState({ name: "" });
+
+  const showToast = useSkillToast();
+  // Which row is mid-action, so both buttons on it can disable together.
+  const [acting, setActing] = useState({});
+
+  /* ExpertBookings' equivalent is `try { await fn() } finally {...}` — no
+     catch. A failed confirm there leaves the button un-spinning and says
+     NOTHING, so the expert cannot tell whether the learner is now booked.
+     This one reports, and re-loads rather than guessing the new state:
+     confirm can legitimately land in several statuses (pending_payment when
+     the listing is paid, confirmed when it is free), so an optimistic
+     `status: "confirmed"` would be a guess that is sometimes wrong. */
+  const act = async (id, key, fn, okMsg) => {
+    setActing((a) => ({ ...a, [id]: key }));
+    try {
+      await fn();
+      showToast(okMsg);
+      load();
+    } catch (err) {
+      /* extractError, not err.response.data.detail — these endpoints raise
+         DRF ValidationError, whose body is a bare ARRAY
+         (["Session is not in 'requested' state."]), so a `.detail` lookup
+         finds nothing and throws away a perfectly good server message. The
+         shared helper handles that shape, and refuses HTML error documents,
+         which is how a Django 500 page once reached a user as a banner. */
+      showToast(extractError(err));
+    } finally {
+      setActing((a) => { const n = { ...a }; delete n[id]; return n; });
+    }
+  };
+
+  const acceptSession = (b) => act(b.id, "accept",
+    () => api.post(`/skill/teacher/sessions/${b.id}/confirm/`), "Session confirmed.");
+
+  const declineSession = (b) => act(b.id, "decline",
+    () => api.post(`/skill/teacher/sessions/${b.id}/decline/`), "Request declined.");
 
   const load = () => {
     setError("");
@@ -167,9 +217,38 @@ export default function ExpertDashboard() {
                 <div className="ed-scheduleTime">{fmtTime(b.scheduled_for)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="ed-scheduleTopic">{b.topic}</div>
-                  <div className="ed-scheduleWith">with {b.name}</div>
+                  <div className="ed-scheduleWith">
+                    with {b.name}
+                    {SESSION_STATUS[b.status] && (
+                      <span className={`ed-sessChip ed-sessChip--${SESSION_STATUS[b.status].tone}`}>
+                        {SESSION_STATUS[b.status].label}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {b.live && <button className="ed-startBtn" onClick={() => navigate("/teacher/expert/bookings")}>Start</button>}
+                {/* Accept/Decline live HERE, on the row, because this is where
+                    the expert sees the request. Previously the only place to
+                    answer was the separate Bookings screen. */}
+                {b.status === "requested" ? (
+                  <div className="ed-sessActions">
+                    <button
+                      className="ed-startBtn"
+                      disabled={!!acting[b.id]}
+                      onClick={() => acceptSession(b)}
+                    >
+                      {acting[b.id] === "accept" ? "Accepting…" : "Accept"}
+                    </button>
+                    <button
+                      className="ed-declineBtn"
+                      disabled={!!acting[b.id]}
+                      onClick={() => declineSession(b)}
+                    >
+                      {acting[b.id] === "decline" ? "Declining…" : "Decline"}
+                    </button>
+                  </div>
+                ) : b.live ? (
+                  <button className="ed-startBtn" onClick={() => navigate(`/teacher/skill-session/live/${b.id}`)}>Start</button>
+                ) : null}
               </div>
             ))}
           </div>
