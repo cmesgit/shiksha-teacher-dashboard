@@ -136,3 +136,42 @@
 .ed-badge--toggle { cursor: pointer; border: 1px solid transparent; font: inherit; font-size: 11.5px; font-weight: 700; }
 .ed-badge--toggle:disabled { opacity: .65; cursor: progress; }
 .ed-badge--paused { background: var(--warning-soft); color: var(--warning); border-color: var(--warning); }
+
+/* ── S3 · Profile checklist ──────────────────────────────────────────────
+   A checklist, not a "profile strength" meter. There is no score to draw:
+   completeness() is a boolean plus a list of missing keys, so the count is
+   the only honest progress indicator. */
+.ed-checklist { border-left: 3px solid var(--warning); }
+
+.ed-checklistHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ed-checklistCount {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ed-checklistWhy {
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.ed-checklistItems {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
