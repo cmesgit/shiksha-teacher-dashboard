@@ -18,6 +18,7 @@ import api from "../../shared/apiClient";
 import SkillModal from "../../components/SkillModal";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { useSkillToast } from "../../components/useSkillToast";
+import extractError from "../../shared/extractError";
 import "../../styles/skillDev.css";
 import "../../styles/expertBookings.css";
 import { LoadingState, EmptyState } from "../../components/StateViews";
@@ -78,9 +79,29 @@ export default function ExpertBookings() {
     state: { learnerId: sess.learner?.id, learnerName: sess.learner?.name },
   });
 
+  /* try/finally with NO catch was the bug: a failed confirm left the button
+     un-spinning and said NOTHING, so the expert could not tell whether the
+     learner was now booked. The optimistic state update also never ran, so
+     the row silently disagreed with the server.
+
+     extractError, not err.response.data.detail — these endpoints raise DRF
+     ValidationError, whose body is a bare ARRAY (["Session is not in
+     'requested' state."]), so a .detail lookup finds nothing and discards a
+     perfectly good message. Same fix as the expert dashboard's handler. */
   const act = async (id, key, fn) => {
     setActing((a) => ({ ...a, [id]: key }));
-    try { await fn(); } finally { setActing((a) => { const n = { ...a }; delete n[id]; return n; }); }
+    try {
+      await fn();
+    } catch (err) {
+      /* Swallowed deliberately, NOT rethrown: every caller invokes this from
+         an onClick that ignores the returned promise, so rethrowing would
+         only produce an unhandled rejection. Each caller's optimistic state
+         update already sits after its `await` inside fn, so a failed request
+         skips it on its own. */
+      showToast(extractError(err));
+    } finally {
+      setActing((a) => { const n = { ...a }; delete n[id]; return n; });
+    }
   };
 
   const accept = (s) => act(s.id, "accepting", async () => {
