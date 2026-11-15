@@ -56,6 +56,9 @@ const EMPTY = {
   },
   week_chart: { labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], counts: [0, 0, 0, 0, 0, 0, 0] },
   accepting_bookings: true,
+  // Defaults to COMPLETE so a slow load never flashes a to-do list at an
+  // expert whose profile is finished.
+  completeness: { is_complete: true, missing: [] },
   today_schedule: [],
   next_up: [],
   recent_reviews: [],
@@ -159,13 +162,18 @@ export default function ExpertDashboard() {
     { value: `${stats.hours_this_month}h`, label: "Hours taught this month" },
     {
       value: stats.avg_rating != null ? Number(stats.avg_rating).toFixed(1) : "—",
-      label: stats.rank ? `Rating · Rank #${stats.rank}` : "Rating",
+      /* "Rank #N" was CUT. It is computed by counting experts with a higher
+         cached rating, so it does not break ties — every expert on 4.8 is
+         told the same rank — and it is None for anyone unrated, which is
+         most of them. A public league position that is wrong for ties and
+         absent for newcomers is worse than no position. */
+      label: "Rating",
       sub: stats.reviews_count ? `${stats.reviews_count} reviews` : null,
     },
   ];
 
   const maxCount = Math.max(1, ...week_chart.counts);
-  const todos = buildTodos(profile_todo);
+  const checklist = buildChecklist(data.completeness);
   const adv = advertised(advertising);
 
   return (
@@ -201,15 +209,30 @@ export default function ExpertDashboard() {
         </div>
       )}
 
-      {!loading && todos.length > 0 && (
-        <div className="rd-card teacher" style={{ borderLeft: "3px solid #ff8f01" }}>
-          <h4 style={{ margin: "0 0 8px" }}>Finish setting up</h4>
-          {todos.map((t) => (
-            <div key={t.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "6px 0" }}>
-              <div style={{ fontSize: 13, color: "#6b7c83" }}>{t.text}</div>
-              <button className="sk-btn sk-btn--ghost" onClick={() => navigate(t.to)} style={{ flexShrink: 0 }}>{t.cta}</button>
-            </div>
-          ))}
+      {!loading && checklist.length > 0 && (
+        <div className="rd-card teacher ed-checklist">
+          <div className="ed-checklistHead">
+            <h4 style={{ margin: 0 }}>Finish your profile</h4>
+            {/* A COUNT, not a percentage. It needs no weighting to be true. */}
+            <span className="ed-checklistCount">
+              {checklist.length} left
+            </span>
+          </div>
+          <p className="ed-checklistWhy">
+            Your profile stays unlisted until these are done, so learners can&rsquo;t find you yet.
+          </p>
+          <ul className="ed-checklistItems">
+            {checklist.map((t) => (
+              <li key={t.key}>{t.text}</li>
+            ))}
+          </ul>
+          <button
+            className="sk-btn sk-btn--primary"
+            onClick={() => navigate("/teacher/expert/profile")}
+            style={{ marginTop: 10 }}
+          >
+            Finish profile
+          </button>
         </div>
       )}
 
@@ -325,12 +348,12 @@ export default function ExpertDashboard() {
               <h4 style={{ margin: 0 }}>Advertising</h4>
               <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 100, background: adv.bg, color: adv.fg }}>{adv.label}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 12 }}>
-              <span style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 900, fontSize: 30, color: "#1a2c33", letterSpacing: "-.7px" }}>
-                {loading ? "—" : (advertising.reach_count ?? 0).toLocaleString("en-IN")}
-              </span>
-              <span style={{ fontSize: 12, color: "#6b7c83", fontWeight: 700 }}>reach</span>
-            </div>
+            {/* The big "reach" figure was CUT. add_reach() exists but has NO
+                CALLERS anywhere in the backend, so reach_count is 0 for every
+                expert who has ever used this product. Showing a prominent
+                zero on the Advertising card told a paying expert their
+                promotion had reached nobody. Restore it the day something
+                actually increments it. */}
             <div style={{ fontSize: 12, color: "#6b7c83", marginTop: 2, lineHeight: 1.5 }}>{adv.blurb}</div>
             <button className="sk-btn sk-btn--primary" onClick={() => navigate("/teacher/expert/promote")} style={{ width: "100%", marginTop: 12, justifyContent: "center" }}>
               {advertising.sub_active ? "Manage subscription" : "Promote my profile"}
@@ -367,10 +390,44 @@ function advertised(a = {}) {
   return { label: "Not promoted", bg: "#9aa9af22", fg: "#6b7c83", blurb: "Subscribe to be advertised consistently and grow your reach." };
 }
 
-function buildTodos(p = {}) {
-  const out = [];
-  if (p.needs_location) {
-    out.push({ key: "loc", to: "/teacher/expert/profile", cta: "Add location", text: "Add your class location so nearby learners can find you for offline lessons." });
-  }
-  return out;
+/* ── S3 · Profile checklist ──────────────────────────────────────────────
+   The design asks for a "profile strength" PERCENTAGE. There is no such
+   number, and inventing one would be the worst kind of fabrication on this
+   screen: a score is load-bearing — experts optimise against it — and any
+   weighting I chose would be arbitrary. What makes a profile 73% rather than
+   80%? Nothing. The backend's completeness() returns exactly what is true:
+   a boolean and a list of missing field keys.
+
+   So this renders the real CHECKLIST. It is strictly more useful than a
+   score: it tells the expert what to DO, where a percentage only tells them
+   they are being judged. Progress shows as a plain count of what is left — a
+   real number that needs no denominator and no weighting.
+
+   Deliberately NOT in this list:
+   · experience_timeline / experience_years / education — Django-admin-only,
+     with no write path anywhere in the product. The design's "Background
+     timeline — Add" button cannot ship: it would open a form that cannot
+     save. An item an expert cannot action does not belong on their to-do.
+   · pricing and "open slots" — neither is part of completeness(). Pricing
+     was deliberately removed from it; open slots were never in it. Adding
+     them here would re-introduce a requirement the product dropped. */
+const CHECKLIST_LABELS = {
+  subject_description: "Say what you teach",
+  languages:           "Add the languages you teach in",
+  bio:                 "Write a short bio",
+  class_mode:          "Choose where lessons happen",
+  class_location:      "Add your class location",
+  full_name:           "Add your full name",
+  date_of_birth:       "Add your date of birth",
+  phone:               "Add a phone number",
+  profile_photo:       "Add a profile photo",
+};
+
+function buildChecklist(completeness) {
+  const missing = (completeness && completeness.missing) || [];
+  return missing
+    // An unknown key means the backend grew a requirement this screen has
+    // not been taught to label. Skip it rather than render a raw field name.
+    .filter((k) => CHECKLIST_LABELS[k])
+    .map((k) => ({ key: k, text: CHECKLIST_LABELS[k] }));
 }
