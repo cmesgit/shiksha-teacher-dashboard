@@ -55,6 +55,7 @@ const EMPTY = {
     hours_this_month: 0, rank: null, total_experts: 0,
   },
   week_chart: { labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], counts: [0, 0, 0, 0, 0, 0, 0] },
+  accepting_bookings: true,
   today_schedule: [],
   next_up: [],
   recent_reviews: [],
@@ -74,6 +75,7 @@ export default function ExpertDashboard() {
   const showToast = useSkillToast();
   // Which row is mid-action, so both buttons on it can disable together.
   const [acting, setActing] = useState({});
+  const [savingAccepting, setSavingAccepting] = useState(false);
 
   /* ExpertBookings' equivalent is `try { await fn() } finally {...}` — no
      catch. A failed confirm there leaves the button un-spinning and says
@@ -107,6 +109,26 @@ export default function ExpertDashboard() {
   const declineSession = (b) => act(b.id, "decline",
     () => api.post(`/skill/teacher/sessions/${b.id}/decline/`), "Request declined.");
 
+  /* Optimistic, and reverted on failure. This one IS safe to be optimistic
+     about, unlike confirm/decline: the server echoes exactly the boolean we
+     sent, so there is no second state it can legitimately land in. */
+  const toggleAccepting = async () => {
+    const next = !acceptingBookings;
+    setSavingAccepting(true);
+    setData((d) => ({ ...d, accepting_bookings: next }));
+    try {
+      await api.patch("/skill/teacher/profile/", { accepting_bookings: next });
+      showToast(next
+        ? "You're taking new bookings again."
+        : "New booking requests are paused. Confirmed sessions are unaffected.");
+    } catch (err) {
+      setData((d) => ({ ...d, accepting_bookings: !next }));
+      showToast(extractError(err));
+    } finally {
+      setSavingAccepting(false);
+    }
+  };
+
   const load = () => {
     setError("");
     api.get("/skill/teacher/dashboard/")
@@ -125,6 +147,9 @@ export default function ExpertDashboard() {
   }, []);
 
   const { stats, week_chart, today_schedule, recent_reviews, advertising, profile_todo, activity } = data;
+  // Default TRUE so a slow load shows the normal state rather than flashing
+  // "Not taking new bookings" at an expert who is.
+  const acceptingBookings = data.accepting_bookings !== false;
   const greetHour = new Date().getHours();
   const greeting = greetHour < 12 ? "Good morning" : greetHour < 17 ? "Good afternoon" : "Good evening";
 
@@ -149,7 +174,24 @@ export default function ExpertDashboard() {
         <div>
           <h1 className="ed-greet">{loading ? "Loading…" : `${greeting}, ${profile.name}`}</h1>
         </div>
-        <span className="ed-badge">Accepting bookings</span>
+        {/* Was a hardcoded <span> reading "Accepting bookings" for every
+            expert, always — true or not, and impossible to turn off. It is
+            now the real `accepting_bookings` field, and pausing is ENFORCED:
+            SessionRequestView 409s a new request while it is off. */}
+        <button
+          type="button"
+          className={`ed-badge ed-badge--toggle${acceptingBookings ? "" : " ed-badge--paused"}`}
+          onClick={toggleAccepting}
+          disabled={savingAccepting}
+          aria-pressed={acceptingBookings}
+          title={acceptingBookings
+            ? "You're taking new requests. Click to pause."
+            : "New requests are paused. Your confirmed sessions are unaffected."}
+        >
+          {savingAccepting
+            ? "Saving…"
+            : acceptingBookings ? "Accepting bookings" : "Not taking new bookings"}
+        </button>
       </div>
 
       {error && !loading && (
