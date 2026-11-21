@@ -23,7 +23,25 @@
  * Deliberately UI-free: this file talks to the server and nothing else.
  * Feature activation is RC-011's.
  */
-import api from "../shared/apiClient";
+/* 🔴 `./apiClient`, not `../shared/apiClient`.
+ *
+ * This file is synced into all three web apps, but `src/shared/apiClient.js`
+ * exists only in the two dashboards — it is not a sync target for
+ * shiksha-frontend, which has `src/api/apiClient.js` and nothing else. The
+ * sibling path resolves in all three.
+ *
+ * RC-010 shipped the other spelling and nothing caught it, because the module
+ * shipped inert: no component imported it, so Rollup never resolved it and
+ * the build stayed green. RC-011 is the first thing to import it, and the
+ * frontend build failed immediately with "Could not resolve
+ * ../shared/apiClient". A latent broken import is the cost of landing code
+ * nothing exercises yet; worth remembering for the rest of this feature,
+ * which is deliberately built the same way.
+ *
+ * The two clients are equivalent — same axios instance, same API_URL, same
+ * withCredentials, same refreshSession interceptor, same default export — so
+ * this changes no behaviour in the dashboards. */
+import api from "./apiClient";
 
 const BASE = "/api/sessions/collaboration/v1";
 
