@@ -270,9 +270,9 @@ export function AuthProvider({ children }) {
   // `track` is optional and one of "academy" | "skill" (backend contract). When
   // omitted the backend defaults to academy-if-approved, else the first approved
   // track. Error codes map to the switcher's inline messages.
-  const enterTeacherMode = async (password, track) => {
+  const enterTeacherMode = async (pin, track) => {
     try {
-      await api.post("/accounts/context/teacher/", { password, track });
+      await api.post("/accounts/context/teacher/", { pin, track });
       setLoading(true);
       await bootstrap();
       return { ok: true };
@@ -282,13 +282,14 @@ export function AuthProvider({ children }) {
       if (code === "not_approved")  return { notApproved: true };
       if (code === "track_pending") return { trackPending: true };
       if (code === "track_locked")  return { trackLocked: true };
+      if (code === "bad_pin")       return { badPin: true };
       return Promise.reject({ message: extractError(err), raw: err });
     }
   };
 
   // ── Switch between already-held teaching tracks (no password) ──────────────
   // Moves an in-track teacher between Academy/Skill-Dev without re-confirming the
-  // account password (POST /accounts/context/teacher/track/). Same per-track
+  // PIN (POST /accounts/context/teacher/track/). Same per-track
   // gates as enterTeacherMode.
   const switchTrack = async (track) => {
     try {
