@@ -1,0 +1,324 @@
+/* shared/src/components/live/assistance/assistance.css — RC-011.
+ * ─────────────────────────────────────────────────────────────────────────
+ * Accessibility rules from frontend-ux-specification.md that are encoded
+ * here rather than left to each app's theme, because they are requirements
+ * and not taste:
+ *
+ *   - Buttons are at least 44x44 CSS pixels.
+ *   - Focus is always visible, and never removed by `outline: none`.
+ *   - Status is never carried by colour alone; every state also has a text
+ *     label and a non-colour marker in the markup.
+ *   - Contrast targets WCAG AA against the surfaces used here.
+ *
+ * Scoped under `sa-` so this can be dropped into three different app themes
+ * without colliding with their existing live-room styles.
+ */
+
+.sa-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.sa-dialog {
+  background: #ffffff;
+  color: #14181f;
+  border-radius: 12px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px 22px 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.sa-title {
+  font-size: 1.15rem;
+  line-height: 1.35;
+  margin: 0 0 10px;
+  font-weight: 650;
+}
+
+.sa-subtitle {
+  font-size: 0.95rem;
+  margin: 16px 0 6px;
+  font-weight: 650;
+}
+
+.sa-body {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+/* Secondary text still has to clear AA: #5a6472 on white is 4.9:1. A lighter
+ * grey would be the usual choice and would fail. */
+.sa-note {
+  margin: 8px 0;
+  color: #5a6472;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.sa-caps {
+  border: 1px solid #d6dbe3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+}
+
+.sa-caps-legend {
+  font-weight: 650;
+  padding: 0 4px;
+  font-size: 0.9rem;
+}
+
+.sa-cap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* 44px row, so the checkbox and its label are a comfortable target. */
+  min-height: 44px;
+  line-height: 1.4;
+}
+
+.sa-cap input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.sa-dwell {
+  margin: 4px 0 12px;
+  font-size: 0.88rem;
+  color: #5a6472;
+}
+
+.sa-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.sa-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #aeb6c2;
+  background: #f3f5f8;
+  color: #14181f;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sa-btn:hover:not(:disabled) { background: #e8ecf2; }
+
+/* Never remove this. Keyboard users need it and the spec requires it. */
+.sa-btn:focus-visible,
+.sa-input:focus-visible,
+.sa-cap input:focus-visible,
+.sa-mute input:focus-visible {
+  outline: 3px solid #1f6feb;
+  outline-offset: 2px;
+}
+
+.sa-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sa-btn-deny {
+  background: #ffffff;
+  border-color: #7b8494;
+}
+
+/* Allow is not styled as the primary, attention-grabbing action. The
+ * safe choice should not have to compete with the risky one. */
+.sa-btn-allow {
+  background: #e7efff;
+  border-color: #7aa7ef;
+}
+
+.sa-btn-stop {
+  background: #fdecec;
+  border-color: #d98a8a;
+  font-weight: 700;
+}
+
+.sa-link {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  padding: 10px 0;
+  min-height: 44px;
+  color: #1f5fbf;
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ── status bar ──────────────────────────────────────────────────────── */
+
+.sa-status,
+.sa-ended {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin: 8px 0;
+  border: 1px solid transparent;
+}
+
+.sa-status.is-active {
+  background: #fff6e5;
+  border-color: #d9a441;
+  color: #3d2f10;
+}
+
+.sa-status.is-paused {
+  background: #eef1f5;
+  border-color: #9aa3b0;
+  color: #1d232c;
+}
+
+.sa-ended {
+  background: #f2f4f7;
+  border-color: #9aa3b0;
+  color: #1d232c;
+}
+
+.sa-status-mark {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sa-status-text {
+  font-weight: 600;
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+
+.sa-status-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── menu, devices, pairing ──────────────────────────────────────────── */
+
+.sa-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sa-shared,
+.sa-mute {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
+.sa-mute input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+.sa-hosts,
+.sa-devices {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sa-host,
+.sa-device {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 44px;
+}
+
+.sa-host-name,
+.sa-device-name {
+  font-weight: 600;
+  flex: 1 1 auto;
+}
+
+/* The state word itself carries the meaning; the border is decoration. */
+.sa-device-state {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.sa-device-state[data-online="true"] { color: #1d6b3f; }
+.sa-device-state[data-online="false"] { color: #5a6472; }
+
+.sa-steps {
+  margin: 8px 0 12px 20px;
+  padding: 0;
+  line-height: 1.6;
+}
+
+.sa-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.sa-label {
+  display: block;
+  width: 100%;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.sa-input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #aeb6c2;
+  font: inherit;
+  letter-spacing: 0.12em;
+  flex: 1 1 180px;
+}
+
+.sa-phrase {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: #f3f5f8;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.sa-error {
+  margin: 10px 0 0;
+  color: #8c1d1d;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-dialog { transition: none; }
+}
