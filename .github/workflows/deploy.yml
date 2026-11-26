@@ -5,6 +5,10 @@ on:
     branches:
       - Dev
 
+concurrency:
+  group: teacher-dev
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,7 +21,18 @@ jobs:
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
+            set -eu
             cd /home/appuser/frontend/teacher_ui
             git checkout Dev
-            git pull origin Dev
-            npm run build
+            git pull --ff-only origin Dev
+            npm ci
+            stage=$(mktemp -d dist.stage.XXXXXX)
+            trap 'rm -rf -- "$stage"' EXIT
+            npm run build -- --outDir "$stage"
+            test -s "$stage/index.html"
+            mkdir -p dist
+            # Publish every new asset before the entry page; keep old chunks
+            # for visitors who still have the previous release open.
+            find "$stage" -mindepth 1 -maxdepth 1 ! -name index.html -exec cp -a -t dist -- {} +
+            if [ -f dist/index.html ]; then cp -a dist/index.html dist/index.previous.html; fi
+            mv -f "$stage/index.html" dist/index.html
